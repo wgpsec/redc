@@ -2,22 +2,39 @@
 
 ---
 
-> 编译前 按需从 tf-template 仓库中把你需要的场景 复制到 redc/utils/redc-templates/ 路径下 !!!
-
 ## 编译
 
+> 编译前 按需从 https://github.com/wgpsec/redc-template 仓库中把你需要的场景 复制到 redc/utils/redc-templates/ 路径下 !!!
+
+复制后，进行编译
 ```
 goreleaser --snapshot --skip-publish --rm-dist
 ```
 
-## 安装依赖工具
+## 本地依赖工具
 
 **mac**
+
+aliyun-cli
 ```bash
 brew install aliyun-cli
-brew install terraform
+```
+
+terraform
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+brew upgrade hashicorp/tap/terraform
+```
+
+jq
+```bash
 brew install jq
 ```
+
+aws-cli
+- https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.html
+
 
 **linux**
 ```bash
@@ -49,16 +66,33 @@ https://docs.aws.amazon.com/zh_cn/cli/latest/userguide/getting-started-install.h
 aws configure
 ```
 
-**windows**
-```
-https://github.com/aliyun/aliyun-cli/releases/download/v3.0.121/aliyun-cli-windows-3.0.121-amd64.zip
-https://releases.hashicorp.com/terraform/1.2.3/terraform_1.2.3_windows_amd64.zip
-```
+## 依赖配置
 
-## 配置
-
+**aliyun cli 配置**
 ```bash
 aliyun configure set --profile cloud-tool --mode AK --region cn-beijing --access-key-id xxxxxxxxxxxxxx --access-key-secret xxxxxxxxxxxxxx
+```
+
+**aws-cli 配置**
+```
+aws configure
+AKIAXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ap-east-1
+text
+```
+
+**配置rclone** (如果用代理池传r2 就配置,如果不用可以不用配置)
+```
+rclone config
+s3
+Cloudflare R2 Storage
+XXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+https://XXXXXXXXXXXXXXXXXXXXXXXXXXX.r2.cloudflarestorage.com
+auto
+
+rclone lsf r2:test
 ```
 
 配置tf插件缓存路径
@@ -66,12 +100,40 @@ aliyun configure set --profile cloud-tool --mode AK --region cn-beijing --access
 echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 ```
 
-使用前需初始化redc，将自动下载tf模块依赖
+使用前需初始化redc，将自动下载tf模块依赖 (如果重新对模板打包,则再次编译后还需要进行初始化)
 ```
 ./redc -init
 ```
 
-## 思路
+## 交互使用
+
+```bash
+# 开启 awvs 场景
+redc -start awvs -u zhangsan
+.........
+.........
+场景uuid:xxxxxxxxx
+
+# 查看指定场景的状态
+redc -status [uuid]
+
+# 关闭指定场景
+redc -stop [uuid]
+
+# 查看所有场景
+redc -list
+uuid        type    createtime      operator
+xxxxxxxxx   awvs    2022.02.22      system
+bbbbbbbbb   file    2022.02.22      system
+```
+
+场景名称 - 对应模板仓库 https://github.com/wgpsec/redc-template
+
+按你放到redc/utils/redc-templates/ 路径下的"文件夹名称"来
+
+---
+
+## 设计规划
 
 1. 先创建新项目
 2. 指定项目下要创建场景会从场景库复制一份场景文件夹到项目文件夹下
@@ -100,50 +162,3 @@ echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
     - 项目状态文件 (project.ini)
 - 项目3 (./project3)
     - ...
-
-## 交互
-
-```bash
-# 项目 test 开启 awvs 场景
-redc -project test -start awvs -u zhangsan
-.........
-.........
-项目uuid:xxxxxxxxx
-
-# 查看 test 项目中指定场景的状态
-redc -project test -status [uuid] -u zhangsan
-
-# 关闭 test 项目中指定场景
-redc -project test -stop [uuid] -u zhangsan
-
-# 查看 test 项目的所有场景
-redc -project test -list -u zhangsan
-uuid        type    createtime      operator
-xxxxxxxxx   awvs    2022.02.22      system
-bbbbbbbbb   file    2022.02.22      system
-```
-
-场景名称
-```
-awvs
-file
-chat
-c2
-nessus
-proxy
-pupy
-```
-
----
-
-## 设计规划
-
-tf 分成 2 类场景
-- 基础场景
-- 复杂场景 (由基础场景修改而来)
-
-redc 考虑是给予平台使用，在平台上由多项目、多用户进行操作,同时兼顾单机版需求
-
-由于 tf 的局限性，使用时和其文件夹结构脱不开关联，在多用户的情况下需要用 Backend 同步状态锁，融入到平台虽然可以用 Consul 解决多用户操作的问题，但多项目下要使用依然无法解决
-
-无法让多项目用1个文件夹场景，如果多复制几个文件夹太过笨重。。。这些都不够高效率
