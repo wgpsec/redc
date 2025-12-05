@@ -40,17 +40,17 @@ func NewTerraformExecutor(workingDir string) (*TerraformExecutor, error) {
 	}, nil
 }
 
-// Init runs terraform init
+// Init runs terraform init with upgrade option
 func (te *TerraformExecutor) Init(ctx context.Context) error {
 	return te.tf.Init(ctx, tfexec.Upgrade(true))
 }
 
-// Apply runs terraform apply with auto-approve
+// Apply runs terraform apply (auto-approve is the default behavior in terraform-exec)
 func (te *TerraformExecutor) Apply(ctx context.Context) error {
 	return te.tf.Apply(ctx)
 }
 
-// Destroy runs terraform destroy with auto-approve
+// Destroy runs terraform destroy (auto-approve is the default behavior in terraform-exec)
 func (te *TerraformExecutor) Destroy(ctx context.Context) error {
 	return te.tf.Destroy(ctx)
 }
@@ -90,150 +90,9 @@ func (te *TerraformExecutor) Show(ctx context.Context) error {
 	return nil
 }
 
-// createContextWithTimeout creates a context with a default timeout
+// createContextWithTimeout creates a context with a default timeout of 30 minutes
 func createContextWithTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 30*time.Minute)
-}
-
-// TfExecInit0 performs first-time initialization using terraform-exec
-func TfExecInit0(Path string) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	fmt.Printf("Initializing terraform in %s\n", Path)
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		fmt.Printf("场景初始化失败: %v\n", err)
-		// Fallback to bash method
-		TfInit0(Path)
-		return
-	}
-
-	err = te.Init(ctx)
-	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-		// Retry once
-		err2 := te.Init(ctx)
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err2)
-			os.Exit(3)
-		}
-	}
-}
-
-// TfExecInit performs initialization after copying using terraform-exec
-func TfExecInit(Path string) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	fmt.Printf("Initializing terraform in %s\n", Path)
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		fmt.Printf("场景初始化失败: %v\n", err)
-		// Fallback to bash method
-		TfInit(Path)
-		return
-	}
-
-	err = te.Init(ctx)
-	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-		// Retry once
-		err2 := te.Init(ctx)
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err2)
-			// Remove the case folder on failure
-			os.RemoveAll(Path)
-			os.Exit(3)
-		}
-	}
-}
-
-// TfExecApply performs terraform apply using terraform-exec
-func TfExecApply(Path string) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	fmt.Printf("Applying terraform in %s\n", Path)
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		fmt.Printf("场景创建失败: %v\n", err)
-		// Fallback to bash method
-		TfApply(Path)
-		return
-	}
-
-	err = te.Apply(ctx)
-	if err != nil {
-		fmt.Println("场景创建失败!尝试重新创建!")
-		// Try to destroy first
-		te.Destroy(ctx)
-		// Retry apply
-		err2 := te.Apply(ctx)
-		if err2 != nil {
-			fmt.Println("场景创建第二次失败!请手动排查问题")
-			fmt.Println("path路径: ", Path)
-			os.Exit(3)
-		}
-	}
-}
-
-// TfExecStatus shows terraform status using terraform-exec
-func TfExecStatus(Path string) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	fmt.Printf("Getting terraform status in %s\n", Path)
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		fmt.Printf("场景状态查询失败: %v\n", err)
-		// Fallback to bash method
-		TfStatus(Path)
-		return
-	}
-
-	err = te.Show(ctx)
-	if err != nil {
-		fmt.Println("场景状态查询失败!请手动排查问题")
-		fmt.Println("path路径: ", Path)
-		os.Exit(3)
-	}
-}
-
-// TfExecDestroy performs terraform destroy using terraform-exec
-func TfExecDestroy(Path string) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	fmt.Printf("Destroying terraform resources in %s\n", Path)
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		fmt.Printf("场景销毁失败: %v\n", err)
-		// Fallback to bash method
-		TfDestroy(Path)
-		return
-	}
-
-	err = te.Destroy(ctx)
-	if err != nil {
-		fmt.Println("场景销毁失败,第二次尝试!", err)
-		// Retry twice more
-		err2 := te.Destroy(ctx)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第三次尝试!", err2)
-			err3 := te.Destroy(ctx)
-			if err3 != nil {
-				fmt.Println("场景销毁多次重试失败!请手动排查问题")
-				fmt.Println("path路径: ", Path)
-				os.Exit(3)
-			}
-		}
-	}
 }
 
 // GetTerraformOutput retrieves a terraform output value using terraform-exec
