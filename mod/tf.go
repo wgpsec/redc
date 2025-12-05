@@ -11,12 +11,37 @@ import (
 	"time"
 )
 
-// 第一次初始化
+// 第一次初始化 - 使用 terraform-exec
 func TfInit0(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
+	fmt.Printf("Initializing terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		fmt.Printf("场景初始化失败,尝试使用备用方式: %v\n", err)
+		tfInit0Fallback(Path)
+		return
+	}
+
+	err = te.Init(ctx)
+	if err != nil {
+		fmt.Println("场景初始化失败,再次尝试!", err)
+		// Retry once
+		err2 := te.Init(ctx)
+		if err2 != nil {
+			fmt.Println("场景初始化失败,请检查网络连接!", err2)
+			_ = beeep.Notify("redc", fmt.Sprintf("场景初始化失败,请检查网络连接! %v", err2), "assets/information.png")
+			os.Exit(3)
+		}
+	}
+}
+
+// tfInit0Fallback 使用bash方式的备用初始化
+func tfInit0Fallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -init")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
 	if err != nil {
 		fmt.Println("场景初始化失败,再次尝试!", err)
 
@@ -30,12 +55,38 @@ func TfInit0(Path string) {
 	}
 }
 
-// 复制后的初始化
+// 复制后的初始化 - 使用 terraform-exec
 func TfInit(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
+	fmt.Printf("Initializing terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		fmt.Printf("场景初始化失败,尝试使用备用方式: %v\n", err)
+		tfInitFallback(Path)
+		return
+	}
+
+	err = te.Init(ctx)
+	if err != nil {
+		fmt.Println("场景初始化失败,再次尝试!", err)
+		// Retry once
+		err2 := te.Init(ctx)
+		if err2 != nil {
+			fmt.Println("场景初始化失败,请检查网络连接!", err2)
+			// Remove the case folder on failure
+			os.RemoveAll(Path)
+			os.Exit(3)
+		}
+	}
+}
+
+// tfInitFallback 使用bash方式的备用初始化
+func tfInitFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -init")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
 	if err != nil {
 		fmt.Println("场景初始化失败,再次尝试!", err)
 
@@ -55,8 +106,38 @@ func TfInit(Path string) {
 	}
 }
 
+// TfApply 使用 terraform-exec 执行 apply
 func TfApply(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
+	fmt.Printf("Applying terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		fmt.Printf("场景创建失败,尝试使用备用方式: %v\n", err)
+		tfApplyFallback(Path)
+		return
+	}
+
+	err = te.Apply(ctx)
+	if err != nil {
+		fmt.Println("场景创建失败!尝试重新创建!")
+		// Try to destroy first
+		te.Destroy(ctx)
+		// Retry apply
+		err2 := te.Apply(ctx)
+		if err2 != nil {
+			fmt.Println("场景创建第二次失败!请手动排查问题")
+			fmt.Println("path路径: ", Path)
+			_ = beeep.Notify("redc", fmt.Sprintf("场景创建第二次失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
+			os.Exit(3)
+		}
+	}
+}
+
+// tfApplyFallback 使用bash方式的备用apply
+func tfApplyFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -start")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -start")
 	if err != nil {
@@ -80,8 +161,31 @@ func TfApply(Path string) {
 	}
 }
 
+// TfStatus 使用 terraform-exec 查看状态
 func TfStatus(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
+	fmt.Printf("Getting terraform status in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		fmt.Printf("场景状态查询失败,尝试使用备用方式: %v\n", err)
+		tfStatusFallback(Path)
+		return
+	}
+
+	err = te.Show(ctx)
+	if err != nil {
+		fmt.Println("场景状态查询失败!请手动排查问题")
+		fmt.Println("path路径: ", Path)
+		_ = beeep.Notify("redc", fmt.Sprintf("场景状态查询失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
+		os.Exit(3)
+	}
+}
+
+// tfStatusFallback 使用bash方式的备用状态查询
+func tfStatusFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -status")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -status")
 	if err != nil {
@@ -92,8 +196,40 @@ func TfStatus(Path string) {
 	}
 }
 
+// TfDestroy 使用 terraform-exec 销毁资源
 func TfDestroy(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
+	fmt.Printf("Destroying terraform resources in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		fmt.Printf("场景销毁失败,尝试使用备用方式: %v\n", err)
+		tfDestroyFallback(Path)
+		return
+	}
+
+	err = te.Destroy(ctx)
+	if err != nil {
+		fmt.Println("场景销毁失败,第二次尝试!", err)
+		// Retry twice more
+		err2 := te.Destroy(ctx)
+		if err2 != nil {
+			fmt.Println("场景销毁失败,第三次尝试!", err2)
+			err3 := te.Destroy(ctx)
+			if err3 != nil {
+				fmt.Println("场景销毁多次重试失败!请手动排查问题")
+				fmt.Println("path路径: ", Path)
+				_ = beeep.Notify("redc", fmt.Sprintf("场景销毁多次重试失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
+				os.Exit(3)
+			}
+		}
+	}
+}
+
+// tfDestroyFallback 使用bash方式的备用销毁
+func tfDestroyFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -stop")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
 	if err != nil {
@@ -114,7 +250,6 @@ func TfDestroy(Path string) {
 			}
 		}
 	}
-
 }
 
 func C2Apply(Path string) {
@@ -143,9 +278,17 @@ func C2Apply(Path string) {
 		}
 	}
 
-	// 获得本地几个变量
-	c2_ip := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
-	c2_pass := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
+	// 获得本地几个变量 - 使用 terraform-exec 获取 output
+	c2_ip, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_ip")
+	if err != nil {
+		fmt.Printf("获取 ecs_ip 失败,尝试使用备用方式: %v\n", err)
+		c2_ip = utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
+	}
+	c2_pass, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_password")
+	if err != nil {
+		fmt.Printf("获取 ecs_password 失败,尝试使用备用方式: %v\n", err)
+		c2_pass = utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
+	}
 
 	cs_port := C2Port
 	cs_pass := C2Pass
@@ -192,13 +335,8 @@ func C2Apply(Path string) {
 
 	fmt.Println("ssh结束!")
 
-	err = utils.Command("cd " + Path + " && bash deploy.sh -status")
-
-	if err != nil {
-		mod2.PrintOnError(err, "场景创建失败")
-		RedcLog("场景创建失败")
-		os.Exit(3)
-	}
+	// 使用 terraform-exec 查看状态
+	TfStatus(Path)
 
 }
 
@@ -212,9 +350,17 @@ func C2Change(Path string) {
 		os.Exit(3)
 	}
 
-	// 获得本地几个变量
-	c2_ip := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
-	c2_pass := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
+	// 获得本地几个变量 - 使用 terraform-exec 获取 output
+	c2_ip, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_ip")
+	if err != nil {
+		fmt.Printf("获取 ecs_ip 失败,尝试使用备用方式: %v\n", err)
+		c2_ip = utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
+	}
+	c2_pass, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_password")
+	if err != nil {
+		fmt.Printf("获取 ecs_password 失败,尝试使用备用方式: %v\n", err)
+		c2_pass = utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
+	}
 	ipsum := utils.Command2("cd " + Path + "&& cd zone-node && cat ipsum.txt")
 	ecs_main_ip := utils.Command2("cd " + Path + "&& cd zone-node && cat ecs_main_ip.txt")
 
