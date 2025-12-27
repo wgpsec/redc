@@ -8,10 +8,11 @@ resource "random_password" "password" {
 
 resource "alicloud_instance" "instance" {
   security_groups            = alicloud_security_group.group.*.id
-  instance_type              = "ecs.c6.large"
+  instance_type              = "ecs.e-c1m2.large"
   image_id                   = "debian_12_2_x64_20G_alibase_20231012.vhd"
   instance_name              = "aliyun_bj_ecs"
   vswitch_id                 = alicloud_vswitch.vswitch.id
+  system_disk_category       = "cloud_essd_entry"
   system_disk_size           = 20
   internet_max_bandwidth_out = 100
   password = random_password.password.result
@@ -40,12 +41,16 @@ sudo rm /usr/sbin/aliyun-service
 sudo rm /lib/systemd/system/aliyun.service
 sudo systemctl stop aliyun.service
 
-sudo wget -O simplehttpserver_0.0.5_linux_amd64.tar.gz 'https://pub-4cbde83fd01f4fe98e2672c3b1f14315.r2.dev/file-server/simplehttpserver_0.0.5_linux_amd64.tar.gz'
+sudo echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+sudo echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sudo sysctl -p
+
+sudo wget -O simplehttpserver_0.0.5_linux_amd64.tar.gz 'https://redteam-tools-kite.oss-cn-beijing.aliyuncs.com/file-server/simplehttpserver_0.0.5_linux_amd64.tar.gz?OSSAccessKeyId=LTAI5t9W4XX6RAGJ9tV1eML1&Expires=361755496480&Signature=510kkaJAWz8Twj2XSjq%2BQVPKD%2F4%3D'
 sudo tar -zxvf simplehttpserver_0.0.5_linux_amd64.tar.gz
 sudo mv --force simplehttpserver /usr/local/bin/simplehttpserver
 sudo chmod +x /usr/local/bin/simplehttpserver
 
-sudo curl -o f8x https://f8x.io/ && mv --force f8x /usr/local/bin/f8x && chmod +x /usr/local/bin/f8x
+sudo curl -o f8x https://f8x.ffffffff0x.com/ && mv --force f8x /usr/local/bin/f8x && chmod +x /usr/local/bin/f8x
 
 sudo apt-get install -y python3-pip
 sudo pip3 install trzsz --break-system-packages
@@ -55,7 +60,7 @@ EOF
 }
 
 resource "alicloud_security_group" "group" {
-  name        = "test_security_group"
+  security_group_name        = "test_security_group"
   vpc_id      = alicloud_vpc.vpc.id
 }
 
@@ -87,5 +92,5 @@ resource "alicloud_vpc" "vpc" {
 
 data "alicloud_zones" "default" {
   available_resource_creation = "VSwitch"
-  available_instance_type = "ecs.c6.large"
+  available_instance_type = "ecs.e-c1m2.large"
 }
