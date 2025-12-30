@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gen2brain/beeep"
 	"os"
+	"path/filepath"
 	"red-cloud/mod2"
 	"red-cloud/utils"
 	"strconv"
@@ -11,141 +12,196 @@ import (
 	"time"
 )
 
-// 第一次初始化
+// notifyError sends a notification and exits with failure code
+func notifyError(message string, err error) {
+	fmt.Printf("%s: %v\n", message, err)
+	_ = beeep.Notify("redc", fmt.Sprintf("%s: %v", message, err), "assets/information.png")
+	os.Exit(ExitCodeFailure)
+}
+
+// readFileContent reads a file and returns its content with newlines trimmed
+func readFileContent(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+// 第一次初始化 - 使用 terraform-exec (无fallback)
 func TfInit0(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -init")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
+	fmt.Printf("Initializing terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
+		notifyError("场景初始化失败,terraform未找到或配置错误", err)
+	}
 
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景初始化失败,请检查网络连接! %v", err), "assets/information.png")
-			os.Exit(3)
-		}
+	// Use retry logic with InitRetries constant
+	err = retryOperation(ctx, te.Init, InitRetries)
+	if err != nil {
+		notifyError("场景初始化失败,请检查网络连接!", err)
 	}
 }
 
-// 复制后的初始化
+// 复制后的初始化 - 使用 terraform-exec (无fallback)
 func TfInit(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -init")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
+	fmt.Printf("Initializing terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
+		os.RemoveAll(Path)
+		notifyError("场景初始化失败,terraform未找到或配置错误", err)
+	}
 
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-
-			// 无法初始化,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(3)
-			}
-			os.Exit(3)
-		}
+	// Use retry logic with InitRetries constant
+	err = retryOperation(ctx, te.Init, InitRetries)
+	if err != nil {
+		fmt.Println("场景初始化失败,请检查网络连接!", err)
+		// Remove the case folder on failure
+		os.RemoveAll(Path)
+		os.Exit(ExitCodeFailure)
 	}
 }
 
+// TfApply 使用 terraform-exec 执行 apply (无fallback)
 func TfApply(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -start")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start")
+	fmt.Printf("Applying terraform in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		notifyError("场景创建失败,terraform未找到或配置错误", err)
+	}
+
+	err = te.Apply(ctx)
 	if err != nil {
 		fmt.Println("场景创建失败!尝试重新创建!")
-
-		// 先关闭
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
+		// Try to destroy first
+		te.Destroy(ctx)
+		// Retry apply
+		err2 := te.Apply(ctx)
 		if err2 != nil {
-			fmt.Println("场景销毁,等待重新创建!")
-			os.Exit(3)
-		}
-
-		// 重新创建
-		err3 := utils.Command("cd " + Path + " && bash deploy.sh -start")
-		if err3 != nil {
-			fmt.Println("场景创建第二次失败!请手动排查问题")
-			fmt.Println("path路径: ", Path)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景创建第二次失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-			os.Exit(3)
+			notifyError("场景创建第二次失败!请手动排查问题,path路径: "+Path, err2)
 		}
 	}
 }
 
+// TfStatus 使用 terraform-exec 查看状态 (无fallback)
 func TfStatus(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -status")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -status")
+	fmt.Printf("Getting terraform status in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景状态查询失败!请手动排查问题")
-		fmt.Println("path路径: ", Path)
-		_ = beeep.Notify("redc", fmt.Sprintf("场景状态查询失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-		os.Exit(3)
+		notifyError("场景状态查询失败,terraform未找到或配置错误", err)
+	}
+
+	err = te.Show(ctx)
+	if err != nil {
+		notifyError("场景状态查询失败!请手动排查问题,path路径: "+Path, err)
 	}
 }
 
+// TfDestroy 使用 terraform-exec 销毁资源 (无fallback)
 func TfDestroy(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
+	fmt.Printf("Destroying terraform resources in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景销毁失败,第二次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第三次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-			if err3 != nil {
-				fmt.Println("场景销毁多次重试失败!请手动排查问题")
-				fmt.Println("path路径: ", Path)
-				_ = beeep.Notify("redc", fmt.Sprintf("场景销毁多次重试失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-				os.Exit(3)
-			}
-		}
+		notifyError("场景销毁失败,terraform未找到或配置错误", err)
 	}
 
+	// Use retry logic with MaxRetries
+	err = retryOperation(ctx, te.Destroy, MaxRetries)
+	if err != nil {
+		notifyError("场景销毁多次重试失败!请手动排查问题,path路径: "+Path, err)
+	}
+}
+
+// applyTerraformInDir applies terraform in a specific subdirectory
+func applyTerraformInDir(baseDir string, subDir string) error {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+
+	path := baseDir + "/" + subDir
+	fmt.Printf("Applying terraform in %s\n", path)
+
+	te, err := NewTerraformExecutor(path)
+	if err != nil {
+		return fmt.Errorf("failed to create executor for %s: %w", path, err)
+	}
+
+	return te.Apply(ctx)
+}
+
+// destroyTerraformInDir destroys terraform resources in a specific subdirectory
+func destroyTerraformInDir(baseDir string, subDir string) error {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+
+	path := baseDir + "/" + subDir
+	fmt.Printf("Destroying terraform in %s\n", path)
+
+	te, err := NewTerraformExecutor(path)
+	if err != nil {
+		return fmt.Errorf("failed to create executor for %s: %w", path, err)
+	}
+
+	return retryOperation(ctx, te.Destroy, MaxRetries)
 }
 
 func C2Apply(Path string) {
-
-	// 先开c2
-	err := utils.Command("cd " + Path + " && bash deploy.sh -step1")
+	// 先开c2 (step1 - apply in c2-ecs directory)
+	err := applyTerraformInDir(Path, "c2-ecs")
 	if err != nil {
-		fmt.Println("场景创建失败,自动销毁场景!")
+		fmt.Println("场景创建失败,自动销毁场景!", err)
 		RedcLog("场景创建失败,自动销毁场景!")
 		C2Destroy(Path, strconv.Itoa(Node), Domain)
 		// 成功销毁场景后,删除 case 文件夹
-		err = os.RemoveAll(Path)
-		os.Exit(3)
+		os.RemoveAll(Path)
+		os.Exit(ExitCodeFailure)
 	}
 
-	// 开rg
+	// 开rg (step2 - apply in zone-node directory if Node != 0)
 	if Node != 0 {
-		err = utils.Command("cd " + Path + " && bash deploy.sh -step2 " + strconv.Itoa(Node) + " " + Domain)
+		err = applyTerraformInDir(Path, "zone-node")
 		if err != nil {
-			fmt.Println("场景创建失败,自动销毁场景!")
+			fmt.Println("场景创建失败,自动销毁场景!", err)
 			RedcLog("场景创建失败,自动销毁场景!")
 			C2Destroy(Path, strconv.Itoa(Node), Domain)
 			// 成功销毁场景后,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			os.Exit(3)
+			os.RemoveAll(Path)
+			os.Exit(ExitCodeFailure)
 		}
 	}
 
-	// 获得本地几个变量
-	c2_ip := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
-	c2_pass := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
+	// 获得本地几个变量 - 使用 terraform-exec 获取 output
+	c2_ip, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_ip")
+	if err != nil {
+		fmt.Printf("获取 ecs_ip 失败: %v\n", err)
+		RedcLog("获取 ecs_ip 失败")
+		os.Exit(ExitCodeFailure)
+	}
+	c2_pass, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_password")
+	if err != nil {
+		fmt.Printf("获取 ecs_password 失败: %v\n", err)
+		RedcLog("获取 ecs_password 失败")
+		os.Exit(ExitCodeFailure)
+	}
 
 	cs_port := C2Port
 	cs_pass := C2Pass
@@ -161,10 +217,18 @@ func C2Apply(Path string) {
 
 	// ssh上去起teamserver
 	if Node != 0 {
-		ipsum := utils.Command2("cd " + Path + "&& cd zone-node && cat ipsum.txt")
-		ecs_main_ip := utils.Command2("cd " + Path + "&& cd zone-node && cat ecs_main_ip.txt")
-		ipsum = strings.Replace(ipsum, "\n", "", -1)
-		ecs_main_ip = strings.Replace(ecs_main_ip, "\n", "", -1)
+		ipsum, err := readFileContent(filepath.Join(Path, "zone-node", "ipsum.txt"))
+		if err != nil {
+			fmt.Printf("读取 ipsum.txt 失败: %v\n", err)
+			RedcLog("读取 ipsum.txt 失败")
+			os.Exit(ExitCodeFailure)
+		}
+		ecs_main_ip, err := readFileContent(filepath.Join(Path, "zone-node", "ecs_main_ip.txt"))
+		if err != nil {
+			fmt.Printf("读取 ecs_main_ip.txt 失败: %v\n", err)
+			RedcLog("读取 ecs_main_ip.txt 失败")
+			os.Exit(ExitCodeFailure)
+		}
 		cscommand := "setsid ./teamserver -new " + cs_port + " " + c2_ip + " " + cs_pass + " " + cs_domain + " " + ipsum + " " + ecs_main_ip + " > /dev/null 2>&1 &"
 		fmt.Println("cscommand: ", cscommand)
 		err = utils.Gotossh("root", c2_pass, ssh_ip, cscommand)
@@ -173,8 +237,8 @@ func C2Apply(Path string) {
 			RedcLog("ssh 过程出现报错!自动销毁场景")
 			C2Destroy(Path, strconv.Itoa(Node), Domain)
 			// 成功销毁场景后,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			os.Exit(3)
+			os.RemoveAll(Path)
+			os.Exit(ExitCodeFailure)
 		}
 	} else {
 		cscommand := "setsid ./teamserver -new " + cs_port + " " + c2_ip + " " + cs_pass + " " + cs_domain + " > /dev/null 2>&1 &"
@@ -185,38 +249,62 @@ func C2Apply(Path string) {
 			RedcLog("ssh 过程出现报错!自动销毁场景")
 			C2Destroy(Path, strconv.Itoa(Node), Domain)
 			// 成功销毁场景后,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			os.Exit(3)
+			os.RemoveAll(Path)
+			os.Exit(ExitCodeFailure)
 		}
 	}
 
 	fmt.Println("ssh结束!")
 
-	err = utils.Command("cd " + Path + " && bash deploy.sh -status")
-
-	if err != nil {
-		mod2.PrintOnError(err, "场景创建失败")
-		RedcLog("场景创建失败")
-		os.Exit(3)
-	}
+	// 使用 terraform-exec 查看状态
+	TfStatus(Path)
 
 }
 
 func C2Change(Path string) {
-
-	// 重开rg
-	fmt.Println("cd " + Path + " && bash deploy.sh -step3 " + strconv.Itoa(Node) + " " + Domain)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -step3 " + strconv.Itoa(Node) + " " + Domain)
-	if err != nil {
-		mod2.PrintOnError(err, "场景更改失败")
-		os.Exit(3)
+	// 重开rg (step3 - recreate zone-node)
+	if Node != 0 {
+		// Destroy first
+		err := destroyTerraformInDir(Path, "zone-node")
+		if err != nil {
+			fmt.Printf("场景更改失败(销毁): %v\n", err)
+			mod2.PrintOnError(err, "场景更改失败")
+			os.Exit(ExitCodeFailure)
+		}
+		// Apply again
+		err = applyTerraformInDir(Path, "zone-node")
+		if err != nil {
+			fmt.Printf("场景更改失败(创建): %v\n", err)
+			mod2.PrintOnError(err, "场景更改失败")
+			os.Exit(ExitCodeFailure)
+		}
 	}
 
-	// 获得本地几个变量
-	c2_ip := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_ip | jq '.' -r")
-	c2_pass := utils.Command2("cd " + Path + " && cd c2-ecs" + "&& terraform output -json ecs_password | jq '.' -r")
-	ipsum := utils.Command2("cd " + Path + "&& cd zone-node && cat ipsum.txt")
-	ecs_main_ip := utils.Command2("cd " + Path + "&& cd zone-node && cat ecs_main_ip.txt")
+	// 获得本地几个变量 - 使用 terraform-exec 获取 output
+	c2_ip, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_ip")
+	if err != nil {
+		fmt.Printf("获取 ecs_ip 失败: %v\n", err)
+		RedcLog("获取 ecs_ip 失败")
+		os.Exit(ExitCodeFailure)
+	}
+	c2_pass, err := GetTerraformOutput(Path+"/c2-ecs", "ecs_password")
+	if err != nil {
+		fmt.Printf("获取 ecs_password 失败: %v\n", err)
+		RedcLog("获取 ecs_password 失败")
+		os.Exit(ExitCodeFailure)
+	}
+	ipsum, err := readFileContent(filepath.Join(Path, "zone-node", "ipsum.txt"))
+	if err != nil {
+		fmt.Printf("读取 ipsum.txt 失败: %v\n", err)
+		RedcLog("读取 ipsum.txt 失败")
+		os.Exit(ExitCodeFailure)
+	}
+	ecs_main_ip, err := readFileContent(filepath.Join(Path, "zone-node", "ecs_main_ip.txt"))
+	if err != nil {
+		fmt.Printf("读取 ecs_main_ip.txt 失败: %v\n", err)
+		RedcLog("读取 ecs_main_ip.txt 失败")
+		os.Exit(ExitCodeFailure)
+	}
 
 	cs_port := C2Port
 	cs_pass := C2Pass
@@ -227,8 +315,6 @@ func C2Change(Path string) {
 	ssh_ip = strings.Replace(ssh_ip, "\n", "", -1)
 	c2_pass = strings.Replace(c2_pass, "\n", "", -1)
 	c2_ip = strings.Replace(c2_ip, "\n", "", -1)
-	ipsum = strings.Replace(ipsum, "\n", "", -1)
-	ecs_main_ip = strings.Replace(ecs_main_ip, "\n", "", -1)
 	cscommand := "setsid ./teamserver -changelistener1 " + cs_port + " " + c2_ip + " " + cs_pass + " " + cs_domain + " " + ipsum + " " + ecs_main_ip + " > /dev/null 2>&1 &"
 
 	// ssh上去起teamserver
@@ -237,25 +323,47 @@ func C2Change(Path string) {
 }
 
 func C2Destroy(Path string, Command1 string, Domain string) {
+	// Parse the node count
+	nodeCount, _ := strconv.Atoi(Command1)
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain)
+	// Destroy zone-node if it exists
+	if nodeCount != 0 {
+		err := destroyTerraformInDir(Path, "zone-node")
+		if err != nil {
+			fmt.Println("zone-node销毁失败,第一次尝试!", err)
+			RedcLog("zone-node销毁失败,第一次尝试!")
+			// Retry
+			err2 := destroyTerraformInDir(Path, "zone-node")
+			if err2 != nil {
+				fmt.Println("zone-node销毁失败,第二次尝试!", err2)
+				RedcLog("zone-node销毁失败,第二次尝试!")
+				// One more try
+				err3 := destroyTerraformInDir(Path, "zone-node")
+				if err3 != nil {
+					fmt.Println("zone-node销毁失败!")
+					RedcLog("zone-node销毁失败")
+					// Continue to destroy c2-ecs anyway
+				}
+			}
+		}
+	}
+
+	// Destroy c2-ecs
+	err := destroyTerraformInDir(Path, "c2-ecs")
 	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-		RedcLog("场景销毁失败,第一次尝试!")
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain)
+		fmt.Println("c2-ecs销毁失败,第一次尝试!", err)
+		RedcLog("c2-ecs销毁失败,第一次尝试!")
+		// Retry
+		err2 := destroyTerraformInDir(Path, "c2-ecs")
 		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-			RedcLog("场景销毁失败,第二次尝试!")
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain)
+			fmt.Println("c2-ecs销毁失败,第二次尝试!", err2)
+			RedcLog("c2-ecs销毁失败,第二次尝试!")
+			// One more try
+			err3 := destroyTerraformInDir(Path, "c2-ecs")
 			if err3 != nil {
 				fmt.Println("场景销毁失败!")
 				RedcLog("场景销毁失败")
-				os.Exit(3)
+				os.Exit(ExitCodeFailure)
 			}
 		}
 	}
@@ -263,243 +371,61 @@ func C2Destroy(Path string, Command1 string, Domain string) {
 }
 
 func AwsProxyApply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func AwsProxyDestroy(Path string, Command1 string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
 
 func AliyunProxyApply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func AsmApply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node))
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func AsmNodeApply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node) + " " + Domain + " " + Domain2)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + strconv.Itoa(Node) + " " + Domain + " " + Domain2)
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func AliyunProxyChange(Path string) {
-
-	// 重开proxy
-	fmt.Println("cd " + Path + " && bash deploy.sh -change " + strconv.Itoa(Node))
-	err := utils.Command("cd " + Path + " && bash deploy.sh -change " + strconv.Itoa(Node))
-	if err != nil {
-		fmt.Println("场景更改失败!")
-		RedcLog("场景更改失败!")
-		os.Exit(3)
-	}
-
+	// 重开proxy - destroy and apply
+	TfDestroy(Path)
+	TfApply(Path)
 }
 
 func AsmChange(Path string) {
-
-	// 重开执行器
-	fmt.Println("cd " + Path + " && bash deploy.sh -change " + strconv.Itoa(Node))
-	err := utils.Command("cd " + Path + " && bash deploy.sh -change " + strconv.Itoa(Node))
-	if err != nil {
-		fmt.Println("场景更改失败!")
-		RedcLog("场景更改失败!")
-		os.Exit(3)
-	}
-
+	// 重开执行器 - destroy and apply
+	TfDestroy(Path)
+	TfApply(Path)
 }
 
 func AliyunProxyDestroy(Path string, Command1 string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
 
 func AsmDestroy(Path string, Command1 string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
 
 func AsmNodeDestroy(Path string, Command1 string, Domain string, Domain2 string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain + " " + Domain2)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain + " " + Domain2)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain + " " + Domain2)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Command1 + " " + Domain + " " + Domain2)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
 
 func DnslogApply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + Domain)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + Domain)
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func DnslogDestroy(Path string, Domain string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Domain)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Domain)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Domain)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Domain)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
 
 func Base64Apply(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -start " + Base64Command)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start " + Base64Command)
-	if err != nil {
-		fmt.Println("场景创建失败!")
-		RedcLog("场景创建失败!")
-		os.Exit(3)
-	}
-
+	TfApply(Path)
 }
 
 func Base64Destroy(Path string, Base64Command string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop " + Base64Command)
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Base64Command)
-	if err != nil {
-		fmt.Println("场景销毁失败,第一次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Base64Command)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第二次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop " + Base64Command)
-			if err3 != nil {
-				fmt.Println("场景销毁失败!")
-				RedcLog("场景销毁失败!")
-				os.Exit(3)
-			}
-		}
-	}
-
+	TfDestroy(Path)
 }
