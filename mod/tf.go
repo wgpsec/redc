@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gen2brain/beeep"
 	"os"
+	"path/filepath"
 	"red-cloud/mod2"
 	"red-cloud/utils"
 	"strconv"
@@ -16,6 +17,15 @@ func notifyError(message string, err error) {
 	fmt.Printf("%s: %v\n", message, err)
 	_ = beeep.Notify("redc", fmt.Sprintf("%s: %v", message, err), "assets/information.png")
 	os.Exit(ExitCodeFailure)
+}
+
+// readFileContent reads a file and returns its content with newlines trimmed
+func readFileContent(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
 }
 
 // 第一次初始化 - 使用 terraform-exec (无fallback)
@@ -207,10 +217,18 @@ func C2Apply(Path string) {
 
 	// ssh上去起teamserver
 	if Node != 0 {
-		ipsum := utils.Command2("cd " + Path + "&& cd zone-node && cat ipsum.txt")
-		ecs_main_ip := utils.Command2("cd " + Path + "&& cd zone-node && cat ecs_main_ip.txt")
-		ipsum = strings.Replace(ipsum, "\n", "", -1)
-		ecs_main_ip = strings.Replace(ecs_main_ip, "\n", "", -1)
+		ipsum, err := readFileContent(filepath.Join(Path, "zone-node", "ipsum.txt"))
+		if err != nil {
+			fmt.Printf("读取 ipsum.txt 失败: %v\n", err)
+			RedcLog("读取 ipsum.txt 失败")
+			os.Exit(ExitCodeFailure)
+		}
+		ecs_main_ip, err := readFileContent(filepath.Join(Path, "zone-node", "ecs_main_ip.txt"))
+		if err != nil {
+			fmt.Printf("读取 ecs_main_ip.txt 失败: %v\n", err)
+			RedcLog("读取 ecs_main_ip.txt 失败")
+			os.Exit(ExitCodeFailure)
+		}
 		cscommand := "setsid ./teamserver -new " + cs_port + " " + c2_ip + " " + cs_pass + " " + cs_domain + " " + ipsum + " " + ecs_main_ip + " > /dev/null 2>&1 &"
 		fmt.Println("cscommand: ", cscommand)
 		err = utils.Gotossh("root", c2_pass, ssh_ip, cscommand)
@@ -275,8 +293,18 @@ func C2Change(Path string) {
 		RedcLog("获取 ecs_password 失败")
 		os.Exit(ExitCodeFailure)
 	}
-	ipsum := utils.Command2("cd " + Path + "&& cd zone-node && cat ipsum.txt")
-	ecs_main_ip := utils.Command2("cd " + Path + "&& cd zone-node && cat ecs_main_ip.txt")
+	ipsum, err := readFileContent(filepath.Join(Path, "zone-node", "ipsum.txt"))
+	if err != nil {
+		fmt.Printf("读取 ipsum.txt 失败: %v\n", err)
+		RedcLog("读取 ipsum.txt 失败")
+		os.Exit(ExitCodeFailure)
+	}
+	ecs_main_ip, err := readFileContent(filepath.Join(Path, "zone-node", "ecs_main_ip.txt"))
+	if err != nil {
+		fmt.Printf("读取 ecs_main_ip.txt 失败: %v\n", err)
+		RedcLog("读取 ecs_main_ip.txt 失败")
+		os.Exit(ExitCodeFailure)
+	}
 
 	cs_port := C2Port
 	cs_pass := C2Pass
@@ -287,8 +315,6 @@ func C2Change(Path string) {
 	ssh_ip = strings.Replace(ssh_ip, "\n", "", -1)
 	c2_pass = strings.Replace(c2_pass, "\n", "", -1)
 	c2_ip = strings.Replace(c2_ip, "\n", "", -1)
-	ipsum = strings.Replace(ipsum, "\n", "", -1)
-	ecs_main_ip = strings.Replace(ecs_main_ip, "\n", "", -1)
 	cscommand := "setsid ./teamserver -changelistener1 " + cs_port + " " + c2_ip + " " + cs_pass + " " + cs_domain + " " + ipsum + " " + ecs_main_ip + " > /dev/null 2>&1 &"
 
 	// ssh上去起teamserver
