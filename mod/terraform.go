@@ -18,6 +18,8 @@ const (
 	ExitCodeFailure = 3
 	// MaxRetries is the maximum number of retries for failed operations
 	MaxRetries = 3
+	// InitRetries is the number of retries for init operations
+	InitRetries = 2
 )
 
 // TerraformExecutor wraps terraform-exec functionality

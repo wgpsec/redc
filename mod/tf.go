@@ -32,8 +32,8 @@ func TfInit0(Path string) {
 		return
 	}
 
-	// Use retry logic
-	err = retryOperation(ctx, te.Init, 2)
+	// Use retry logic with InitRetries constant
+	err = retryOperation(ctx, te.Init, InitRetries)
 	if err != nil {
 		notifyError("场景初始化失败,请检查网络连接!", err)
 	}
@@ -67,8 +67,8 @@ func TfInit(Path string) {
 		return
 	}
 
-	// Use retry logic
-	err = retryOperation(ctx, te.Init, 2)
+	// Use retry logic with InitRetries constant
+	err = retryOperation(ctx, te.Init, InitRetries)
 	if err != nil {
 		fmt.Println("场景初始化失败,请检查网络连接!", err)
 		// Remove the case folder on failure
@@ -128,11 +128,13 @@ func tfApplyFallback(Path string) {
 	if err != nil {
 		fmt.Println("场景创建失败!尝试重新创建!")
 		// 先关闭
-		utils.Command("cd " + Path + " && bash deploy.sh -stop")
+		if err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop"); err2 != nil {
+			fmt.Printf("场景销毁失败: %v\n", err2)
+		}
 		// 重新创建
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -start")
-		if err2 != nil {
-			notifyError("场景创建第二次失败!请手动排查问题,path路径: "+Path, err2)
+		err3 := utils.Command("cd " + Path + " && bash deploy.sh -start")
+		if err3 != nil {
+			notifyError("场景创建第二次失败!请手动排查问题,path路径: "+Path, err3)
 		}
 	}
 }
