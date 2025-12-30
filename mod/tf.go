@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// notifyError sends a notification and exits with failure code
+func notifyError(message string, err error) {
+	fmt.Printf("%s: %v\n", message, err)
+	_ = beeep.Notify("redc", fmt.Sprintf("%s: %v", message, err), "assets/information.png")
+	os.Exit(ExitCodeFailure)
+}
+
 // 第一次初始化 - 使用 terraform-exec
 func TfInit0(Path string) {
 	ctx, cancel := createContextWithTimeout()
@@ -25,16 +32,10 @@ func TfInit0(Path string) {
 		return
 	}
 
-	err = te.Init(ctx)
+	// Use retry logic
+	err = retryOperation(ctx, te.Init, 2)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-		// Retry once
-		err2 := te.Init(ctx)
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err2)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景初始化失败,请检查网络连接! %v", err2), "assets/information.png")
-			os.Exit(3)
-		}
+		notifyError("场景初始化失败,请检查网络连接!", err)
 	}
 }
 
@@ -44,13 +45,10 @@ func tfInit0Fallback(Path string) {
 	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
 	if err != nil {
 		fmt.Println("场景初始化失败,再次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
+		// Retry once
 		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
 		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景初始化失败,请检查网络连接! %v", err), "assets/information.png")
-			os.Exit(3)
+			notifyError("场景初始化失败,请检查网络连接!", err2)
 		}
 	}
 }
@@ -69,17 +67,13 @@ func TfInit(Path string) {
 		return
 	}
 
-	err = te.Init(ctx)
+	// Use retry logic
+	err = retryOperation(ctx, te.Init, 2)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-		// Retry once
-		err2 := te.Init(ctx)
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err2)
-			// Remove the case folder on failure
-			os.RemoveAll(Path)
-			os.Exit(3)
-		}
+		fmt.Println("场景初始化失败,请检查网络连接!", err)
+		// Remove the case folder on failure
+		os.RemoveAll(Path)
+		os.Exit(ExitCodeFailure)
 	}
 }
 
@@ -89,19 +83,13 @@ func tfInitFallback(Path string) {
 	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
 	if err != nil {
 		fmt.Println("场景初始化失败,再次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
+		// Retry once
 		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
 		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-
+			fmt.Println("场景初始化失败,请检查网络连接!", err2)
 			// 无法初始化,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(3)
-			}
-			os.Exit(3)
+			os.RemoveAll(Path)
+			os.Exit(ExitCodeFailure)
 		}
 	}
 }
@@ -128,10 +116,7 @@ func TfApply(Path string) {
 		// Retry apply
 		err2 := te.Apply(ctx)
 		if err2 != nil {
-			fmt.Println("场景创建第二次失败!请手动排查问题")
-			fmt.Println("path路径: ", Path)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景创建第二次失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-			os.Exit(3)
+			notifyError("场景创建第二次失败!请手动排查问题,path路径: "+Path, err2)
 		}
 	}
 }
@@ -142,21 +127,12 @@ func tfApplyFallback(Path string) {
 	err := utils.Command("cd " + Path + " && bash deploy.sh -start")
 	if err != nil {
 		fmt.Println("场景创建失败!尝试重新创建!")
-
 		// 先关闭
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-		if err2 != nil {
-			fmt.Println("场景销毁,等待重新创建!")
-			os.Exit(3)
-		}
-
+		utils.Command("cd " + Path + " && bash deploy.sh -stop")
 		// 重新创建
-		err3 := utils.Command("cd " + Path + " && bash deploy.sh -start")
-		if err3 != nil {
-			fmt.Println("场景创建第二次失败!请手动排查问题")
-			fmt.Println("path路径: ", Path)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景创建第二次失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-			os.Exit(3)
+		err2 := utils.Command("cd " + Path + " && bash deploy.sh -start")
+		if err2 != nil {
+			notifyError("场景创建第二次失败!请手动排查问题,path路径: "+Path, err2)
 		}
 	}
 }
@@ -177,10 +153,7 @@ func TfStatus(Path string) {
 
 	err = te.Show(ctx)
 	if err != nil {
-		fmt.Println("场景状态查询失败!请手动排查问题")
-		fmt.Println("path路径: ", Path)
-		_ = beeep.Notify("redc", fmt.Sprintf("场景状态查询失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-		os.Exit(3)
+		notifyError("场景状态查询失败!请手动排查问题,path路径: "+Path, err)
 	}
 }
 
@@ -189,10 +162,7 @@ func tfStatusFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -status")
 	err := utils.Command("cd " + Path + " && bash deploy.sh -status")
 	if err != nil {
-		fmt.Println("场景状态查询失败!请手动排查问题")
-		fmt.Println("path路径: ", Path)
-		_ = beeep.Notify("redc", fmt.Sprintf("场景状态查询失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-		os.Exit(3)
+		notifyError("场景状态查询失败!请手动排查问题,path路径: "+Path, err)
 	}
 }
 
@@ -210,44 +180,27 @@ func TfDestroy(Path string) {
 		return
 	}
 
-	err = te.Destroy(ctx)
+	// Use retry logic with MaxRetries
+	err = retryOperation(ctx, te.Destroy, MaxRetries)
 	if err != nil {
-		fmt.Println("场景销毁失败,第二次尝试!", err)
-		// Retry twice more
-		err2 := te.Destroy(ctx)
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第三次尝试!", err2)
-			err3 := te.Destroy(ctx)
-			if err3 != nil {
-				fmt.Println("场景销毁多次重试失败!请手动排查问题")
-				fmt.Println("path路径: ", Path)
-				_ = beeep.Notify("redc", fmt.Sprintf("场景销毁多次重试失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-				os.Exit(3)
-			}
-		}
+		notifyError("场景销毁多次重试失败!请手动排查问题,path路径: "+Path, err)
 	}
 }
 
 // tfDestroyFallback 使用bash方式的备用销毁
 func tfDestroyFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -stop")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-	if err != nil {
-		fmt.Println("场景销毁失败,第二次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第三次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-			if err3 != nil {
-				fmt.Println("场景销毁多次重试失败!请手动排查问题")
-				fmt.Println("path路径: ", Path)
-				_ = beeep.Notify("redc", fmt.Sprintf("场景销毁多次重试失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-				os.Exit(3)
-			}
+	
+	// Retry loop
+	for i := 0; i < MaxRetries; i++ {
+		err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
+		if err == nil {
+			return
+		}
+		if i < MaxRetries-1 {
+			fmt.Printf("场景销毁失败,第%d次尝试! %v\n", i+2, err)
+		} else {
+			notifyError("场景销毁多次重试失败!请手动排查问题,path路径: "+Path, err)
 		}
 	}
 }

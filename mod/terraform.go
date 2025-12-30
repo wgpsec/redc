@@ -11,6 +11,15 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
+const (
+	// TerraformTimeout is the default timeout for terraform operations
+	TerraformTimeout = 30 * time.Minute
+	// ExitCodeFailure is the exit code used for failures
+	ExitCodeFailure = 3
+	// MaxRetries is the maximum number of retries for failed operations
+	MaxRetries = 3
+)
+
 // TerraformExecutor wraps terraform-exec functionality
 type TerraformExecutor struct {
 	tf         *tfexec.Terraform
@@ -90,9 +99,9 @@ func (te *TerraformExecutor) Show(ctx context.Context) error {
 	return nil
 }
 
-// createContextWithTimeout creates a context with a default timeout of 30 minutes
+// createContextWithTimeout creates a context with a default timeout
 func createContextWithTimeout() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 30*time.Minute)
+	return context.WithTimeout(context.Background(), TerraformTimeout)
 }
 
 // GetTerraformOutput retrieves a terraform output value using terraform-exec
@@ -106,4 +115,19 @@ func GetTerraformOutput(Path string, outputName string) (string, error) {
 	}
 
 	return te.Output(ctx, outputName)
+}
+
+// retryOperation retries an operation up to maxRetries times
+func retryOperation(ctx context.Context, operation func(context.Context) error, maxRetries int) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = operation(ctx)
+		if err == nil {
+			return nil
+		}
+		if i < maxRetries-1 {
+			fmt.Printf("Operation failed (attempt %d/%d): %v\n", i+1, maxRetries, err)
+		}
+	}
+	return err
 }
