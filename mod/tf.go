@@ -192,7 +192,7 @@ func TfDestroy(Path string) {
 // tfDestroyFallback 使用bash方式的备用销毁
 func tfDestroyFallback(Path string) {
 	fmt.Println("cd " + Path + " && bash deploy.sh -stop")
-	
+
 	// Retry loop
 	for i := 0; i < MaxRetries; i++ {
 		err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
