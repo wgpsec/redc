@@ -2,15 +2,16 @@ package mod
 
 import (
 	"fmt"
-	"github.com/gen2brain/beeep"
-	uuid "github.com/satori/go.uuid"
-	"gopkg.in/ini.v1"
 	"math/rand"
 	"os"
 	"red-cloud/utils"
 	"strconv"
 	"text/tabwriter"
 	"time"
+
+	"github.com/gen2brain/beeep"
+	uuid "github.com/satori/go.uuid"
+	"gopkg.in/ini.v1"
 )
 
 func RandomName() string {
@@ -49,7 +50,7 @@ func CaseCreate(ProjectPath string, CaseName string, User string, Name string) {
 	}
 
 	// 在次 init,防止万一
-	TfInit(ProjectPath + "/" + u1.String())
+	TfInit2(ProjectPath + "/" + u1.String())
 
 	fmt.Println("开始创建")
 
@@ -207,7 +208,7 @@ func CaseKill(ProjectPath string, UUID string) {
 	for _, v := range dirs {
 		err := utils.CheckFileName(v, "tf")
 		if err {
-			TfInit(v)
+			TfInit2(v)
 		}
 	}
 

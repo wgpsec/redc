@@ -2,8 +2,8 @@ package mod
 
 import (
 	"fmt"
-	"github.com/gen2brain/beeep"
 	"os"
+	"red-cloud/mod/gologger"
 	"red-cloud/mod2"
 	"red-cloud/utils"
 	"strconv"
@@ -11,108 +11,104 @@ import (
 	"time"
 )
 
-// 第一次初始化
-func TfInit0(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -init")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
+// readFileContent reads a file and returns its content with newlines trimmed
+func readFileContent(path string) (string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景初始化失败,请检查网络连接! %v", err), "assets/information.png")
-			os.Exit(3)
-		}
+		return "", err
 	}
+	return strings.TrimSpace(string(data)), nil
 }
 
-// 复制后的初始化
-func TfInit(Path string) {
+// TfInit 初始化场景
+func TfInit(Path string) error {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+	gologger.Info().Msgf("正在初始化场景「%s」", Path)
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -init")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -init")
-	//err := utils.Command("cd " + Path + " && TF_SKIP_PROVIDER_VERIFY=1  terraform init")
+	// 寻找执行程序
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景初始化失败,再次尝试!", err)
-
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -init")
-		if err2 != nil {
-			fmt.Println("场景初始化失败,请检查网络连接!", err)
-
-			// 无法初始化,删除 case 文件夹
-			err = os.RemoveAll(Path)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(3)
-			}
-			os.Exit(3)
-		}
+		return fmt.Errorf("TF可执行配置失败: %w", err)
 	}
+
+	// Use retry logic with InitRetries constant
+	err = retryOperation(ctx, te.Init, InitRetries)
+	if err != nil {
+		return fmt.Errorf("请检查网络连接: %w", err)
+	}
+	return nil
 }
 
-func TfApply(Path string) {
+// TfInit2 复制后的初始化 遗留函数
+func TfInit2(Path string) {
 
-	fmt.Println("cd " + Path + " && bash deploy.sh -start")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -start")
-	if err != nil {
-		fmt.Println("场景创建失败!尝试重新创建!")
-
-		// 先关闭
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-		if err2 != nil {
-			fmt.Println("场景销毁,等待重新创建!")
+	if err := TfInit(Path); err != nil {
+		// 无法初始化,删除 case 文件夹
+		err = os.RemoveAll(Path)
+		if err != nil {
+			fmt.Println(err)
 			os.Exit(3)
 		}
-
-		// 重新创建
-		err3 := utils.Command("cd " + Path + " && bash deploy.sh -start")
-		if err3 != nil {
-			fmt.Println("场景创建第二次失败!请手动排查问题")
-			fmt.Println("path路径: ", Path)
-			_ = beeep.Notify("redc", fmt.Sprintf("场景创建第二次失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-			os.Exit(3)
-		}
-	}
-}
-
-func TfStatus(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -status")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -status")
-	if err != nil {
-		fmt.Println("场景状态查询失败!请手动排查问题")
-		fmt.Println("path路径: ", Path)
-		_ = beeep.Notify("redc", fmt.Sprintf("场景状态查询失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
 		os.Exit(3)
 	}
 }
 
-func TfDestroy(Path string) {
-
-	fmt.Println("cd " + Path + " && bash deploy.sh -stop")
-	err := utils.Command("cd " + Path + " && bash deploy.sh -stop")
+func TfApply(Path string) error {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+	fmt.Printf("Applying terraform in %s\n", Path)
+	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		fmt.Println("场景销毁失败,第二次尝试!", err)
+		return fmt.Errorf("场景创建失败,terraform未找到或配置错误: %w", err)
+	}
 
-		// 如果初始化失败就再次尝试一次
-		err2 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-		if err2 != nil {
-			fmt.Println("场景销毁失败,第三次尝试!", err)
-
-			// 第三次
-			err3 := utils.Command("cd " + Path + " && bash deploy.sh -stop")
-			if err3 != nil {
-				fmt.Println("场景销毁多次重试失败!请手动排查问题")
-				fmt.Println("path路径: ", Path)
-				_ = beeep.Notify("redc", fmt.Sprintf("场景销毁多次重试失败!请手动排查问题,path路径: %v", Path), "assets/information.png")
-				os.Exit(3)
-			}
+	err = te.Apply(ctx)
+	if err != nil {
+		gologger.Error().Msgf("场景创建失败，正在尝试第二次创建: %v", err)
+		err = te.Destroy(ctx)
+		if err != nil {
+			gologger.Error().Msgf("场景删除失败！: %v", err)
+			return err
 		}
+		// Retry apply
+		err2 := te.Apply(ctx)
+		if err2 != nil {
+			return fmt.Errorf("场景创建第二次失败!请手动排查问题,path路径: %s : %w", Path, err2)
+		}
+	}
+	return nil
+}
+
+func TfStatus(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+
+	fmt.Printf("Getting terraform status in %s\n", Path)
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		gologger.Error().Msgf("场景状态查询失败,terraform未找到或配置错误: %v", err)
+	}
+
+	err = te.Show(ctx)
+	if err != nil {
+		gologger.Error().Msgf("场景状态查询失败!请手动排查问题,path路径: %s,%v", Path, err)
+	}
+}
+
+func TfDestroy(Path string) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+	fmt.Printf("Destroying terraform resources in %s\n", Path)
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		gologger.Error().Msgf("场景销毁失败,terraform未找到或配置错误: %v", err)
+	}
+	// Use retry logic with MaxRetries
+	err = retryOperation(ctx, te.Destroy, MaxRetries)
+	if err != nil {
+		gologger.Error().Msgf("场景销毁失败!请手动排查问题,path路径: %s,%v", Path, err)
 	}
 
 }

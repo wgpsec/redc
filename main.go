@@ -4,24 +4,51 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
-	"github.com/gen2brain/beeep"
 	"os"
 	redc "red-cloud/mod"
-	"red-cloud/mod2"
+	"red-cloud/mod/gologger"
 	"red-cloud/utils"
+
+	"github.com/gen2brain/beeep"
 )
 
 var ProjectPath = "./redc-taskresult"
 
+const banner = `
+
+██████╗  ███████╗ ██████╗   ██████╗ 
+ ██╔══██╗ ██╔════╝ ██╔══██╗ ██╔════╝ 
+ ██████╔╝ █████╗   ██║  ██║ ██║      
+ ██╔══██╗ ██╔══╝   ██║  ██║ ██║      
+ ██║  ██║ ███████╗ ██████╔╝ ╚██████╗ 
+ ╚═╝  ╚═╝ ╚══════╝ ╚═════╝   ╚═════╝
+
+`
+
+var (
+	BuiltAt   string
+	GoVersion string
+	GitAuthor string
+	BuildSha  string
+	GitTag    string
+)
+
+func Banner() {
+	gologger.Print().Msgf("%sBuilt At: %s\nGo Version: %s\nAuthor: %s\nBuild SHA: %s\nVersion: %s\n\n", banner, BuiltAt, GoVersion, GitAuthor, BuildSha, GitTag)
+}
 func main() {
-
+	Banner()
 	flag.Parse()
-
 	// -version 显示版本号
 	if redc.V {
 		fmt.Println(redc.Version)
 		_ = beeep.Notify("redc", "版本"+redc.Version, "assets/information.png")
 		os.Exit(0)
+	}
+
+	// 解析配置文件
+	if err := redc.LoadCredentials("./config.yaml"); err != nil {
+		gologger.Fatal().Msgf("配置文件加载失败! %s", err.Error())
 	}
 
 	// 解析配置(暂时不需要这一步)
@@ -30,29 +57,23 @@ func main() {
 	// -init 初始化
 	if redc.Init {
 		redc.RedcLog("进行初始化")
-		fmt.Println("初始化中")
+		gologger.Info().Msgf("初始化中")
 		// 先删除文件夹
 		err := os.RemoveAll("redc-templates")
-		mod2.PrintOnError(err, "初始化过程中删除模板文件夹失败")
-		// 释放templates资源
+		gologger.Error().Msgf("初始化过程中删除模板文件夹失败: %s", err)
+		// 释放 templates 资源
 		utils.ReleaseDir("redc-templates")
 
 		// 遍历 redc-templates 文件夹,不包括子目录
 		_, dirs := utils.GetFilesAndDirs("./redc-templates")
 		for _, v := range dirs {
-			redc.TfInit0(v)
-		}
-
-		// 遍历 redc-templates 文件夹,包括子目录 (现已被替代)
-		/*dirs := utils.ChechDirMain("./redc-templates")
-		for _, v := range dirs {
-			err := utils.CheckFileName(v, "tf")
-			if err {
-				fmt.Println(v)
-				redc.TfInit(v)
+			err = redc.TfInit(v)
+			if err != nil {
+				gologger.Error().Msgf("「%s」场景初始化失败\n %s", v, err)
 			}
-		}*/
-		os.Exit(0)
+		}
+		gologger.Info().Msgf("✅场景初始化任务完成！")
+		return
 	}
 
 	// 解析项目名称
