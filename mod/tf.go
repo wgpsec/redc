@@ -66,13 +66,19 @@ func TfPlan(Path string, opts ...string) error {
 	fmt.Printf("Planing terraform in %s\n", Path)
 	te, err := NewTerraformExecutor(Path)
 	if err != nil {
-		return fmt.Errorf("场景创建失败: %w", err)
+		return fmt.Errorf("执行失败: %s", err.Error())
 	}
-
-	err = te.Plan(ctx, ToPlan(opts)...)
+	o := ToPlan(opts)
+	// 增加 plan 输出文件
+	o = append(o, tfexec.Out(planPath))
+	err = te.Plan(ctx, o...)
 	if err != nil {
-		gologger.Error().Msgf("场景创建失败: %v", err)
+		gologger.Debug().Msgf("场景创建失败: %v", err)
 		return err
+	}
+	err = te.ShowPlan(ctx)
+	if err != nil {
+		gologger.Error().Msgf("PLAN 信息展示失败！")
 	}
 	return nil
 }
@@ -84,10 +90,11 @@ func TfApply(Path string, opts ...string) error {
 	if err != nil {
 		return fmt.Errorf("场景启动失败,terraform未找到或配置错误: %w", err)
 	}
-
+	o := ToApply(opts)
+	o = append(o, tfexec.DirOrPlan(planPath))
 	err = te.Apply(ctx, ToApply(opts)...)
 	if err != nil {
-		gologger.Error().Msgf("场景启动失败: %v", err)
+		gologger.Debug().Msgf("场景启动失败: %s", err.Error())
 		return err
 	}
 	return nil
@@ -109,6 +116,29 @@ func TfStatus(Path string) {
 	}
 }
 
+func TfOutput(Path string) error {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		return fmt.Errorf("TF可执行配置失败: %w", err)
+	}
+
+	outputs, err := te.Output(ctx)
+	if err != nil {
+		return fmt.Errorf("获取 Output 失败: %w", err)
+	}
+
+	if len(outputs) > 0 {
+		gologger.Info().Msg("Terraform Outputs:")
+		for k, v := range outputs {
+			gologger.Info().Msgf("%s: %s", k, string(v.Value))
+		}
+	}
+	return nil
+}
+
 func TfDestroy(Path string, opts []string) error {
 	ctx, cancel := createContextWithTimeout()
 	defer cancel()
@@ -121,11 +151,6 @@ func TfDestroy(Path string, opts []string) error {
 	if err != nil {
 		gologger.Error().Msgf("场景销毁失败!请手动排查问题,path路径: %s,%v", Path, err)
 	}
-	// Use retry logic with MaxRetries
-	//err = retryOperation(ctx, te.Destroy, MaxRetries)
-	//if err != nil {
-	//	gologger.Error().Msgf("场景销毁失败!请手动排查问题,path路径: %s,%v", Path, err)
-	//}
 	return nil
 }
 

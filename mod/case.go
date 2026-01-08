@@ -21,25 +21,33 @@ const (
 	StatePending CaseState = "pending"
 )
 
-func RandomName() string {
-	var lastName = []string{
+func RandomName(s string) string {
+	var firstName = []string{
 		"red", "blue", "yellow", "brown", "purple", "anger", "lazy", "shy", "huge", "rare",
 		"fast", "stupid", "sluggish", "boring", "rigid", "rigorous", "clever", "dexterity",
 		"white", "black", "dark", "idiot", "shiny", "friendly", "integrity", "happy", "sad",
-		"lively", "lonely", "ugly", "leisurely", "calm", "young", "tenacious"}
-	var firstName = []string{
+		"lively", "lonely", "ugly", "leisurely", "calm", "young", "tenacious", "admiring",
+		"agitated", "boring", "clever", "compassionate", "condescending", "cranky", "desperate",
+		"distracted", "ecstatic", "focused", "goofy", "hungry", "jolly", "modest", "naughty", "nostalgic",
+		"pensive", "recursing", "sleepy", "thirsty", "xenodochial", "zen", "niubi",
+	}
+	var lastName = []string{
 		"pig", "cow", "sheep", "mouse", "dragon", "serpent", "tiger", "fox", "frog", "chicken",
 		"fish", "shrimp", "hippocampus", "helicopter", "crab", "dolphin", "whale", "chinchilla",
 		"bunny", "mole", "rabbit", "horse", "monkey", "dog", "shark", "panda", "bear", "lion",
-		"rhino", "leopard", "giraffe", "deer", "wolf", "parrot", "camel", "antelope", "turtle", "zebra"}
-	var lastNameLen = len(lastName)
-	var firstNameLen = len(firstName)
-	rand.Seed(time.Now().UnixNano())     //设置随机数种子
-	var first string                     //名
-	for i := 0; i <= rand.Intn(1); i++ { //随机产生2位或者3位的名
-		first = fmt.Sprint(firstName[rand.Intn(firstNameLen-1)])
+		"rhino", "leopard", "giraffe", "deer", "wolf", "parrot", "camel", "antelope", "turtle",
+		"zebra", "hacker",
 	}
-	return fmt.Sprint(lastName[rand.Intn(lastNameLen-1)]) + first
+	rand.Seed(time.Now().UnixNano())
+begin:
+	first := firstName[rand.Intn(len(firstName)-1)]
+	last := lastName[rand.Intn(len(lastName)-1)]
+	// NO NO NO ~
+	if (first == "stupid" || first == "goofy") && last == "wolf" {
+		goto begin
+	}
+	s = truncateString(s, 10)
+	return fmt.Sprintf("%s_%s_%s", first, last, s)
 }
 
 // GenerateCaseID 生成 ID (64字符 hex string)
@@ -54,7 +62,7 @@ func GenerateCaseID() string {
 }
 
 // CaseScene 场景参数判断
-func CaseScene(t string) ([]string, error) {
+func CaseScene(t string, m map[string]string) ([]string, error) {
 	var par []string
 	switch t {
 	case "cs-49", "c2-new", "snowc2":
@@ -78,10 +86,14 @@ func CaseScene(t string) ([]string, error) {
 			fmt.Sprintf("doamin=%s", Domain),
 		)
 	}
+	// 增加自定义参数
+	for k, v := range m {
+		par = append(par, fmt.Sprintf("%s=%s", k, v))
+	}
 	return par, nil
 }
 
-func (p *RedcProject) CaseCreate(CaseName string, User string, Name string) (*Case, error) {
+func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars map[string]string) (*Case, error) {
 	// 创建新的 case 目录,这里不需要检测是否存在,因为名称是采用nanoID
 	gologger.Info().Msgf("正在创建场景 「%s」", CaseName)
 	uid := GenerateCaseID()
@@ -101,9 +113,8 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string) (*Ca
 		gologger.Error().Msgf("二次初始化失败！%s", err.Error())
 		return nil, err
 	}
-
 	// 初始化结构参数
-	par, err := CaseScene(CaseName)
+	par, err := CaseScene(CaseName, vars)
 	if err != nil {
 		gologger.Error().Msgf("场景参数校验失败！%s", err.Error())
 		return nil, err
@@ -111,7 +122,7 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string) (*Ca
 
 	// 初始化实例名称
 	if Name == "" {
-		Name = RandomName()
+		Name = RandomName(CaseName)
 	}
 
 	// 初始化实例
@@ -123,12 +134,15 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string) (*Ca
 		Path:       casePath,
 		Type:       CaseName,
 		Parameter:  par,
-		State:      StateCreated,
+		State:      StateError,
 	}
+	// 绑定 project 参数
+	c.bindHandlers(p)
 
 	// 构建场景
 	if err := c.TfPlan(); err != nil {
-		gologger.Error().Msgf("场景创建失败！%s", err.Error())
+		gologger.Debug().Msgf("场景创建校验失败！%s", err.Error())
+		c.Remove()
 		return nil, err
 	}
 	gologger.Info().Msgf("场景创建成功！%s", uid)
@@ -147,11 +161,27 @@ func (c *Case) TfApply() error {
 	var err error
 	err = TfApply(c.Path, c.Parameter...)
 	if err != nil {
+		// 启动失败立即销毁
+		c.TfDestroy()
 		return err
 	}
-	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
-	c.State = StateRunning
+	c.StatusChange(StateRunning)
+	// 输出 output 信息
+	if err := TfOutput(c.Path); err != nil {
+		gologger.Error().Msgf("获取 Output 信息失败: %v", err)
+	}
 	return nil
+}
+
+// bindHandlers 绑定项目方法
+func (c *Case) bindHandlers(p *RedcProject) {
+	// 随时删除自己
+	c.removeHandle = func() error {
+		return p.HandleCase(c)
+	}
+	c.saveHandler = func() error {
+		return p.SaveProject()
+	}
 }
 
 func (c *Case) TfPlan() error {
@@ -160,8 +190,18 @@ func (c *Case) TfPlan() error {
 	if err != nil {
 		return err
 	}
+	c.StatusChange(StateCreated)
+	return nil
+}
+
+func (c *Case) StatusChange(s CaseState) error {
+	c.State = s
 	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
-	c.State = StateCreated
+	if c.saveHandler != nil {
+		if err := c.saveHandler(); err != nil {
+			return fmt.Errorf("状态修改成功，但配置文件保存失败: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -171,19 +211,19 @@ func (c *Case) TfDestroy() error {
 		gologger.Error().Msgf("场景销毁失败！%s", err.Error())
 		return err
 	}
-	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
-	c.State = StateStopped
+	c.StatusChange(StateStopped)
 	return nil
 }
 func (c *Case) Remove() error {
 	if c.State == StateRunning {
 		return fmt.Errorf("场景正在运行中，请先停止场景后删除！")
 	}
-	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
 	err := os.RemoveAll(c.Path)
 	if err != nil {
 		return fmt.Errorf("删除场景文件失败！%s", err.Error())
 	}
+	err = c.removeHandle()
+	gologger.Info().Msgf("场景删除成功")
 	return nil
 }
 
@@ -216,9 +256,21 @@ func (c *Case) Kill() error {
 }
 
 // Change 重建场景
-func (c *Case) Change() error {
-	// 销毁场景，不删除项目
-	if err := c.TfDestroy(); err != nil {
+func (c *Case) Change(cc ChangeCommand) error {
+	if cc.IsRemove {
+		// 销毁场景，不删除项目
+		gologger.Info().Msgf("正在销毁场景 「%s」 %s\n", c.Name, c.Id)
+		if err := c.TfDestroy(); err != nil {
+			return err
+		}
+	}
+	// TODO 更改弹性公网IP等操作
+	// 重新赋值
+	if par, err := CaseScene(c.Type, cc.Pars); err != nil {
+		c.Parameter = par
+	}
+	// 展示更改信息
+	if err := c.TfPlan(); err != nil {
 		return err
 	}
 	// 重建场景
@@ -229,6 +281,7 @@ func (c *Case) Change() error {
 }
 
 func (c *Case) Status() error {
+	gologger.Info().Msgf("Case「%s」当前 %s 状态", c.Name, c.State)
 	TfStatus(c.Path)
 	return nil
 }
@@ -260,4 +313,19 @@ func parseTime(timeStr string) time.Time {
 		return time.Now() // 解析失败则返回当前时间，避免 panic
 	}
 	return t
+}
+
+// truncateString 安全截断函数
+func truncateString(s string, length int) string {
+	// 1. 将字符串转为 rune 切片（处理多字节字符的关键）
+	runes := []rune(s)
+
+	// 2. 判断字符数量是否超过限制
+	if len(runes) > length {
+		// 3. 截取前 length 个字符并转回 string
+		return string(runes[:length])
+	}
+
+	// 4. 如果没超过，原样返回
+	return s
 }

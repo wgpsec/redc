@@ -3,13 +3,17 @@ package cmd
 import (
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
-	userName    string
-	projectName string
+	userName     string
+	projectName  string
+	envVars      map[string]string
+	commandToRun string
 )
 
 var runCmd = &cobra.Command{
@@ -23,6 +27,9 @@ var runCmd = &cobra.Command{
 		if err := c.TfApply(); err != nil {
 			gologger.Error().Msgf("场景启动失败！%s", err.Error())
 		}
+		if len(args) > 1 {
+			commandToRun = strings.Join(args[1:], " ")
+		}
 	},
 }
 
@@ -33,7 +40,8 @@ var createCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1), // 强制要求输入一个模板名，例如 pte
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
-		createLogic(templateName)
+		c := createLogic(templateName)
+		gologger.Info().Msgf("✅「%s」%s 场景创建完成！，接下来您可以start启动该场景", c.Name, c.Id)
 	},
 }
 
@@ -44,14 +52,13 @@ func createLogic(templateName string) *redc.Case {
 		templateName = "pte_arm"
 	}
 
-	// 解析 Project (这里需要确保 Config 已经在 root.go 加载了)
-	pro, err := redc.ProjectParse(redc.Project, userName) // 注意：这里使用了 flag 传入的 userName
+	pro, err := redc.ProjectParse(redc.Project, userName)
 	if err != nil {
 		gologger.Fatal().Msgf("项目解析失败: %s", err)
 	}
 
 	// 创建 Case
-	c, err := pro.CaseCreate(templateName, userName, projectName)
+	c, err := pro.CaseCreate(templateName, userName, projectName, envVars)
 	if err != nil {
 		gologger.Error().Msgf("❌「%s」场景创建失败: %v", templateName, err)
 		return nil
@@ -63,6 +70,13 @@ func createLogic(templateName string) *redc.Case {
 func init() {
 	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(runCmd)
-	createCmd.Flags().StringVarP(&userName, "user", "u", "system", "指定用户/操作员")
-	createCmd.Flags().StringVarP(&projectName, "name", "n", "", "指定项目/任务名称")
+	CRCommonFlagSet := pflag.NewFlagSet("common", pflag.ExitOnError)
+
+	CRCommonFlagSet.StringVarP(&userName, "user", "u", "system", "指定用户/操作员")
+	CRCommonFlagSet.StringVarP(&projectName, "name", "n", "", "指定项目/任务名称")
+	CRCommonFlagSet.StringToStringVarP(&envVars, "env", "e", nil, "设置环境变量 (格式: key=value)")
+	createCmd.Flags().AddFlagSet(CRCommonFlagSet)
+	runCmd.Flags().AddFlagSet(CRCommonFlagSet)
+	// 禁用参数混排
+	runCmd.Flags().SetInterspersed(false)
 }

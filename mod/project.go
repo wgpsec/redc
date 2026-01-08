@@ -23,16 +23,23 @@ type RedcProject struct {
 // Case 项目信息
 type Case struct {
 	// Id uuid
-	Id         string    `json:"id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`
-	Operator   string    `json:"operator"`
-	Path       string    `json:"path"`
-	Node       int       `json:"node"`
-	CreateTime string    `json:"create_time"`
-	StateTime  string    `json:"state_time"`
-	Parameter  []string  `json:"parameter"`
-	State      CaseState `json:"state"`
+	Id           string    `json:"id"`
+	Name         string    `json:"name"`
+	Type         string    `json:"type"`
+	Operator     string    `json:"operator"`
+	Path         string    `json:"path"`
+	Node         int       `json:"node"`
+	CreateTime   string    `json:"create_time"`
+	StateTime    string    `json:"state_time"`
+	Parameter    []string  `json:"parameter"`
+	State        CaseState `json:"state"`
+	saveHandler  func() error
+	removeHandle func() error
+}
+
+type ChangeCommand struct {
+	IsRemove bool
+	Pars     map[string]string
 }
 
 // NewProjectConfig 创建项目配置文件
@@ -110,9 +117,13 @@ func (p *RedcProject) GetCase(identifier string) (*Case, error) {
 		// 使用指针引用，避免大结构体复制，且允许返回原始切片中的地址
 		c := &p.Case[i]
 
+		// 先绑定项目操作函数
+		c.bindHandlers(p)
+
 		// 1. 第一优先级：精确匹配 (ID 或 Name)
 		// 如果输入的字符串完全等于 ID 或 Name，直接认定为目标
 		if c.Id == identifier || c.Name == identifier {
+			// 绑定 project 参数
 			return c, nil
 		}
 

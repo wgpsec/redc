@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var changeConfig redc.ChangeCommand
+
 // helper: 通用的执行器
 func runAction(actionType string, caseID string) {
 	// 1. 解析项目
@@ -35,13 +37,11 @@ func runAction(actionType string, caseID string) {
 	case "kill":
 		actionErr = c.Kill()
 	case "change":
-		actionErr = c.Change()
+		actionErr = c.Change(changeConfig)
 	case "status":
 		actionErr = c.Status()
 	case "rm":
-		if actionErr = c.Remove(); actionErr == nil {
-			actionErr = pro.HandleCase(c)
-		}
+		actionErr = c.Remove()
 	}
 
 	if actionErr != nil {
@@ -51,7 +51,7 @@ func runAction(actionType string, caseID string) {
 			gologger.Error().Msgf("项目状态保存失败！%s", err.Error())
 			return
 		}
-		gologger.Info().Msgf("✅ %s 操作执行成功: %s", actionType, caseID)
+		gologger.Info().Msgf("✅ %s 操作执行成功: 「%s」%s", actionType, c.Name, c.Id)
 	}
 }
 
@@ -130,6 +130,7 @@ func init() {
 	rootCmd.AddCommand(changeCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(rmCmd)
+	changeCmd.Flags().BoolVar(&changeConfig.IsRemove, "rm", false, "更改时销毁资源")
 	//listCmd.Flags().BoolVarP(&redc.ShowAll, "all", "a", false, "查看所有 case")
 
 }

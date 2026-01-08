@@ -2,7 +2,6 @@ package mod
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,8 +47,8 @@ func NewTerraformExecutor(workingDir string) (*TerraformExecutor, error) {
 	// Set stdout and stderr to os defaults for visibility
 	if Debug {
 		tf.SetStdout(os.Stdout)
+		tf.SetStderr(os.Stderr)
 	}
-	tf.SetStderr(os.Stderr)
 
 	return &TerraformExecutor{
 		tf:         tf,
@@ -77,24 +76,12 @@ func (te *TerraformExecutor) Destroy(ctx context.Context, opts ...tfexec.Destroy
 }
 
 // Output retrieves a terraform output value as a string
-func (te *TerraformExecutor) Output(ctx context.Context, name string) (string, error) {
+func (te *TerraformExecutor) Output(ctx context.Context) (map[string]tfexec.OutputMeta, error) {
 	outputs, err := te.tf.Output(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to get terraform outputs: %w", err)
+		return nil, fmt.Errorf("failed to get terraform outputs: %w", err)
 	}
-
-	outputValue, ok := outputs[name]
-	if !ok {
-		return "", fmt.Errorf("output %q not found", name)
-	}
-
-	// Parse the JSON value to string
-	var result string
-	if err := json.Unmarshal(outputValue.Value, &result); err != nil {
-		return "", fmt.Errorf("failed to parse output value: %w", err)
-	}
-
-	return result, nil
+	return outputs, err
 }
 
 // Show runs terraform show to display current state
@@ -111,22 +98,55 @@ func (te *TerraformExecutor) Show(ctx context.Context) error {
 	return nil
 }
 
+// ShowPlan 解析 Plan 文件并打印人类可读的摘要
+func (te *TerraformExecutor) ShowPlan(ctx context.Context) error {
+	// 1. 调用 Show 读取 Plan 文件
+	plan, err := te.tf.ShowPlanFile(ctx, planPath)
+	if err != nil {
+		return fmt.Errorf("读取 Plan 失败: %w", err)
+	}
+
+	// 2. 检查是否有资源变更
+	if plan.ResourceChanges == nil {
+		fmt.Println("没有检测到资源变更。")
+		return nil
+	}
+
+	fmt.Println("=== 变更预览 ===")
+
+	// 3. 遍历变更列表
+	for _, rc := range plan.ResourceChanges {
+		// rc.Address 是资源的标识符 (例如: aws_instance.web_server)
+		// rc.Change.Actions 是一个字符串切片，描述动作 (["create"], ["update"], ["delete", "create"] 等)
+
+		actions := rc.Change.Actions
+
+		// 简单的逻辑判断动作类型
+		if len(actions) == 1 {
+			switch actions[0] {
+			case "create":
+				fmt.Printf("[+] 创建: %s\n", rc.Address)
+			case "delete":
+				fmt.Printf("[-] 销毁: %s\n", rc.Address)
+			case "update":
+				fmt.Printf("[~] 更新: %s\n", rc.Address)
+			case "no-op":
+				// 没有任何变更，通常不需要打印
+			}
+		} else if len(actions) == 2 {
+			// 通常是 ["delete", "create"]，意味着重建
+			if actions[0] == "delete" && actions[1] == "create" {
+				fmt.Printf("[+/-] 重建 (销毁后创建): %s\n", rc.Address)
+			}
+		}
+	}
+
+	return nil
+}
+
 // createContextWithTimeout creates a context with a default timeout
 func createContextWithTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), TerraformTimeout)
-}
-
-// GetTerraformOutput retrieves a terraform output value using terraform-exec
-func GetTerraformOutput(Path string, outputName string) (string, error) {
-	ctx, cancel := createContextWithTimeout()
-	defer cancel()
-
-	te, err := NewTerraformExecutor(Path)
-	if err != nil {
-		return "", fmt.Errorf("failed to create terraform executor: %w", err)
-	}
-
-	return te.Output(ctx, outputName)
 }
 
 // retryOperation retries an operation up to maxRetries times
