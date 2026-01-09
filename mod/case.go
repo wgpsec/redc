@@ -164,6 +164,7 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 func (c *Case) TfApply() error {
 	var err error
 	if err = TfApply(c.Path, c.Parameter...); err != nil {
+		c.StatusChange(StateError)
 		// 启动失败立即销毁
 		if err := c.TfDestroy(); err != nil {
 			return err
