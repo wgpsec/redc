@@ -5,55 +5,56 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"red-cloud/mod/gologger"
 	"red-cloud/utils" // 保持原有引用
 	"text/tabwriter"
 )
 
 const templateDir = "redc-templates"
+const tmplCaseFile = "case.json"
 
 type RedcTmpl struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	User        string `json:"user"`
+	path        string
 }
 
-// ListRedcTmpl 列出所有镜像并格式化输出表格
-func ListRedcTmpl() {
-	// 检查模板目录是否存在
-	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-		fmt.Printf("模板目录不存在: %s\n", templateDir)
-		return
+func ShowRedcTmpl() {
+	l, err := ListRedcTmpl(templateDir)
+	if err != nil {
+		gologger.Error().Msgf("获取模版列表失败: %s", err)
 	}
-
-	_, dirs := utils.GetFilesAndDirs(templateDir)
-	if len(dirs) == 0 {
-		fmt.Println("暂无镜像数据")
-		return
-	}
-
-	// 使用 tabwriter 进行格式化对齐输出
-	// minwidth=0, tabwidth=8, padding=2, padchar=' ', flags=0
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-
 	// 打印表头
-	fmt.Fprintln(w, "NAME\tUSER\tDESCRIPTION")
+	fmt.Fprintln(w, "NAME\tPATH\tUSER\tDESCRIPTION")
 
-	for _, v := range dirs {
-		// 假设 utils 返回的是完整路径或相对路径
-		// 如果 utils 返回的只是目录名，需要 path = filepath.Join(templateDir, v)
-		// 这里保留原有逻辑，假设 v 是可访问的路径
-		r, err := getImageInfoByFile(v)
-		if err != nil {
-			// 可以选择打印错误日志，这里选择跳过无效的配置
-			// fmt.Printf("跳过无效镜像 [%s]: %v\n", v, err)
-			continue
-		}
+	for _, r := range l {
 		// 格式化写入
-		fmt.Fprintf(w, "%s\t%s\t%s\n", r.Name, r.User, r.Description)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", r.Name, r.path, r.User, r.Description)
 	}
-
 	// 刷新缓冲区，将内容输出到终端
 	w.Flush()
+}
+
+// ListRedcTmpl 获取所有镜像信息
+func ListRedcTmpl(path string) ([]*RedcTmpl, error) {
+	// 检查模板目录是否存在
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("模版目录：「%s」不存在", path)
+	}
+	_, dirs := utils.GetFilesAndDirs(path)
+	var images []*RedcTmpl
+	for _, dir := range dirs {
+		im, err := getImageInfoByFile(dir)
+		if err != nil {
+			gologger.Error().Msgf("无法获取「%s」模版信息: %s", dir, err)
+			continue
+		}
+		im.path = filepath.Base(dir)
+		images = append(images, im)
+	}
+	return images, nil
 }
 
 // DeleteRedcTmpl 根据镜像名称删除对应的目录
@@ -82,17 +83,18 @@ func DeleteRedcTmpl(imageName string) error {
 
 // getImageInfoByFile 读取并解析 case.json
 func getImageInfoByFile(path string) (*RedcTmpl, error) {
-	configPath := filepath.Join(path, "case.json")
-
+	configPath := filepath.Join(path, tmplCaseFile)
+	image := &RedcTmpl{
+		path: path,
+	}
 	file, err := os.Open(configPath)
 	if err != nil {
-		return nil, err // 简化错误返回，上层决定是否打印
+		return image, err
 	}
 	defer file.Close()
 
-	var image RedcTmpl
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&image)
+	err = decoder.Decode(image)
 	if err != nil {
 		return nil, fmt.Errorf("JSON解码失败: %w", err)
 	}
@@ -102,5 +104,5 @@ func getImageInfoByFile(path string) (*RedcTmpl, error) {
 		image.Name = filepath.Base(path)
 	}
 
-	return &image, nil
+	return image, nil
 }

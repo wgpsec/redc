@@ -20,13 +20,21 @@ var showAll bool // 定义一个变量来接收 flag
 
 var tmplLsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "List all available images",
+	Short: "列出所有模版文件",
 	Run: func(cmd *cobra.Command, args []string) {
-		redc.ListRedcTmpl()
+		redc.ShowRedcTmpl()
+	},
+}
+var tmplRMCmd = &cobra.Command{
+	Use:   "rm",
+	Short: "删除模版文件",
+	Run: func(cmd *cobra.Command, args []string) {
+		redc.ShowRedcTmpl()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(tmplCmd)
 	tmplCmd.AddCommand(tmplLsCmd)
+	tmplCmd.AddCommand(tmplRMCmd)
 }

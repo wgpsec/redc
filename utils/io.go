@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"red-cloud/mod/gologger"
 	"strings"
 )
 
@@ -85,7 +86,8 @@ func Dir(src string, dst string) (err error) {
 func GetFilesAndDirs(dirPth string) (files []string, dirs []string) {
 	dir, err := ioutil.ReadDir(dirPth)
 	if err != nil {
-		os.Exit(3)
+		gologger.Error().Msgf("获取目录失败: %s", err)
+		return []string{}, []string{}
 	}
 
 	PthSep := string(os.PathSeparator)

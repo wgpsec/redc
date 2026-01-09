@@ -15,11 +15,11 @@ import (
 
 // RedcProject 项目结构体
 type RedcProject struct {
-	ProjectName string `json:"project_name"`
-	ProjectPath string `json:"project_path"`
-	CreateTime  string `json:"create_time"`
-	User        string `json:"user"`
-	Case        []Case `json:"case"`
+	ProjectName string  `json:"project_name"`
+	ProjectPath string  `json:"project_path"`
+	CreateTime  string  `json:"create_time"`
+	User        string  `json:"user"`
+	Case        []*Case `json:"case"`
 }
 
 // Case 项目信息
@@ -35,7 +35,7 @@ type Case struct {
 	StateTime    string    `json:"state_time"`
 	Parameter    []string  `json:"parameter"`
 	State        CaseState `json:"state"`
-	Output       map[string]tfexec.OutputMeta
+	output       map[string]tfexec.OutputMeta
 	saveHandler  func() error
 	removeHandle func() error
 }
@@ -131,7 +131,7 @@ func (p *RedcProject) GetCase(identifier string) (*Case, error) {
 	// 遍历所有 Case
 	for i := range p.Case {
 		// 使用指针引用，避免大结构体复制，且允许返回原始切片中的地址
-		c := &p.Case[i]
+		c := p.Case[i]
 
 		// 先绑定项目操作函数
 		c.bindHandlers(p)
@@ -192,7 +192,7 @@ func (p *RedcProject) HandleCase(c *Case) error {
 }
 
 func (p *RedcProject) AddCase(c *Case) error {
-	p.Case = append(p.Case, *c)
+	p.Case = append(p.Case, c)
 	return nil
 }
 

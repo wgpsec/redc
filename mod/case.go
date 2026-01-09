@@ -183,12 +183,16 @@ func (c *Case) TfApply() error {
 }
 func (c *Case) GetInstanceInfo(id string) (string, error) {
 	// 1. 检查 Output 是否为 nil 防止空指针
-	if c.Output == nil {
-		return "", fmt.Errorf("output 数据未初始化")
+	if c.output == nil {
+		_, err := c.TfOutput()
+		if err != nil {
+			return "", fmt.Errorf("output 数据未初始化")
+		}
+
 	}
 
 	// 2. 检查 key 是否存在
-	val, ok := c.Output[id]
+	val, ok := c.output[id]
 	if !ok {
 		return "", fmt.Errorf("未找到 ID 为 %s 的信息", id)
 	}
@@ -210,7 +214,7 @@ func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
 		gologger.Error().Msgf("获取 Output 信息失败: %v", err)
 		return nil, err
 	}
-	c.Output = o
+	c.output = o
 	return o, nil
 }
 
@@ -235,15 +239,14 @@ func (c *Case) TfPlan() error {
 	return nil
 }
 
-func (c *Case) StatusChange(s CaseState) error {
+func (c *Case) StatusChange(s CaseState) {
 	c.State = s
 	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
 	if c.saveHandler != nil {
 		if err := c.saveHandler(); err != nil {
-			return fmt.Errorf("状态修改成功，但配置文件保存失败: %v", err)
+			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
 		}
 	}
-	return nil
 }
 
 func (c *Case) TfDestroy() error {
