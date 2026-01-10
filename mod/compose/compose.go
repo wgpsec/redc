@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -181,8 +182,6 @@ func processServiceUp(svc *RuntimeService, ctx *ComposeContext) error {
 	return runSSHActions(svc, ctx.LogMgr)
 }
 
-// --- 运行时辅助函数 ---
-
 func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 	if svc.Spec.Command == "" && len(svc.Spec.Volumes) == 0 && len(svc.Spec.Downloads) == 0 {
 		return nil
@@ -243,46 +242,87 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 }
 
 func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, logMgr *gologger.LogManager) error {
+	gologger.Debug().Msgf("Running Setup Tasks %d...", len(tasks))
 	for _, task := range tasks {
-		targetSvc, ok := svcs[task.Service]
-		if !ok {
-			gologger.Debug().Msgf("Task [%s] skipped: Target %s not active", task.Name, task.Service)
+		// 1. 查找目标实例 (支持裂变/多实例)
+		var targets []*RuntimeService
+		for _, s := range svcs {
+			// 关键修正：通过 RawName 匹配。
+			// 例如 task.Service 是 "web"，这里会匹配到 "web-1", "web-2" 等
+			if s.RawName == task.Service {
+				targets = append(targets, s)
+			}
+		}
+		if len(targets) == 0 {
+			gologger.Warning().Msgf("Setup task [%s] skipped: No active instances found for service group '%s'", task.Name, task.Service)
 			continue
 		}
-
-		cmds, err := expandVariable(task.Command, svcs, nil)
-		if err != nil {
-			gologger.Error().Msgf("Task [%s] var error: %v", task.Name, err)
-			continue
-		}
-
-		sshConf, err := targetSvc.CaseRef.GetSSHConfig()
-		if err != nil {
-			gologger.Error().Msgf("Task [%s] SSH config error: %v", task.Name, err)
-			continue
-		}
-
-		func() {
-			client, err := sshutil.NewClient(sshConf)
+		gologger.Info().Msgf("Setup task [%s] matched %d instance(s) of service '%s'", task.Name, len(targets), task.Service)
+		// 2. 遍历所有匹配的实例并执行命令
+		for _, targetSvc := range targets {
+			cmds, err := expandVariable(task.Command, svcs, targetSvc)
 			if err != nil {
-				gologger.Error().Msgf("Task [%s] SSH connect failed: %v", task.Name, err)
-				return
-			}
-			defer client.Close()
-
-			logger, _ := logMgr.NewServiceLogger("setup")
-			if logger != nil {
-				logger.ServiceName = "setup"
-				defer logger.Close()
+				gologger.Error().Msgf("Setup task [%s] var error: %v", task.Name, err)
+				continue
 			}
 
-			for _, cmd := range cmds {
-				gologger.Info().Msgf("[setup] Task: %s | Cmd: %s", task.Name, cmd)
-				if err := client.RunCommandWithLogger(cmd, logger); err != nil {
-					gologger.Error().Msgf("[setup] Task failed: %v", err)
+			sshConf, err := targetSvc.CaseRef.GetSSHConfig()
+			if err != nil {
+				gologger.Error().Msgf("Setup task [%s] SSH config error: %v", task.Name, err)
+				continue
+			}
+
+			err = func() error {
+				client, err := sshutil.NewClient(sshConf)
+				if err != nil {
+					gologger.Error().Msgf("Setup task [%s] SSH connect failed: %v", task.Name, err)
+					return fmt.Errorf("SSH connect failed: %v", err)
 				}
+				defer client.Close()
+
+				logger, _ := logMgr.NewServiceLogger("setup")
+				if logger != nil {
+					logger.ServiceName = "setup"
+					defer logger.Close()
+				}
+
+				for _, cmd := range cmds {
+					gologger.Info().Msgf("[setup] Task: %s | Cmd: %s", task.Name, cmd)
+
+					// 1. 创建一个 Buffer 来捕获输出 (包括 stdout 和 stderr)
+					var outputBuf bytes.Buffer
+
+					// 2. 构造 MultiWriter: 既写入日志文件，又写入 Buffer
+					// 如果 logger 为 nil，则只写入 buffer
+					var combinedWriter io.Writer
+					if logger != nil {
+						combinedWriter = io.MultiWriter(logger, &outputBuf)
+					} else {
+						combinedWriter = &outputBuf
+					}
+
+					// 3. 执行命令
+					// RunCommandWithLogger 内部还会再叠加 os.Stdout/Stderr
+					runErr := client.RunCommandWithLogger(cmd, combinedWriter)
+
+					// 4. 获取结果字符串 (去除首尾空白)
+					outputStr := strings.TrimSpace(outputBuf.String())
+
+					task.Outputs = outputStr
+
+					// 6. 错误处理：如果执行失败，返回错误信息，并附带刚才捕获的输出以便调试
+					if runErr != nil {
+						gologger.Error().Msgf("[setup] Task failed: %v | Output: %s", runErr, outputStr)
+						return fmt.Errorf("cmd execution failed: %w, output: %s", runErr, outputStr)
+					}
+				}
+				return nil
+			}()
+			if err != nil {
+				// 停止执行后续任务
+				//return err
 			}
-		}()
+		}
 	}
 	return nil
 }

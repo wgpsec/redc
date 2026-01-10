@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"red-cloud/mod/gologger"
 	"time"
 
 	"github.com/pkg/sftp"     // 需要: go get github.com/pkg/sftp
@@ -16,12 +17,13 @@ import (
 
 // SSHConfig 定义连接参数
 type SSHConfig struct {
-	User     string
-	Host     string
-	Port     int
-	Password string
-	KeyPath  string
-	Timeout  time.Duration
+	User       string
+	Host       string
+	Port       int
+	Password   string
+	KeyPath    string
+	MaxRetries int
+	Timeout    time.Duration
 }
 
 type Client struct {
@@ -31,6 +33,7 @@ type Client struct {
 // NewClient 创建 SSH 连接
 func NewClient(conf *SSHConfig) (*Client, error) {
 	var authMethods []ssh.AuthMethod
+	maxRetries := 3
 
 	// 优先尝试密钥 (Requirement #3)
 	if conf.KeyPath != "" {
@@ -45,6 +48,11 @@ func NewClient(conf *SSHConfig) (*Client, error) {
 	// 其次尝试密码
 	if conf.Password != "" {
 		authMethods = append(authMethods, ssh.Password(conf.Password))
+	}
+	gologger.Debug().Msgf("正在尝试SSH连接: ssh %s@%s %s\n", conf.User, conf.Host, conf.Password)
+	// 如果没有设置重试，默认3次
+	if conf.MaxRetries > 0 {
+		maxRetries = 3
 	}
 
 	config := &ssh.ClientConfig{
@@ -76,14 +84,34 @@ func NewClient(conf *SSHConfig) (*Client, error) {
 			},
 		},
 	}
-
+	var client *ssh.Client
+	var err error
 	addr := fmt.Sprintf("%s:%d", conf.Host, conf.Port)
-	client, err := ssh.Dial("tcp", addr, config)
-	if err != nil {
-		return nil, err
+	for i := 0; i < maxRetries; i++ {
+		client, err = ssh.Dial("tcp", addr, config)
+		if err == nil {
+			// 连接成功，直接返回
+			return &Client{client}, nil
+		}
+		//var netErr net.Error
+		//if errors.As(err, &netErr) && netErr.Timeout() {
+		//	gologger.Error().Msgf("SSH 网络连接超时")
+		//}
+		//if errors.Is(err, syscall.ECONNREFUSED) {
+		//	gologger.Error().Msgf("连接被拒绝 (端口可能未开放或被防火墙拦截): %s\n", addr)
+		//}
+		// 如果不是最后一次尝试，则等待一段时间重试
+		if i < maxRetries-1 {
+			// 第二次尝试才进行提示
+			if i >= 1 {
+				gologger.Error().Msgf("SSH连接错误，正在重试 (%d/%d)... %s\n", i+1, maxRetries, err.Error())
+			}
+			time.Sleep(30 * time.Second)
+		}
+
 	}
 
-	return &Client{client}, nil
+	return &Client{client}, fmt.Errorf("ssh dial failed after %d attempts: %w", maxRetries, err)
 }
 
 // RunCommand 执行非交互式命令 (docker exec id cmd)

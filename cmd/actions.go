@@ -53,7 +53,6 @@ func runAction(actionType string, caseID string) {
 var stopCmd = &cobra.Command{
 	Use:   "stop [id]",
 	Short: "停止指定场景",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("stop", args[0])
 	},
@@ -62,7 +61,6 @@ var stopCmd = &cobra.Command{
 var statusCmd = &cobra.Command{
 	Use:   "status [id]",
 	Short: "查看场景状态",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("status", args[0])
 	},
@@ -71,7 +69,6 @@ var statusCmd = &cobra.Command{
 var changeCmd = &cobra.Command{
 	Use:   "change [id]",
 	Short: "更改场景",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("change", args[0])
 	},
@@ -80,7 +77,6 @@ var changeCmd = &cobra.Command{
 var startCmd = &cobra.Command{
 	Use:   "start [id]",
 	Short: "启动场景",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("start", args[0])
 	},
@@ -89,7 +85,6 @@ var startCmd = &cobra.Command{
 var killCmd = &cobra.Command{
 	Use:   "kill [id]",
 	Short: "销毁指定场景",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("kill", args[0])
 	},
@@ -97,7 +92,6 @@ var killCmd = &cobra.Command{
 var rmCmd = &cobra.Command{
 	Use:   "rm [id]",
 	Short: "删除场景 case",
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("rm", args[0])
 	},

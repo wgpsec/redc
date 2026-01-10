@@ -65,6 +65,7 @@ type SetupTask struct {
 	Service string `yaml:"service"`         // 目标服务名
 	Command string `yaml:"command"`         // 远程执行的命令
 	Shell   string `yaml:"shell,omitempty"` // 指定解释器 (默认 bash)
+	Outputs string `yaml:"output,omitempty"`
 }
 
 // RuntimeService 运行时服务状态
@@ -160,8 +161,7 @@ func NewComposeContext(opts ComposeOptions) (*ComposeContext, error) {
 	}, nil
 }
 
-// --- 共享辅助函数 ---
-
+// resolveConfigs 解析配置
 func resolveConfigs(raw map[string]ConfigItem) (map[string]string, error) {
 	res := make(map[string]string)
 	for k, v := range raw {
@@ -179,6 +179,7 @@ func resolveConfigs(raw map[string]ConfigItem) (map[string]string, error) {
 	return res, nil
 }
 
+// expandService 裂变逻辑，解析服务
 func expandService(name string, spec ServiceSpec) []*RuntimeService {
 	var providers []string
 	switch v := spec.Provider.(type) {
