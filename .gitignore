@@ -12,3 +12,5 @@
 **/*.jar
 .idea
 dist/
+out
+redc-taskresult

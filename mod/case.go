@@ -1,340 +1,413 @@
 package mod
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"github.com/gen2brain/beeep"
-	uuid "github.com/satori/go.uuid"
-	"gopkg.in/ini.v1"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"red-cloud/mod/gologger"
 	"red-cloud/utils"
-	"strconv"
 	"text/tabwriter"
 	"time"
+
+	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-func RandomName() string {
-	var lastName = []string{
+type CaseState string
+
+const (
+	StateRunning CaseState = "running"
+	StateStopped CaseState = "stopped"
+	StateError   CaseState = "error"
+	StateCreated CaseState = "created"
+	StatePending CaseState = "pending"
+)
+
+func RandomName(s string) string {
+	var firstName = []string{
 		"red", "blue", "yellow", "brown", "purple", "anger", "lazy", "shy", "huge", "rare",
 		"fast", "stupid", "sluggish", "boring", "rigid", "rigorous", "clever", "dexterity",
 		"white", "black", "dark", "idiot", "shiny", "friendly", "integrity", "happy", "sad",
-		"lively", "lonely", "ugly", "leisurely", "calm", "young", "tenacious"}
-	var firstName = []string{
+		"lively", "lonely", "ugly", "leisurely", "calm", "young", "tenacious", "admiring",
+		"agitated", "boring", "clever", "compassionate", "condescending", "cranky", "desperate",
+		"distracted", "ecstatic", "focused", "goofy", "hungry", "jolly", "modest", "naughty", "nostalgic",
+		"pensive", "recursing", "sleepy", "thirsty", "xenodochial", "zen", "niubi",
+	}
+	var lastName = []string{
 		"pig", "cow", "sheep", "mouse", "dragon", "serpent", "tiger", "fox", "frog", "chicken",
 		"fish", "shrimp", "hippocampus", "helicopter", "crab", "dolphin", "whale", "chinchilla",
 		"bunny", "mole", "rabbit", "horse", "monkey", "dog", "shark", "panda", "bear", "lion",
-		"rhino", "leopard", "giraffe", "deer", "wolf", "parrot", "camel", "antelope", "turtle", "zebra"}
-	var lastNameLen = len(lastName)
-	var firstNameLen = len(firstName)
-	rand.Seed(time.Now().UnixNano())     //设置随机数种子
-	var first string                     //名
-	for i := 0; i <= rand.Intn(1); i++ { //随机产生2位或者3位的名
-		first = fmt.Sprint(firstName[rand.Intn(firstNameLen-1)])
+		"rhino", "leopard", "giraffe", "deer", "wolf", "parrot", "camel", "antelope", "turtle",
+		"zebra", "hacker",
 	}
-	return fmt.Sprint(lastName[rand.Intn(lastNameLen-1)]) + first
+	rand.Seed(time.Now().UnixNano())
+begin:
+	first := firstName[rand.Intn(len(firstName)-1)]
+	last := lastName[rand.Intn(len(lastName)-1)]
+	// NO NO NO ~
+	if (first == "stupid" || first == "goofy") && last == "wolf" {
+		goto begin
+	}
+	s = truncateString(s, 10)
+	return fmt.Sprintf("%s_%s_%s", first, last, s)
 }
 
-func CaseCreate(ProjectPath string, CaseName string, User string, Name string) {
-	// 创建新的 case 目录,这里不需要检测是否存在,因为名称是采用nanoID
-	u1 := uuid.NewV4()
-
-	// 复制tf文件
-	err := utils.Dir("redc-templates/"+CaseName, ProjectPath+"/"+u1.String())
-	if err != nil {
-		fmt.Println("错误输入")
-		os.Exit(3)
-	} else {
-		fmt.Println("Case 路径", u1.String())
-		fmt.Println("关闭命令: ./redc -stop ", u1.String())
+// GenerateCaseID 生成 ID (64字符 hex string)
+// 本质是 32 字节 (256 bit) 的随机数
+func GenerateCaseID() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		// 极端情况下随机数生成失败，回退到时间戳+简单的随机，或者直接 panic
+		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
+	return hex.EncodeToString(b)
+}
 
-	// 在次 init,防止万一
-	TfInit(ProjectPath + "/" + u1.String())
-
-	fmt.Println("开始创建")
-
-	// 部分场景单独处理
-	if CaseName == "cs-49" || CaseName == "c2-new" || CaseName == "snowc2" {
-		C2Apply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "aws-proxy" {
-		AwsProxyApply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "aliyun-proxy" {
-		AliyunProxyApply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "asm" {
-		AsmApply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "asm-node" {
-		AsmNodeApply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "dnslog" || CaseName == "xraydnslog" || CaseName == "interactsh" {
+// CaseScene 场景参数判断
+func CaseScene(t string, m map[string]string) ([]string, error) {
+	var par []string
+	switch t {
+	case "cs-49", "c2-new", "snowc2":
+		par = RVar(
+			fmt.Sprintf("node_count=%d", Node),
+			fmt.Sprintf("domain=%s", Domain),
+		)
+	case "aws-proxy", "aliyun-proxy", "asm":
+		par = RVar(fmt.Sprintf("node_count=%d", Node))
+	case "dnslog", "xraydnslog", "interactsh":
 		if Domain == "360.com" {
-			fmt.Printf("创建dnslog时,域名不可为默认值")
-			RedcLog("创建失败,创建dnslog时,域名不可为默认值")
-			os.Exit(3)
+			return par, fmt.Errorf("创建 dnslog 时,域名不可为默认值")
 		}
-		DnslogApply(ProjectPath + "/" + u1.String())
-	} else if CaseName == "pss5" || CaseName == "frp" || CaseName == "frp-loki" || CaseName == "nps" {
-		Base64Apply(ProjectPath + "/" + u1.String())
-	} else {
-		TfApply(ProjectPath + "/" + u1.String())
+		par = RVar(fmt.Sprintf("domain=%s", Domain))
+	case "pss5", "frp", "frp-loki", "nps":
+		par = []string{fmt.Sprintf("base64_command=%s", Base64Command)}
+	case "asm-node":
+		par = RVar(
+			fmt.Sprintf("node_count=%d", Node),
+			fmt.Sprintf("domain2=%s", Domain2),
+			fmt.Sprintf("domain=%s", Domain),
+		)
 	}
-
-	// 确认场景创建无误后,才会写入到配置文件中
-	RedcLog("创建成功 " + ProjectPath + u1.String() + " " + CaseName)
-	// case 入库
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
+	// 增加自定义参数
+	for k, v := range m {
+		par = append(par, fmt.Sprintf("%s=%s", k, v))
 	}
-	cfg.Section(u1.String()).Key("Operator").SetValue(User)
-	cfg.Section(u1.String()).Key("Type").SetValue(CaseName)
-	currentTime := time.Now().Format("2006-01-02 15:04:05")
-	cfg.Section(u1.String()).Key("CreateTime").SetValue(currentTime)
-
-	if Name == "" {
-		Name = RandomName()
-	}
-	cfg.Section(u1.String()).Key("Name").SetValue(Name)
-
-	// 部分场景单独处理
-	if CaseName == "cs-49" || CaseName == "c2-new" || CaseName == "snowc2" {
-		// 写入节点数量到ini文件
-		cfg.Section(u1.String()).Key("Node").SetValue(strconv.Itoa(Node))
-		cfg.Section(u1.String()).Key("Doamin").SetValue(Domain)
-	} else if CaseName == "aws-proxy" {
-		// 写入节点数量到ini文件
-		cfg.Section(u1.String()).Key("Node").SetValue(strconv.Itoa(Node))
-	} else if CaseName == "aliyun-proxy" {
-		// 写入节点数量到ini文件
-		cfg.Section(u1.String()).Key("Node").SetValue(strconv.Itoa(Node))
-	} else if CaseName == "asm" {
-		// 写入节点数量到ini文件
-		cfg.Section(u1.String()).Key("Node").SetValue(strconv.Itoa(Node))
-	} else if CaseName == "asm-node" {
-		// 写入节点数量到ini文件
-		cfg.Section(u1.String()).Key("Node").SetValue(strconv.Itoa(Node))
-		cfg.Section(u1.String()).Key("Doamin").SetValue(Domain)
-		cfg.Section(u1.String()).Key("Doamin2").SetValue(Domain2)
-	} else if CaseName == "dnslog" || CaseName == "xraydnslog" || CaseName == "interactsh" {
-		// 写入域名到ini文件
-		cfg.Section(u1.String()).Key("Doamin").SetValue(Domain)
-	} else if CaseName == "pss5" || CaseName == "frp" || CaseName == "frp-loki" || CaseName == "nps" {
-		// 写入base64命令到ini文件
-		cfg.Section(u1.String()).Key("Base64Command").SetValue(Base64Command)
-	}
-	err = cfg.SaveTo(filePath)
-	if err != nil {
-		fmt.Printf("写入 ini 时失败: %v", err)
-		RedcLog("写入 ini 时失败")
-		os.Exit(3)
-	}
-
-	fmt.Println("Case 路径", u1.String())
-	fmt.Println("关闭命令: ./redc -stop ", u1.String())
-	_ = beeep.Notify("redc", fmt.Sprintf("%v 场景创建完毕!", CaseName), "assets/information.png")
-
+	return par, nil
 }
 
-func CaseStop(ProjectPath string, UUID string) {
+func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars map[string]string) (*Case, error) {
+	// 创建新的 case 目录,这里不需要检测是否存在,因为名称是采用nanoID
+	gologger.Info().Msgf("正在创建场景 「%s」", CaseName)
+	uid := GenerateCaseID()
 
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
+	// 从模版文件夹复制模版
+	tpPath := filepath.Join("redc-templates", CaseName)
+	casePath := filepath.Join(p.ProjectPath, uid)
+
+	// 复制 tf文件
+	gologger.Debug().Msgf("复制模版中 %s", uid)
+	if err := utils.Dir(tpPath, casePath); err != nil {
+		return nil, fmt.Errorf("复制模版出错！\n%v", err)
 	}
 
-	//fmt.Println(UUID)
-	if cfg.Section(UUID).Key("Type").String() == "cs-49" || cfg.Section(UUID).Key("Type").String() == "c2-new" || cfg.Section(UUID).Key("Type").String() == "snowc2" {
-		C2Destroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String(),
-			cfg.Section(UUID).Key("Domain").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "aws-proxy" {
-		AwsProxyDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "aliyun-proxy" {
-		AliyunProxyDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "asm" {
-		AsmDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "asm-node" {
-		AsmNodeDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String(),
-			cfg.Section(UUID).Key("Domain").String(),
-			cfg.Section(UUID).Key("Domain2").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "dnslog" || cfg.Section(UUID).Key("Type").String() == "xraydnslog" || cfg.Section(UUID).Key("Type").String() == "interactsh" {
-		DnslogDestroy(ProjectPath+"/"+UUID, cfg.Section(UUID).Key("Domain").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "pss5" || cfg.Section(UUID).Key("Type").String() == "frp" || cfg.Section(UUID).Key("Type").String() == "frp-loki" || cfg.Section(UUID).Key("Type").String() == "nps" {
-		Base64Destroy(ProjectPath+"/"+UUID, cfg.Section(UUID).Key("Base64Command").String())
-	} else {
-		TfDestroy(ProjectPath + "/" + UUID)
-	}
-
-	// 成功销毁场景后,删除 case 文件夹
-	err = os.RemoveAll(ProjectPath + "/" + UUID)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(3)
-	}
-
-	// case 删除
-	cfg2, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
-	cfg2.DeleteSection(UUID)
-	err = cfg2.SaveTo(filePath)
-	if err != nil {
-		fmt.Printf("修改 ini 时失败: %v", err)
-		RedcLog("修改 ini 时失败")
-		os.Exit(3)
-	}
-
-}
-
-func CaseKill(ProjectPath string, UUID string) {
-
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
 	// 在次 init,防止万一
-	dirs := utils.ChechDirMain(ProjectPath + "/" + UUID)
+	if err := TfInit2(casePath); err != nil {
+		gologger.Error().Msgf("二次初始化失败！%s", err.Error())
+		return nil, err
+	}
+	// 初始化结构参数
+	par, err := CaseScene(CaseName, vars)
+	if err != nil {
+		gologger.Error().Msgf("场景参数校验失败！%s", err.Error())
+		return nil, err
+	}
+
+	// 初始化实例名称
+	if Name == "" {
+		Name = RandomName(CaseName)
+	}
+
+	// 初始化实例
+	c := &Case{
+		CreateTime: time.Now().Format("2006-01-02 15:04:05"),
+		Id:         uid,
+		Name:       Name,
+		Operator:   User,
+		Path:       casePath,
+		Type:       CaseName,
+		Parameter:  par,
+		State:      StatePending,
+	}
+	// 绑定 project 参数
+	c.bindHandlers(p)
+
+	// 构建场景
+	if err := c.TfPlan(); err != nil {
+		gologger.Debug().Msgf("场景创建校验失败！%s", err.Error())
+		c.Remove()
+		return nil, err
+	}
+	gologger.Info().Msgf("场景创建成功！%s", uid)
+	// 确认场景创建无误后,才会写入到配置文件中
+	err = p.AddCase(c)
+	err = p.SaveProject()
+	if err != nil {
+		gologger.Error().Msgf("项目配置保存失败！")
+		return nil, err
+	}
+	RedcLog("创建成功 " + p.ProjectPath + uid + " " + CaseName)
+	return c, nil
+}
+
+func (c *Case) TfApply() error {
+	var err error
+	gologger.Info().Msgf("正在启动场景：%s(%s)", c.Name, c.GetId())
+	if c.State == StateRunning {
+		return fmt.Errorf("场景正在运行中！")
+	}
+	if err = TfApply(c.Path, c.Parameter...); err != nil {
+		c.StatusChange(StateError)
+		// 启动失败立即销毁
+		if err := c.TfDestroy(); err != nil {
+			return err
+		}
+		return err
+	}
+	c.StatusChange(StateRunning)
+	output, err := c.TfOutput()
+	if err != nil {
+		return err
+	}
+	for s, meta := range output {
+		fmt.Println(s, string(meta.Value))
+	}
+	return nil
+}
+func (c *Case) GetInstanceInfo(id string) (string, error) {
+	// 1. 检查 Output 是否为 nil 防止空指针
+	if c.output == nil {
+		_, err := c.TfOutput()
+		if err != nil {
+			return "", fmt.Errorf("output 数据未初始化")
+		}
+
+	}
+
+	// 2. 检查 key 是否存在
+	val, ok := c.output[id]
+	if !ok {
+		return "", fmt.Errorf("未找到 ID 为 %s 的信息", id)
+	}
+	var str string
+	// 反序列化会将 JSON 字符串解析为 Go 的 string，自动去除引号和处理转义
+	if err := json.Unmarshal(val.Value, &str); err != nil {
+		return "", err
+	}
+
+	// 3. 安全地获取 Value 并转换为字符串
+	// 这里假设 val.Value 是 string 类型，或者可以使用 fmt.Sprint 确保兼容性
+	return str, nil
+}
+
+func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
+	// 输出 output 信息
+	o, err := TfOutput(c.Path)
+	if err != nil {
+		gologger.Error().Msgf("获取 Output 信息失败: %v", err)
+		return nil, err
+	}
+	c.output = o
+	return o, nil
+}
+
+// bindHandlers 绑定项目方法
+func (c *Case) bindHandlers(p *RedcProject) {
+	// 随时删除自己
+	c.removeHandle = func() error {
+		return p.HandleCase(c)
+	}
+	c.saveHandler = func() error {
+		return p.SaveProject()
+	}
+}
+
+func (c *Case) TfPlan() error {
+	gologger.Info().Msgf("正在构建场景「%s(%s)」...", c.Name, c.GetId())
+	if err := TfPlan(c.Path, c.Parameter...); err != nil {
+		return err
+	}
+	c.StatusChange(StateCreated)
+	return nil
+}
+
+func (c *Case) StatusChange(s CaseState) {
+	c.State = s
+	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
+	if c.saveHandler != nil {
+		if err := c.saveHandler(); err != nil {
+			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
+		}
+	}
+}
+
+func (c *Case) TfDestroy() error {
+	gologger.Info().Msgf("正在销毁场景「%s(%s)」...", c.Name, c.GetId())
+	err := TfDestroy(c.Path, c.Parameter)
+	if err != nil {
+		gologger.Error().Msgf("场景销毁失败！%s", err.Error())
+		return err
+	}
+	c.StatusChange(StateStopped)
+	return nil
+}
+func (c *Case) Remove() error {
+	if c.State == StateRunning {
+		return fmt.Errorf("场景正在运行中，请先停止场景后删除！")
+	}
+	err := os.RemoveAll(c.Path)
+	if err != nil {
+		return fmt.Errorf("删除场景文件失败！%s", err.Error())
+	}
+	err = c.removeHandle()
+	gologger.Info().Msgf("场景删除成功")
+	return nil
+}
+
+// Stop 停止场景
+func (c *Case) Stop() error {
+	if c.State != StateRunning {
+		gologger.Warning().Msgf("该场景提示未运行中,不过还是为您销毁")
+	}
+	err := c.TfDestroy()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Kill 强制销毁场景
+func (c *Case) Kill() error {
+	// 在次 init,防止万一
+	dirs := utils.ChechDirMain(c.Path)
 	for _, v := range dirs {
 		err := utils.CheckFileName(v, "tf")
 		if err {
-			TfInit(v)
+			TfInit2(v)
 		}
 	}
-
-	if cfg.Section(UUID).Key("Type").String() == "cs-49" || cfg.Section(UUID).Key("Type").String() == "c2-new" || cfg.Section(UUID).Key("Type").String() == "snowc2" {
-		C2Destroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String(),
-			cfg.Section(UUID).Key("Domain").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "aws-proxy" {
-		AwsProxyDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "aliyun-proxy" {
-		AliyunProxyDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "asm" {
-		AsmDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "asm-node" {
-		AsmNodeDestroy(ProjectPath+"/"+UUID,
-			cfg.Section(UUID).Key("Node").String(),
-			cfg.Section(UUID).Key("Domain").String(),
-			cfg.Section(UUID).Key("Domain2").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "dnslog" || cfg.Section(UUID).Key("Type").String() == "xraydnslog" || cfg.Section(UUID).Key("Type").String() == "interactsh" {
-		DnslogDestroy(ProjectPath+"/"+UUID, cfg.Section(UUID).Key("Domain").String())
-	} else if cfg.Section(UUID).Key("Type").String() == "pss5" || cfg.Section(UUID).Key("Type").String() == "frp" || cfg.Section(UUID).Key("Type").String() == "frp-loki" || cfg.Section(UUID).Key("Type").String() == "nps" {
-		Base64Destroy(ProjectPath+"/"+UUID, cfg.Section(UUID).Key("Base64Command").String())
-	} else {
-		TfDestroy(ProjectPath + "/" + UUID)
+	// 销毁场景
+	if err := c.Stop(); err != nil {
+		gologger.Error().Msgf("场景销毁失败！%s", err.Error())
+		return err
 	}
-
-	// 成功销毁场景后,删除 case 文件夹
-	err = os.RemoveAll(ProjectPath + "/" + UUID)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(3)
-	}
-
-	// case 删除
-	cfg2, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
-	cfg2.DeleteSection(UUID)
-	err = cfg2.SaveTo(filePath)
-	if err != nil {
-		fmt.Printf("修改 ini 时失败: %v", err)
-		_ = beeep.Notify("redc", fmt.Sprintf("修改 ini 时失败: %v", err), "assets/information.png")
-		os.Exit(3)
-	}
+	return nil
 }
 
-func CaseChange(ProjectPath string, UUID string) {
-
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
-
-	if cfg.Section(UUID).Key("Type").String() == "cs-49" || cfg.Section(UUID).Key("Type").String() == "c2-new" || cfg.Section(UUID).Key("Type").String() == "snowc2" {
-		C2Change(ProjectPath + "/" + UUID)
-	} else if cfg.Section(UUID).Key("Type").String() == "aliyun-proxy" {
-		AliyunProxyChange(ProjectPath + "/" + UUID)
-	} else if cfg.Section(UUID).Key("Type").String() == "asm" {
-		AsmChange(ProjectPath + "/" + UUID)
-	} else {
-		fmt.Printf("不适用与当前场景")
-		os.Exit(3)
-	}
-
-}
-
-func CaseStatus(ProjectPath string, UUID string) {
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
-
-	fmt.Println("操作人员:", cfg.Section(UUID).Key("Operator").String())
-	fmt.Println("项目名称:", cfg.Section(UUID).Key("Name").String())
-	fmt.Println("场景类型:", cfg.Section(UUID).Key("Type").String())
-	fmt.Println("创建时间:", cfg.Section(UUID).Key("CreateTime").String())
-
-	TfStatus(ProjectPath + "/" + UUID)
-
-}
-
-func CaseList(ProjectPath string) {
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
-	}
-
-	w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ',
-		tabwriter.AlignRight)
-	fmt.Fprintln(w, "UUID\tType\tName\tOperator\tCreateTime\t")
-	for i := 1; i < len(cfg.SectionStrings()); i++ {
-		if cfg.Section(cfg.SectionStrings()[i]).Key("Operator").String() == U || U == "system" {
-			fmt.Fprintln(w, cfg.SectionStrings()[i], "\t", cfg.Section(cfg.SectionStrings()[i]).Key("Type").String(), "\t", cfg.Section(cfg.SectionStrings()[i]).Key("Name").String(), "\t", cfg.Section(cfg.SectionStrings()[i]).Key("Operator").String(), "\t", cfg.Section(cfg.SectionStrings()[i]).Key("CreateTime").String())
+// Change 重建场景
+func (c *Case) Change(cc ChangeCommand) error {
+	if cc.IsRemove {
+		// 销毁场景，不删除项目
+		gologger.Info().Msgf("正在销毁场景 「%s」 %s\n", c.Name, c.Id)
+		if err := c.TfDestroy(); err != nil {
+			return err
 		}
 	}
-	err = w.Flush()
-	if err != nil {
-		fmt.Printf("打印失败: %v", err)
-		os.Exit(3)
+	// TODO 更改弹性公网IP等操作
+	// 重新赋值
+	if par, err := CaseScene(c.Type, cc.Pars); err != nil {
+		c.Parameter = par
 	}
-
-	RandomName()
+	// 展示更改信息
+	if err := c.TfPlan(); err != nil {
+		return err
+	}
+	// 重建场景
+	if err := c.TfApply(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func CheckUser(ProjectPath string, UUID string) {
-	filePath := ProjectPath + "/project.ini"
-	cfg, err := ini.Load(filePath)
+func (c *Case) Status() error {
+	gologger.Info().Msgf("Case「%s」当前 %s 状态", c.Name, c.State)
+	state, err := TfStatus(c.Path)
 	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(3)
+		return err
+	}
+	// 1. 优先打印 Outputs (通常是用户最关心的，如 IP 地址)
+	if len(state.Values.Outputs) > 0 {
+		fmt.Println("\n--- Outputs ---")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		for key, output := range state.Values.Outputs {
+			// output.Value 是 interface{}，可能是 string, map, list 等
+			fmt.Fprintf(w, "%s:\t%v\n", key, output.Value)
+		}
+		w.Flush()
+	} else {
+		fmt.Println("\n--- No Outputs detected ---")
 	}
 
-	// 鉴权
-	if cfg.Section(UUID).Key("Operator").String() != U && U != "system" {
-		fmt.Printf("用户 %v 无权访问 %v", U, UUID)
-		os.Exit(3)
+	// 2. 打印资源概览 (只打印 Root Module 的资源)
+	if state.Values.RootModule != nil && len(state.Values.RootModule.Resources) > 0 {
+		fmt.Println("\n--- Resources ---")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "TYPE\tADDRESS\tNAME")
+		for _, res := range state.Values.RootModule.Resources {
+			fmt.Fprintf(w, "%s\t%s\t%s\n", res.Type, res.Address, res.Name)
+		}
+		w.Flush()
+	}
+	return nil
+}
+func (c *Case) GetId() string {
+	if len(c.Id) > 12 {
+		return c.Id[:12]
+	}
+	return c.Id
+}
+
+// humanDuration 计算时间差并返回 Docker 风格的字符串
+// 例如: "Up 2 hours", "Up 5 minutes"
+func humanDuration(t time.Time) string {
+	duration := time.Since(t)
+	seconds := int(duration.Seconds())
+
+	switch {
+	case seconds < 60:
+		return fmt.Sprintf("%d seconds", seconds)
+	case seconds < 3600:
+		return fmt.Sprintf("%d minutes", seconds/60)
+	case seconds < 86400:
+		return fmt.Sprintf("%d hours", seconds/3600)
+	default:
+		return fmt.Sprintf("%d days", seconds/86400)
+	}
+}
+
+// parseTime 将字符串时间转为 time.Time
+func parseTime(timeStr string) time.Time {
+	// 对应你代码中的 time.Now().Format("2006-01-02 15:04:05")
+	layout := "2006-01-02 15:04:05"
+	t, err := time.ParseInLocation(layout, timeStr, time.Local)
+	if err != nil {
+		return time.Now() // 解析失败则返回当前时间，避免 panic
+	}
+	return t
+}
+
+// truncateString 安全截断函数
+func truncateString(s string, length int) string {
+	// 1. 将字符串转为 rune 切片（处理多字节字符的关键）
+	runes := []rune(s)
+
+	// 2. 判断字符数量是否超过限制
+	if len(runes) > length {
+		// 3. 截取前 length 个字符并转回 string
+		return string(runes[:length])
 	}
 
+	// 4. 如果没超过，原样返回
+	return s
 }

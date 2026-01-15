@@ -3,8 +3,9 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"red-cloud/mod2"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func Gotossh(username string, password string, addr string, cmd string) error {
