@@ -1,23 +1,57 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 version: 2
 project_name: redc
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
 builds:
   - env:
       - CGO_ENABLED=0
-    id: "redc"
     goos:
-      - linux
-      - windows
+      - freebsd
       - darwin
+      - windows
+      - linux
     goarch:
+      - 386
       - amd64
+      - arm
       - arm64
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    id: homebrew
+    files:
+      - README.md
+      - CHANGELOG.md
+      - LICENSE
+      - static/*
+    format_overrides:
+      - goos: windows
+        format: zip
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ incpatch .Version }}"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^doc:"
+      - "^ci:"
+      - "^Merge pull request"
+brews:
+  - ids:
+      - homebrew
+    name: redc
+    tap:
+      owner: wgpsec
+      name: homebrew-tap
+      branch: master
+    folder: Formula
+    url_template: "https://github.com/wgpsec/redc/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://redc.wgpsec.org"
+    description: "Redc is Red Team Infrastructure Multi-Cloud Automated Deployment Tool"
+    skip_upload: auto
+    install: |-
+      bin.install "redc"
