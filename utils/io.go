@@ -50,7 +50,10 @@ func Dir(src string, dst string) (err error) {
 
 		// 计算目标路径 (例如 src/a -> dst/a)
 		target := filepath.Join(dst, strings.TrimPrefix(path, src))
-		info, _ := d.Info() // 忽略 info 获取错误，极大简化代码
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
 
 		// 1. 目录处理 (包含根目录自身)
 		if d.IsDir() {
