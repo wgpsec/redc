@@ -65,7 +65,6 @@ func (te *TerraformExecutor) Init(ctx context.Context) error {
 // Apply runs terraform apply (auto-approve is the default behavior in terraform-exec)
 func (te *TerraformExecutor) Apply(ctx context.Context, opts ...tfexec.ApplyOption) error {
 	return te.tf.Apply(ctx, opts...)
-	//return nil
 }
 func (te *TerraformExecutor) Plan(ctx context.Context, opts ...tfexec.PlanOption) error {
 	_, err := te.tf.Plan(ctx, opts...)
