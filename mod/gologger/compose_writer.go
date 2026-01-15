@@ -64,6 +64,8 @@ func (w *ComposeWriter) Write(p []byte) (n int, err error) {
 
 func (w *ComposeWriter) Close() {
 	if w.File != nil {
-		w.File.Close()
+		if err := w.File.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close log file for %s: %v\n", w.ServiceName, err)
+		}
 	}
 }
