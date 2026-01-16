@@ -27,30 +27,33 @@
     <a href="https://github.com/wgpsec/redc/discussions">🍭提交需求</a>
   </p>
 
-
-
 中文 | [English](readme_en.md)
 
 ---
 
 Redc 基于 Terraform 封装，将红队基础设施的完整生命周期（创建、配置、销毁）进一步简化。
 
-类似f8x等单机环境部署脚本是在服务器启动后运行的初始化脚本，很好用，但没有解决“从 0 到 1 获取并管理资源”的问题。
-
-可以说 Redc 不仅仅是装机工具，更是对云资源的自动化调度器！
+Redc 不仅仅是开机工具，更是对云资源的自动化调度器！
 
 - **一条命令交付**，从购买机器到服务跑起来一条龙，无需人工干预
 - **多云部署支持**，适配阿里云、腾讯云、AWS 等主流云厂商
 - **场景预制封装**，红队环境 ”预制菜“，再也不用到处找资源
 - **状态资源管理**，本地保存资源状态，随时销毁环境，杜绝资源费用浪费
 
+---
 
+## 安装配置
 
-## 开始使用
+### redc 引擎安装
+#### 下载二进制包
 
-### HomeBrew 安装
+REDC 下载地址：https://github.com/wgpsec/redc/releases
 
-**安装** 
+下载系统对应的压缩文件，解压后在命令行中运行即可。
+
+#### HomeBrew 安装 （WIP）
+
+**安装**
 
 ```bash
 brew tap wgpsec/tap
@@ -61,24 +64,40 @@ brew install wgpsec/tap/redc
 
 ```bash
 brew update
-brew upgrade cloudsword
+brew upgrade redc
 ```
 
-### 下载二进制包
-
-REDC 下载地址：https://github.com/wgpsec/redc/releases
-
-下载系统对应的压缩文件，解压后在命令行中运行即可。
-
-### redc模版
+### 模版选择
 
 场景名称 - 对应模板仓库 https://github.com/wgpsec/redc-template
 
-按你放到redc-templates 路径下的"文件夹名称"
+放到你 redc-templates 路径下，对应的 "文件夹名称" 就是部署时的场景名称
 
 每个场景的具体使用和命令请查看模板仓库 https://github.com/wgpsec/redc-template 里具体场景的 readme
 
+### 引擎配置文件
 
+默认下 redc 会读取当前路径的 config.yaml 配置文件，格式如下
+```yaml
+# 多云身份凭证与默认区域
+providers:
+  aws:
+    access_key: "AKIDXXXXXXXXXXXXXXXX"
+    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "us-east-1"
+  aliyun:
+    access_key: "AKIDXXXXXXXXXXXXXXXX"
+    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "cn-hangzhou"
+  tencentcloud:
+    access_key: "AKIDXXXXXXXXXXXXXXXX"
+    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "ap-guangzhou"
+```
+
+在配置文件加载失败的情况下，会尝试读取系统环境变量，使用前请配置好
+
+---
 
 ## 快速上手
 
@@ -88,11 +107,15 @@ redc设计为docker like命令设计
 
 **初始化模版**
 
-首次使用模版需要运行。为了加快模版部署速度，在修改 `redc-templates` 内容后建议运行加快后续部署速度
+首次使用模版需要运行。为了加快模版部署速度，在修改 `redc-templates` 内容后建议运行 init 选项加快后续部署速度
 
-````
+````bash
 redc init
 ````
+
+![默认init效果](./img/image.png)
+
+> 默认只有 阿里云 ecs 单台机器场景，请自行添加模板至 redc-templates 路径下
 
 **列出模版列表**
 
@@ -111,11 +134,16 @@ redc start [caseid]
 redc start [casename]
 ````
 
-直接创建模版为ecs的case并启动
+直接创建模版名称为 ecs 的 case 并启动
 
 ```
 redc run ecs
 ```
+
+![redc run ecs](./img/image2.png)
+
+> 开启后会给出 case id ，这是标识场景唯一性的识别 id，后续操作都需要用到 case id
+> 例如 8a57078ee8567cf2459a0358bc27e534cb87c8a02eadc637ce8335046c16cb3c 可以用 8a57078ee856 效果一样
 
 使用`-e` 参数可配置变量
 
@@ -131,25 +159,33 @@ redc rm [caseid] # 删除实例（删除前确认实例是否已经停止）
 redc kill [caseid] # init模版后停止实例并删除
 ````
 
+![redc stop [caseid]](./img/image7.png)
+
 **查看case情况**
 
 ````
 redc ps
 ````
 
+![redc ps](./img/image8.png)
+
 **执行命令**
 
 直接执行命令并返回结果
 
 ````
-redc exec ecs whoami
+redc exec [caseid] whoami
 ````
+
+![redc exec [caseid] whoami](./img/image3.png)
 
 进入交互式命令
 
 ````
-redc exec -t ecs bash 
+redc exec -t [caseid] bash
 ````
+
+![redc exec -t [caseid] bash](./img/image4.png)
 
 复制文件到服务器
 
@@ -157,11 +193,15 @@ redc exec -t ecs bash
 redc cp test.txt [caseid]:/root/
 ```
 
+![redc cp test.txt [caseid]:/root/](./img/image5.png)
+
 下载文件到本地
 
 ```
 redc cp [caseid]:/root/test.txt ./
 ```
+
+![redc cp [caseid]:/root/test.txt ./](./img/image6.png)
 
 **更改服务**
 
@@ -374,7 +414,7 @@ setup:
 
 ```
 
-
+---
 
 ## 配置缓存和加速
 
@@ -404,11 +444,9 @@ provider_installation {
               ]
   }
 }
-
-
 ```
 
-
+---
 
 ## 设计规划
 
