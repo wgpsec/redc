@@ -1,8 +1,7 @@
 <p align="center">
   <a href="https://github.com/wgpsec/redc">
-    <img src="README/logo.png" alt="Logo" width="150" height="150">
+    <img src="./img/banner.jpg" width="100%" alt="redc">
   </a>
-  <h3 align="center">REDC</h3>
   <p align="center">
     红队基础设施多云自动化部署工具
     <br />
