@@ -36,7 +36,7 @@ Redc is not just a machine provisioning tool, but an automated cloud resource sc
 
 - **One-command deployment**, from purchasing machines to running services, fully automated without manual intervention
 - **Multi-cloud support**, compatible with Alibaba Cloud, Tencent Cloud, AWS and other mainstream cloud providers
-- **Pre-configured scenarios**, red team environment "ready-to-eat meals", no more hunting for resources
+- **Pre-configured scenarios**, red team environment ready-to-use templates, no more hunting for resources
 - **State resource management**, locally saves resource state, destroy environments anytime, eliminate wasted resource costs
 
 ---
@@ -423,7 +423,7 @@ Configure cache address only:
 echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 ```
 
-Configure Alibaba Cloud acceleration, modify `/.terraformrc` file
+Configure Alibaba Cloud acceleration, modify `~/.terraformrc` file
 
 ```
 plugin_cache_dir  = "$HOME/.terraform.d/plugin-cache"
