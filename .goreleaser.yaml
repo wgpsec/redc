@@ -1,3 +1,4 @@
+version: 2
 project_name: redc
 before:
   hooks:
@@ -7,21 +8,17 @@ builds:
   - env:
       - CGO_ENABLED=0
     goos:
-      - freebsd
       - darwin
       - windows
       - linux
     goarch:
-      - 386
       - amd64
-      - arm
       - arm64
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
     id: homebrew
     files:
       - README.md
-      - config.yaml
 #      - LICENSE
 #      - static/*
     format_overrides:
@@ -43,19 +40,9 @@ brews:
   - ids:
       - homebrew
     name: redc
-    tap:
-      owner: wgpsec
-      name: homebrew-tap
-      branch: master
-    folder: Formula
     url_template: "https://github.com/wgpsec/redc/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://redc.wgpsec.org"
     description: "Redc is Red Team Infrastructure Multi-Cloud Automated Deployment Tool"
     skip_upload: auto
     install: |-
       bin.install "redc"
-      (etc/"redc").install "config.yaml"
-    caveats: |
-      The default configuration file is installed at:
-        #{etc}/redc/config.yaml
-      You can edit this file to customize settings.
