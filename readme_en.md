@@ -87,25 +87,73 @@ For specific usage and commands for each scenario, please check the readme of th
 
 ### Engine Configuration File
 
+redc needs AK/SK credentials to start machines.
+
 By default, redc reads the config.yaml configuration file in the current path, format as follows:
 ```yaml
 # Multi-cloud credentials and default regions
 providers:
   aws:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    AWS_ACCESS_KEY_ID: "AKIDXXXXXXXXXXXXXXXX"
+    AWS_SECRET_ACCESS_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "us-east-1"
   aliyun:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ALICLOUD_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
+    ALICLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "cn-hangzhou"
   tencentcloud:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    TENCENTCLOUD_SECRET_ID: "AKIDXXXXXXXXXXXXXXXX"
+    TENCENTCLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "ap-guangzhou"
 ```
 
-If the configuration file fails to load, it will attempt to read system environment variables, please configure them before use
+If the configuration file fails to load, it will attempt to read system environment variables, please configure them before use.
+
+**AWS environment variables**
+- Docs: https://docs.aws.amazon.com/sdkref/latest/guide/feature-static-credentials.html
+
+Linux/macOS example:
+```bash
+export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+Windows example:
+```powershell
+setx AWS_ACCESS_KEY_ID AKIAIOSFODNN7EXAMPLE
+setx AWS_SECRET_ACCESS_KEY wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+**Alibaba Cloud environment variables**
+- Docs: https://help.aliyun.com/zh/terraform/terraform-authentication
+
+Linux/macOS example (use a shell init file like .bash_profile or .zshrc to persist):
+```bash
+export ALICLOUD_ACCESS_KEY="<AccessKey ID>"
+export ALICLOUD_SECRET_KEY="<AccessKey Secret>"
+# If you use STS credentials, also set security_token
+export ALICLOUD_SECURITY_TOKEN="<STS Token>"
+```
+
+Windows example:
+```
+In System Properties > Advanced > Environment Variables, add ALICLOUD_ACCESS_KEY, ALICLOUD_SECRET_KEY, and ALICLOUD_SECURITY_TOKEN (optional).
+```
+
+**Tencent Cloud environment variables**
+- Docs: https://cloud.tencent.com/document/product/1278/85305
+
+Linux/macOS example:
+```bash
+export TENCENTCLOUD_SECRET_ID=<YourSecretId>
+export TENCENTCLOUD_SECRET_KEY=<YourSecretKey>
+```
+
+Windows example:
+```powershell
+set TENCENTCLOUD_SECRET_ID=<YourSecretId>
+set TENCENTCLOUD_SECRET_KEY=<YourSecretKey>
+```
 
 ---
 
