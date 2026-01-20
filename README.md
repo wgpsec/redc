@@ -43,7 +43,7 @@ Redc 不仅仅是开机工具，更是对云资源的自动化调度器！
 
 ## 安装配置
 
-### redc 引擎安装
+### redc 引擎安装 (第一步)
 #### 下载二进制包
 
 REDC 下载地址：https://github.com/wgpsec/redc/releases
@@ -77,7 +77,7 @@ goreleaser --snapshot --clean
 # 编译成功后会在 dist 路径下
 ```
 
-### 模版选择
+### 模版选择 (第二步)
 
 场景名称 - 对应模板仓库 https://github.com/wgpsec/redc-template
 
@@ -85,27 +85,79 @@ goreleaser --snapshot --clean
 
 每个场景的具体使用和命令请查看模板仓库 https://github.com/wgpsec/redc-template 里具体场景的 readme
 
-### 引擎配置文件
+### 引擎配置文件 (第三步)
+
+redc 开启机器需要依靠 aksk
 
 默认下 redc 会读取当前路径的 config.yaml 配置文件，格式如下
 ```yaml
 # 多云身份凭证与默认区域
 providers:
   aws:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    AWS_ACCESS_KEY_ID: "AKIDXXXXXXXXXXXXXXXX"
+    AWS_SECRET_ACCESS_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "us-east-1"
   aliyun:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ALICLOUD_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
+    ALICLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "cn-hangzhou"
   tencentcloud:
-    access_key: "AKIDXXXXXXXXXXXXXXXX"
-    secret_key: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    TENCENTCLOUD_SECRET_ID: "AKIDXXXXXXXXXXXXXXXX"
+    TENCENTCLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "ap-guangzhou"
 ```
 
 在配置文件加载失败的情况下，会尝试读取系统环境变量，使用前请配置好
+
+**AWS 环境变量**
+- 详情参考 : https://docs.aws.amazon.com/sdkref/latest/guide/feature-static-credentials.html
+
+Linux/macOS 示例通过命令行设置环境变量：
+```bash
+export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+Windows 示例通过命令行设置环境变量：
+```powershell
+setx AWS_ACCESS_KEY_ID AKIAIOSFODNN7EXAMPLE
+setx AWS_SECRET_ACCESS_KEY wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+**阿里云环境变量**
+- 详情参考 : https://help.aliyun.com/zh/terraform/terraform-authentication
+
+Linux/macOS 系统
+> 使用 export 命令配置的临时环境变量仅对当前 Shell 会话有效。如需长期保留，可将 export 命令写入 Shell 的启动配置文件（如 .bash_profile 或 .zshrc）。
+```
+# AccessKey ID
+$ export ALICLOUD_ACCESS_KEY="<AccessKey ID>"
+# AccessKey Secret
+$ export ALICLOUD_SECRET_KEY="<AccessKey Secret>"
+# 如果使用 STS 凭证，需配置 security_token
+$ export ALICLOUD_SECURITY_TOKEN="<STS Token>"
+```
+
+Windows 系统
+```
+在桌面右键单击 此电脑，选择 属性 > 高级系统设置 > 环境变量。
+在 系统变量 或 用户变量 中，单击 新建，创建以下环境变量：ALICLOUD_ACCESS_KEY、ALICLOUD_SECRET_KEY、ALICLOUD_SECURITY_TOKEN（可选）。
+```
+
+**腾讯云环境变量**
+- 详情参考 : https://cloud.tencent.com/document/product/1278/85305
+
+Linux/macOS 系统
+```
+export TENCENTCLOUD_SECRET_ID=您的SecretId
+export TENCENTCLOUD_SECRET_KEY=您的SecretKey
+```
+
+Windows 系统
+```
+set TENCENTCLOUD_SECRET_ID=您的SecretId
+set TENCENTCLOUD_SECRET_KEY=您的SecretKey
+```
 
 ---
 
