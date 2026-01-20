@@ -21,6 +21,7 @@ archives:
     id: homebrew
     files:
       - README.md
+      - config.yaml
 #      - LICENSE
 #      - static/*
     format_overrides:
@@ -53,3 +54,8 @@ brews:
     skip_upload: auto
     install: |-
       bin.install "redc"
+      (etc/"redc").install "config.yaml"
+    caveats: |
+      The default configuration file is installed at:
+        #{etc}/redc/config.yaml
+      You can edit this file to customize settings.
