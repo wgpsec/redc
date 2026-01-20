@@ -16,18 +16,18 @@ var initCmd = &cobra.Command{
 		redc.RedcLog("执行初始化")
 		gologger.Info().Msg("初始化中...")
 
-		const templateDir = "redc-templates"
+		/*
+			// 清理旧目录
+			os.RemoveAll(redc.TemplateDir)
 
-		// 清理旧目录
-		os.RemoveAll(templateDir)
-
-		// 释放资源
-		if err := utils.ReleaseDir(templateDir); err != nil {
-			gologger.Fatal().Msgf("释放模板资源失败: %s", err)
-		}
+			// 释放资源
+			if err := utils.ReleaseDir(redc.TemplateDir); err != nil {
+				gologger.Fatal().Msgf("释放模板资源失败: %s", err)
+			}
+		*/
 
 		// 遍历初始化
-		_, dirs := utils.GetFilesAndDirs("./" + templateDir)
+		_, dirs := utils.GetFilesAndDirs(redc.TemplateDir)
 		for _, v := range dirs {
 			if err := redc.TfInit(v); err != nil {
 				gologger.Error().Msgf("❌「%s」场景初始化失败: %s", v, err)
