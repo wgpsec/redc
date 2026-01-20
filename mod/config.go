@@ -3,11 +3,10 @@ package mod
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"red-cloud/mod/gologger"
+	"reflect"
 
-	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,73 +15,91 @@ var ProjectPath = "./redc-taskresult"
 var ProjectFile = "project.json"
 var planPath = "case.tfplan"
 
-// Config 结构体用于解析 YAML
+// Config 配置文件结构体，新增厂商配置也需要再这里添加
+// yaml 为配置文件，env为tf的环境变量参数
 type Config struct {
 	Providers struct {
 		Aws struct {
-			AccessKey string `yaml:"access_key"`
-			SecretKey string `yaml:"secret_key"`
+			AccessKey string `yaml:"AWS_ACCESS_KEY_ID" env:"AWS_ACCESS_KEY_ID"`
+			SecretKey string `yaml:"AWS_SECRET_ACCESS_KEY" env:"AWS_SECRET_ACCESS_KEY" `
 			Region    string `yaml:"region"`
 		} `yaml:"aws"`
 		Alicloud struct {
-			AccessKey string `yaml:"access_key"`
-			SecretKey string `yaml:"secret_key"`
+			AccessKey string `yaml:"ALICLOUD_ACCESS_KEY" env:"ALICLOUD_ACCESS_KEY" `
+			SecretKey string `yaml:"ALICLOUD_SECRET_KEY" env:"ALICLOUD_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"aliyun"`
 		Tencentcloud struct {
-			SecretId  string `yaml:"secret_id"`
-			SecretKey string `yaml:"secret_key"`
+			SecretId  string `yaml:"TENCENTCLOUD_SECRET_ID" env:"TENCENTCLOUD_SECRET_ID"`
+			SecretKey string `yaml:"TENCENTCLOUD_SECRET_KEY" env:"TENCENTCLOUD_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"tencentcloud"`
 	} `yaml:"providers"`
 }
 
-// LoadConfig 将配置写入环境变量，Terraform Provider 会自动读取
 func LoadConfig(path string) error {
-	usr, err := user.Current()
+	home, _ := os.UserHomeDir() // 忽略错误，home为空也没关系
+
+	// 设置默认缓存路径
+	os.Setenv("TF_PLUGIN_CACHE_DIR", filepath.Join(home, ".terraform.d", "plugin-cache"))
+
+	// 如果指定了 path，只查 path；否则查 [用户目录, 程序目录]
+	searchPaths := []string{path}
 	if path == "" {
-		path = filepath.Join(usr.HomeDir, ".redc", "config.yaml")
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("文件不存在: %s (%v)", path, err)
+		exePath, _ := os.Executable() // 获取程序自身路径
+		searchPaths = []string{
+			filepath.Join(home, ".redc", "config.yaml"),         // 优先级1: 用户目录
+			filepath.Join(filepath.Dir(exePath), "config.yaml"), // 优先级2: 程序旁
 		}
-		return fmt.Errorf("未找到配置文件，将尝试读取系统环境变量: %v", err)
+	}
+
+	var data []byte
+	var err error
+	for _, p := range searchPaths {
+		if p == "" {
+			continue
+		}
+		if data, err = os.ReadFile(p); err == nil {
+			break // 读取成功，跳出循环
+		}
+	}
+
+	if data == nil {
+		gologger.Info().Msgf("未找到配置文件，将尝试环境变量...\n %v\n", searchPaths)
+		return fmt.Errorf("配置文件未找到\n")
 	}
 
 	var conf Config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		return err
 	}
-	// 设置标准 Terraform 环境变量
 
-	err = os.Setenv("TF_PLUGIN_CACHE_DIR", filepath.Join(usr.HomeDir, ".terraform.d", "plugin-cache"))
-	if err != nil {
-		gologger.Error().Msgf("设置环境变量失败: %s", err)
-	}
-	os.Setenv("AWS_ACCESS_KEY_ID", conf.Providers.Aws.AccessKey)
-	os.Setenv("AWS_SECRET_ACCESS_KEY", conf.Providers.Aws.SecretKey)
-
-	os.Setenv("ALICLOUD_ACCESS_KEY", conf.Providers.Alicloud.AccessKey)
-	os.Setenv("ALICLOUD_SECRET_KEY", conf.Providers.Alicloud.SecretKey)
-
-	os.Setenv("TENCENTCLOUD_SECRET_ID", conf.Providers.Tencentcloud.SecretId)
-	os.Setenv("TENCENTCLOUD_SECRET_KEY", conf.Providers.Tencentcloud.SecretKey)
+	// 批量配置环境变量
+	bindEnv(conf)
 
 	return nil
 }
 
-// ParseConfig 解析配置文件
-func ParseConfig(path string) (string, string) {
-	cfg, err := ini.Load(path)
-	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(1)
+// bindEnv 递归遍历结构体，直接用 `yaml` 标签的值作为环境变量 Key
+func bindEnv(v interface{}) {
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	} // 处理指针
+
+	for i := 0; i < val.NumField(); i++ {
+		fieldVal := val.Field(i)
+		fieldType := val.Type().Field(i)
+
+		// 如果是嵌套结构体 (如 Providers -> Aws)，递归处理
+		if fieldVal.Kind() == reflect.Struct {
+			bindEnv(fieldVal.Interface())
+			continue
+		}
+
+		// 如果是字符串且有值，读取 yaml 标签并 Setenv
+		if tag := fieldType.Tag.Get("env"); tag != "" && fieldVal.String() != "" {
+			os.Setenv(tag, fieldVal.String())
+		}
 	}
-
-	ALICLOUD_ACCESS_KEY := cfg.Section("").Key("ALICLOUD_ACCESS_KEY").String()
-	ALICLOUD_SECRET_KEY := cfg.Section("").Key("ALICLOUD_SECRET_KEY").String()
-
-	return ALICLOUD_ACCESS_KEY, ALICLOUD_SECRET_KEY
 }
