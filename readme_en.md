@@ -66,6 +66,17 @@ brew update
 brew upgrade redc
 ```
 
+#### Build from Source
+
+**goreleaser**
+```bash
+git clone https://github.com/wgpsec/redc.git
+cd redc
+goreleaser --snapshot --clean
+
+# Build artifacts are generated under the dist directory
+```
+
 ### Template Selection
 
 Scenario name - corresponds to template repository https://github.com/wgpsec/redc-template

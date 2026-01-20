@@ -66,6 +66,17 @@ brew update
 brew upgrade redc
 ```
 
+#### 从源码编译安装
+
+**goreleaser**
+```bash
+git clone https://github.com/wgpsec/redc.git
+cd redc
+goreleaser --snapshot --clean
+
+# 编译成功后会在 dist 路径下
+```
+
 ### 模版选择
 
 场景名称 - 对应模板仓库 https://github.com/wgpsec/redc-template
