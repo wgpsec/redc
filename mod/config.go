@@ -48,13 +48,13 @@ func LoadConfig(path string) error {
 	if RedcPath == "" {
 		RedcPath = filepath.Join(home, "redc")
 	}
-	// 如果指定了 path，只查 path；否则查 [用户目录, 程序目录]
+	defaultConfigPath := filepath.Join(RedcPath, "config.yaml")
 	searchPaths := []string{path}
 	if path == "" {
 		exePath, _ := os.Executable() // 获取程序自身路径
 		searchPaths = []string{
-			filepath.Join(RedcPath, "config.yaml"),              // 优先级1: 用户目录
-			filepath.Join(filepath.Dir(exePath), "config.yaml"), // 优先级2: 程序旁
+			filepath.Join(filepath.Dir(exePath), "config.yaml"),
+			defaultConfigPath,
 		}
 	}
 
@@ -62,6 +62,7 @@ func LoadConfig(path string) error {
 	ProjectPath = filepath.Join(RedcPath, "task-result")
 
 	var data []byte
+	var conf Config
 	var err error
 	for _, p := range searchPaths {
 		if p == "" {
@@ -73,11 +74,21 @@ func LoadConfig(path string) error {
 	}
 
 	if data == nil {
-		gologger.Info().Msgf("未找到配置文件，将尝试环境变量...\n %v\n", searchPaths)
-		return fmt.Errorf("配置文件未找到\n")
+		gologger.Info().Msgf("未找到配置文件，正在创建默认配置文件: %s\n", defaultConfigPath)
+		if err := os.MkdirAll(filepath.Dir(defaultConfigPath), 0755); err != nil {
+			return fmt.Errorf("创建配置目录失败: %v", err)
+		}
+		defaultConf := Config{}
+		defaultData, err := yaml.Marshal(defaultConf)
+		if err != nil {
+			return fmt.Errorf("生成默认配置模版失败: %v", err)
+		}
+		if err := os.WriteFile(defaultConfigPath, defaultData, 0644); err != nil {
+			return fmt.Errorf("创建配置文件失败: %v", err)
+		}
+		return nil
 	}
 
-	var conf Config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		return err
 	}

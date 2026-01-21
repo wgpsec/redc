@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"red-cloud/mod/gologger"
 	"red-cloud/utils"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -402,6 +403,7 @@ func parseTime(timeStr string) time.Time {
 
 // truncateString 安全截断函数
 func truncateString(s string, length int) string {
+	s = strings.ReplaceAll(s, "/", "_")
 	// 1. 将字符串转为 rune 切片（处理多字节字符的关键）
 	runes := []rune(s)
 
