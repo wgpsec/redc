@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-//go:embed redc-templates
 var local embed.FS
 var dirs []string
 
