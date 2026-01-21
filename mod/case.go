@@ -103,7 +103,10 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 	uid := GenerateCaseID()
 
 	// 从模版文件夹复制模版
-	tpPath := filepath.Join("redc-templates", CaseName)
+	tpPath, err := GetTemplatePath(CaseName)
+	if err != nil {
+		return nil, fmt.Errorf("获取模版错误！%s", err.Error())
+	}
 	casePath := filepath.Join(p.ProjectPath, uid)
 
 	// 复制 tf文件

@@ -11,17 +11,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"red-cloud/mod/gologger"
-	"red-cloud/utils" // 需确保此包存在或自行实现 GetFilesAndDirs
 	"strings"
 	"text/tabwriter"
 	"time"
+
+	"red-cloud/mod/gologger"
+	"red-cloud/utils"
 
 	"github.com/schollz/progressbar/v3"
 )
 
 // TemplateDir 全局配置：默认模版存放路径
-// 这是一个导出变量，CLI 可以通过 flag (如 -d) 直接修改这个变量
 var TemplateDir = "redc-templates"
 
 const TmplCaseFile = "case.json"
@@ -35,7 +35,7 @@ type RedcTmpl struct {
 	Path        string `json:"-"`
 }
 
-// PullOptions 配置项 (移除了 BaseDir，因为使用了全局 TemplateDir)
+// PullOptions 配置项
 type PullOptions struct {
 	RegistryURL string
 	Force       bool
@@ -69,7 +69,7 @@ func Pull(ctx context.Context, imageRef string, opts PullOptions) error {
 		tag = "latest"
 	}
 
-	// 2. 检查本地 (使用全局 TemplateDir)
+	// 2. 检查本地
 	exists, localVer, _ := CheckLocalImage(imageName)
 	if exists {
 		if !opts.Force && localVer != "unknown" && tag == "latest" {
@@ -146,8 +146,13 @@ func pullCore(ctx context.Context, imageName, tag, localVer string, exists bool,
 		gologger.Info().Msgf("⚠️  Force pulling %s:%s...", imageName, targetTag)
 	}
 
-	// 5. 下载并原子安装 (拼接全局 TemplateDir)
-	targetDir := filepath.Join(TemplateDir, imageName)
+	// 5. 下载并原子安装
+	// 使用 resolveSafePath 确保写入路径安全
+	targetDir, err := resolveSafePath(imageName)
+	if err != nil {
+		return false, fmt.Errorf("invalid install path: %w", err)
+	}
+
 	if err := downloadAndInstall(ctx, art, targetDir); err != nil {
 		return false, err
 	}
@@ -156,12 +161,84 @@ func pullCore(ctx context.Context, imageName, tag, localVer string, exists bool,
 }
 
 // =============================================================================
-//  本地管理功能：List (列表) & Remove (删除)
+//  本地管理功能：List, Find, Remove, Check
 // =============================================================================
+
+// GetTemplatePath 根据镜像名称查找并返回本地路径
+// 这是"模版有效性"的权威检查函数
+// 1. 检查路径安全性
+// 2. 检查目录是否存在
+// 3. 检查 case.json 是否存在
+func GetTemplatePath(imageName string) (string, error) {
+	// 1. 获取安全路径
+	path, err := resolveSafePath(imageName)
+	if err != nil {
+		return "", err
+	}
+
+	// 2. 检查目录是否存在
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return "", fmt.Errorf("template '%s' not found", imageName)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("path '%s' exists but is not a directory", path)
+	}
+
+	// 3. 验证是否为有效模版 (必须包含 case.json)
+	configPath := filepath.Join(path, TmplCaseFile)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("template broken: missing %s in %s", TmplCaseFile, imageName)
+	}
+
+	return path, nil
+}
+
+// CheckLocalImage 检查本地是否存在指定模版
+func CheckLocalImage(imageName string) (bool, string, error) {
+	// 复用 GetTemplatePath 进行严格校验
+	// 如果路径非法、目录不存在或缺少配置文件，均视为不存在(false)
+	path, err := GetTemplatePath(imageName)
+	if err != nil {
+		return false, "", nil
+	}
+
+	// 读取元数据
+	meta, err := readTemplateMeta(path)
+	if err != nil || meta.Version == "" {
+		return true, "unknown", nil
+	}
+	return true, meta.Version, nil
+}
+
+// RemoveTemplate 删除指定模版
+func RemoveTemplate(imageName string) error {
+	// 1. 获取安全路径
+	// 这里不使用 GetTemplatePath，因为即使 case.json 丢失(损坏的模版)，
+	// 我们也希望用户能够通过 remove 命令删除它。
+	targetPath, err := resolveSafePath(imageName)
+	if err != nil {
+		return err
+	}
+
+	// 2. 检查是否存在
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		return fmt.Errorf("template '%s' not found", imageName)
+	}
+
+	gologger.Info().Msgf("🗑️  Removing template: %s", imageName)
+
+	// 3. 执行删除
+	if err := os.RemoveAll(targetPath); err != nil {
+		return fmt.Errorf("failed to remove: %w", err)
+	}
+
+	gologger.Info().Msg("✅ Successfully removed.")
+	return nil
+}
 
 // ShowLocalTemplates 打印表格形式的列表
 func ShowLocalTemplates() {
-	// 使用全局 TemplateDir
 	list, err := ListLocalTemplates()
 	if err != nil {
 		gologger.Error().Msgf("Failed to list templates: %v", err)
@@ -192,7 +269,6 @@ func ShowLocalTemplates() {
 
 // ListLocalTemplates 返回结构化数据
 func ListLocalTemplates() ([]*RedcTmpl, error) {
-	// 使用全局 TemplateDir
 	if _, err := os.Stat(TemplateDir); os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -211,52 +287,39 @@ func ListLocalTemplates() ([]*RedcTmpl, error) {
 	return templates, nil
 }
 
-// RemoveTemplate 删除指定模版
-func RemoveTemplate(imageName string) error {
+// =============================================================================
+//  通用辅助函数 / Utils
+// =============================================================================
+
+// resolveSafePath 核心路径处理函数 (Internal)
+// 功能：拼接路径 + 安全检查 (防止路径穿越)
+// 返回：拼接后的路径（如果安全）
+func resolveSafePath(imageName string) (string, error) {
 	if imageName == "" {
-		return fmt.Errorf("image name cannot be empty")
+		return "", fmt.Errorf("image name cannot be empty")
 	}
 
-	// 使用全局 TemplateDir 拼接
+	// 1. 拼接路径
 	targetPath := filepath.Join(TemplateDir, imageName)
 
-	// 安全检查：防止路径穿越 (../../)
-	cleanBase := filepath.Clean(TemplateDir)
-	cleanTarget := filepath.Clean(targetPath)
-	if !strings.HasPrefix(cleanTarget, cleanBase) {
-		return fmt.Errorf("invalid path: %s", imageName)
+	// 2. 安全检查：防止路径穿越 (Zip Slip / Path Traversal)
+	// 逻辑：目标路径必须以 TemplateDir 为前缀
+	absBase, err := filepath.Abs(TemplateDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve base path failed: %w", err)
+	}
+	absTarget, err := filepath.Abs(targetPath)
+	if err != nil {
+		return "", fmt.Errorf("resolve target path failed: %w", err)
 	}
 
-	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
-		return fmt.Errorf("template '%s' not found", imageName)
+	// 确保 target 在 base 目录下
+	// 加 Separator 是为了防止前缀部分匹配误判 (如 /tmp/foo vs /tmp/foobar)
+	if !strings.HasPrefix(absTarget, absBase+string(os.PathSeparator)) && absTarget != absBase {
+		return "", fmt.Errorf("security violation: invalid path traversal detected in '%s'", imageName)
 	}
 
-	gologger.Info().Msgf("🗑️  Removing template: %s", imageName)
-	if err := os.RemoveAll(targetPath); err != nil {
-		return fmt.Errorf("failed to remove: %w", err)
-	}
-
-	gologger.Info().Msg("✅ Successfully removed.")
-	return nil
-}
-
-// =============================================================================
-//  辅助函数 / Utils
-// =============================================================================
-
-// CheckLocalImage 检查本地 (使用全局 TemplateDir)
-func CheckLocalImage(imageName string) (bool, string, error) {
-	targetDir := filepath.Join(TemplateDir, imageName)
-
-	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
-		return false, "", nil
-	}
-
-	meta, err := readTemplateMeta(targetDir)
-	if err != nil || meta.Version == "" {
-		return true, "unknown", nil
-	}
-	return true, meta.Version, nil
+	return targetPath, nil
 }
 
 // readTemplateMeta 读取 case.json

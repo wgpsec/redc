@@ -11,9 +11,11 @@ import (
 )
 
 var commonCachePath = "./tf-plugin-cache" // Provider 插件缓存目录
-var ProjectPath = "./redc-taskresult"
-var ProjectFile = "project.json"
-var planPath = "case.tfplan"
+var RedcPath = ""
+var ProjectPath = "redc-taskresult"
+
+const ProjectFile = "project.json"
+const planPath = "case.tfplan"
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加
 // yaml 为配置文件，env为tf的环境变量参数
@@ -52,6 +54,12 @@ func LoadConfig(path string) error {
 			filepath.Join(filepath.Dir(exePath), "config.yaml"), // 优先级2: 程序旁
 		}
 	}
+
+	if RedcPath == "" {
+		RedcPath = filepath.Join(home, ".redc")
+	}
+	TemplateDir = filepath.Join(RedcPath, "templates")
+	ProjectPath = filepath.Join(RedcPath, "task-result")
 
 	var data []byte
 	var err error
