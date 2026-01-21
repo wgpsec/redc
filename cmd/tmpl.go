@@ -22,7 +22,7 @@ var tmplLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "列出所有模版文件",
 	Run: func(cmd *cobra.Command, args []string) {
-		redc.ShowRedcTmpl()
+		redc.ListLocalTemplates()
 	},
 }
 var tmplRMCmd = &cobra.Command{
@@ -35,7 +35,7 @@ var tmplRMCmd = &cobra.Command{
 		}
 		id := args[0]
 		// 将剩余参数组合成命令
-		redc.DeleteRedcTmpl(id)
+		redc.RemoveTemplate(id)
 	},
 }
 
