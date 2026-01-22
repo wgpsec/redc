@@ -174,9 +174,7 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 	}
 	gologger.Info().Msgf("场景创建成功！%s", uid)
 	// 确认场景创建无误后,才会写入到配置文件中
-	err = p.AddCase(c)
-	err = p.SaveProject()
-	if err != nil {
+	if err = p.AddCase(c); err != nil {
 		gologger.Error().Msgf("项目配置保存失败！")
 		return nil, err
 	}
@@ -243,8 +241,8 @@ func (c *Case) runModuleHook() error {
 	if c.Module == "" {
 		if meta, err := readTemplateMeta(c.Path); err == nil {
 			c.Module = meta.RedcModule
-			if c.project != nil {
-				_ = c.project.SaveProject()
+			if c.project != nil && c.project.storage != nil {
+				_ = c.project.storage.SaveCase(c)
 			}
 		}
 	}

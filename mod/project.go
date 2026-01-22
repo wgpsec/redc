@@ -1,84 +1,25 @@
 package mod
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"red-cloud/mod/gologger"
 	"strings"
-	"sync"
-	"syscall"
 	"text/tabwriter"
 	"time"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-// Global mutex map to protect file operations per project
-var (
-	projectMutexes = make(map[string]*sync.RWMutex)
-	projectMapMu   sync.Mutex
-)
-
-// getProjectMutex returns a mutex for the given project name
-func getProjectMutex(projectName string) *sync.RWMutex {
-	projectMapMu.Lock()
-	defer projectMapMu.Unlock()
-
-	if _, exists := projectMutexes[projectName]; !exists {
-		projectMutexes[projectName] = &sync.RWMutex{}
-	}
-	return projectMutexes[projectName]
-}
-
-// lockProjectFile acquires an exclusive file lock for cross-process synchronization
-func lockProjectFile(path string) (*os.File, error) {
-	lockPath := path + ".lock"
-	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("无法创建锁文件: %w", err)
-	}
-
-	// Acquire exclusive lock (blocks if necessary)
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
-		lockFile.Close()
-		return nil, fmt.Errorf("无法获取文件锁: %w", err)
-	}
-
-	return lockFile, nil
-}
-
-// unlockProjectFile releases the file lock
-func unlockProjectFile(lockFile *os.File) {
-	if lockFile != nil {
-		syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-		lockFile.Close()
-	}
-}
-
-// withProjectLock executes a function with both mutex and file lock held
-func withProjectLock(projectName, filePath string, fn func() error) error {
-	mu := getProjectMutex(projectName)
-	mu.Lock()
-	defer mu.Unlock()
-
-	lockFile, err := lockProjectFile(filePath)
-	if err != nil {
-		return err
-	}
-	defer unlockProjectFile(lockFile)
-
-	return fn()
-}
-
 // RedcProject 项目结构体
 type RedcProject struct {
-	ProjectName string  `json:"project_name"`
-	ProjectPath string  `json:"project_path"`
-	CreateTime  string  `json:"create_time"`
-	User        string  `json:"user"`
-	Case        []*Case `json:"case"`
+	ProjectName string   `json:"project_name"`
+	ProjectPath string   `json:"project_path"`
+	CreateTime  string   `json:"create_time"`
+	User        string   `json:"user"`
+	Case        []*Case  `json:"case"`
+	storage     *Storage // bbolt storage handle
 }
 
 // Case 项目信息
@@ -125,7 +66,8 @@ func NewProjectConfig(name string, user string) (*RedcProject, error) {
 		return nil, fmt.Errorf("创建项目目录失败: %w", err)
 	}
 	gologger.Info().Msgf("项目目录「%s」创建成功！", name)
-	// 创建项目状态文件
+
+	// 创建项目
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 	project := &RedcProject{
 		ProjectName: name,
@@ -134,13 +76,21 @@ func NewProjectConfig(name string, user string) (*RedcProject, error) {
 		User:        user,
 	}
 
-	if err := project.SaveProject(); err != nil {
-		// 如果保存失败，应该清理目录吗？视业务逻辑而定，这里暂时只返回错误
-		return nil, fmt.Errorf("保存项目状态文件失败: %w", err)
+	// Open storage
+	storage, err := OpenStorage(name)
+	if err != nil {
+		return nil, fmt.Errorf("打开数据库失败: %w", err)
 	}
-	gologger.Info().Msgf("项目状态文件「%s」创建成功！", ProjectFile)
-	return project, nil
+	project.storage = storage
 
+	// Save project metadata
+	if err := storage.SaveProject(project); err != nil {
+		storage.Close()
+		return nil, fmt.Errorf("保存项目状态失败: %w", err)
+	}
+
+	gologger.Info().Msgf("项目数据库创建成功！")
+	return project, nil
 }
 
 func ProjectParse(name string, user string) (*RedcProject, error) {
@@ -167,23 +117,23 @@ func ProjectParse(name string, user string) (*RedcProject, error) {
 
 // ProjectByName 读取项目配置
 func ProjectByName(name string) (*RedcProject, error) {
-	path := filepath.Join(ProjectPath, name, ProjectFile)
-	var project RedcProject
-
-	err := withProjectLock(name, path, func() error {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return json.Unmarshal(data, &project)
-	})
-
+	// Open storage
+	storage, err := OpenStorage(name)
 	if err != nil {
-		gologger.Debug().Msgf("读取项目文件失败 [%s]: %v", name, err)
+		gologger.Debug().Msgf("打开数据库失败 [%s]: %v", name, err)
 		return nil, err
 	}
 
-	return &project, nil
+	// Load project
+	project, err := storage.LoadProject(name)
+	if err != nil {
+		storage.Close()
+		gologger.Debug().Msgf("读取项目失败 [%s]: %v", name, err)
+		return nil, err
+	}
+
+	project.storage = storage
+	return project, nil
 }
 
 // GetCase 支持通过 ID(精确/模糊) 或 Name(精确) 查找 Case
@@ -223,32 +173,40 @@ func (p *RedcProject) GetCase(identifier string) (*Case, error) {
 }
 
 // HandleCase 删除指定uid的case
+// HandleCase deletes a case
 func (p *RedcProject) HandleCase(c *Case) error {
-	uid := c.Id
-	found := false
+	if p.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+
+	// Delete from storage
+	if err := p.storage.DeleteCase(c.Id); err != nil {
+		return fmt.Errorf("删除 case 失败: %v", err)
+	}
+
+	// Remove from local list
 	for i, caseInfo := range p.Case {
-		if caseInfo.Id == uid {
-			// 执行删除逻辑：将 i 之后的所有元素前移
+		if caseInfo.Id == c.Id {
 			p.Case = append(p.Case[:i], p.Case[i+1:]...)
-			found = true
-			break // 找到并删除后立即退出循环
+			break
 		}
-	}
-
-	if !found {
-		return fmt.Errorf("未找到 UID 为 %s 的 case，无需删除", uid)
-	}
-
-	// 3. 将修改后的 project 写回文件
-	err := p.SaveProject()
-	if err != nil {
-		return fmt.Errorf("更新项目文件失败: %v", err)
 	}
 
 	return nil
 }
 
+// AddCase adds a new case
 func (p *RedcProject) AddCase(c *Case) error {
+	if p.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+
+	// Save to storage
+	if err := p.storage.SaveCase(c); err != nil {
+		return fmt.Errorf("保存 case 失败: %v", err)
+	}
+
+	// Add to local list
 	p.Case = append(p.Case, c)
 	return nil
 }
@@ -317,86 +275,28 @@ func (p *RedcProject) CaseList() {
 	}
 }
 
-// SaveProject 将修改后的项目配置写回 JSON 文件
+// Close closes the storage database
+func (p *RedcProject) Close() error {
+	if p.storage != nil {
+		return p.storage.Close()
+	}
+	return nil
+}
+
+// SaveProject saves project metadata (without cases)
 func (p *RedcProject) SaveProject() error {
-	if err := os.MkdirAll(p.ProjectPath, 0755); err != nil {
-		return fmt.Errorf("无法恢复项目目录: %w", err)
+	if p.storage == nil {
+		return fmt.Errorf("storage not initialized")
 	}
-
-	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
-	return withProjectLock(p.ProjectName, path, func() error {
-		// Re-read and merge with latest state
-		if data, err := os.ReadFile(path); err == nil {
-			var latest RedcProject
-			if json.Unmarshal(data, &latest) == nil {
-				p.Case = mergeCases(latest.Case, p.Case)
-			}
-		}
-
-		// Write updated state
-		data, err := json.MarshalIndent(p, "", "    ")
-		if err != nil {
-			return fmt.Errorf("序列化失败: %v", err)
-		}
-		return os.WriteFile(path, data, 0644)
-	})
+	return p.storage.SaveProject(p)
 }
 
-// mergeCases merges two case lists, preferring current over latest
-func mergeCases(latestCases, currentCases []*Case) []*Case {
-	caseMap := make(map[string]*Case)
-	for _, c := range currentCases {
-		caseMap[c.Id] = c
-	}
-
-	merged := make([]*Case, 0, len(latestCases))
-	for _, c := range latestCases {
-		if current, exists := caseMap[c.Id]; exists {
-			merged = append(merged, current)
-			delete(caseMap, c.Id)
-		} else {
-			merged = append(merged, c)
-		}
-	}
-
-	// Add new cases not in latest
-	for _, c := range caseMap {
-		merged = append(merged, c)
-	}
-	return merged
-}
-
-// UpdateCaseState 只更新指定 case 的状态，不修改其他内容
+// UpdateCaseState only updates the state of a specific case
 func (p *RedcProject) UpdateCaseState(caseID string, state CaseState, stateTime string) error {
-	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
-	return withProjectLock(p.ProjectName, path, func() error {
-		// Read current state
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("读取项目文件失败: %w", err)
-		}
-
-		var project RedcProject
-		if err := json.Unmarshal(data, &project); err != nil {
-			return fmt.Errorf("解析项目配置失败: %w", err)
-		}
-
-		// Update the specific case
-		for i, c := range project.Case {
-			if c.Id == caseID {
-				project.Case[i].State = state
-				project.Case[i].StateTime = stateTime
-
-				// Write back
-				data, err := json.MarshalIndent(&project, "", "    ")
-				if err != nil {
-					return fmt.Errorf("序列化失败: %v", err)
-				}
-				return os.WriteFile(path, data, 0644)
-			}
-		}
-		return fmt.Errorf("未找到 case ID: %s", caseID)
-	})
+	if p.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	return p.storage.UpdateCaseState(caseID, state, stateTime)
 }
 
 // 简单的时长计算，返回 "2 hours", "5 minutes" 等
