@@ -72,7 +72,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&showVer, "version", "v", false, "显示版本信息")
 	// 全局 Flag
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "配置文件路径")
-	rootCmd.PersistentFlags().StringVar(&redc.RedcPath, "", "", "运行路径，默认在user路径下")
+	rootCmd.PersistentFlags().StringVar(&redc.RedcPath, "runpath", "", "运行路径，默认在user路径下")
 	rootCmd.PersistentFlags().StringVarP(&redc.U, "user", "u", "system", "操作者")
 	rootCmd.PersistentFlags().StringVar(&redc.Project, "project", "default", "项目名称")
 	rootCmd.PersistentFlags().BoolVar(&redc.Debug, "debug", false, "开启调试模式")
