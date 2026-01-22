@@ -294,6 +294,10 @@ func (c *Case) bindHandlers(p *RedcProject) {
 	c.saveHandler = func() error {
 		return p.SaveProject()
 	}
+	// 状态更新专用处理器，只更新状态不全量保存
+	c.stateUpdateHandler = func(state CaseState, stateTime string) error {
+		return p.UpdateCaseState(c.Id, state, stateTime)
+	}
 }
 
 func (c *Case) TfPlan() error {
@@ -308,7 +312,13 @@ func (c *Case) TfPlan() error {
 func (c *Case) StatusChange(s CaseState) {
 	c.State = s
 	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
-	if c.saveHandler != nil {
+	// 优先使用状态更新专用处理器，避免全量覆盖
+	if c.stateUpdateHandler != nil {
+		if err := c.stateUpdateHandler(s, c.StateTime); err != nil {
+			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
+		}
+	} else if c.saveHandler != nil {
+		// 回退到全量保存（向后兼容）
 		if err := c.saveHandler(); err != nil {
 			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
 		}

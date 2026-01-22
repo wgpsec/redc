@@ -384,3 +384,184 @@ func TestProjectByNameInitializesMutex(t *testing.T) {
 		t.Errorf("Failed to save loaded project: %v", err)
 	}
 }
+
+// TestUpdateCaseState tests the targeted state update functionality
+func TestUpdateCaseState(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "redc-test-updatestate-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Set the project path for testing
+	originalProjectPath := ProjectPath
+	ProjectPath = tmpDir
+	defer func() { ProjectPath = originalProjectPath }()
+
+	// Create a test project with multiple cases
+	projectName := "test-update-project"
+	case1ID := GenerateCaseID()
+	case2ID := GenerateCaseID()
+
+	project := &RedcProject{
+		ProjectName: projectName,
+		ProjectPath: filepath.Join(tmpDir, projectName),
+		CreateTime:  time.Now().Format("2006-01-02 15:04:05"),
+		User:        "test-user",
+		Case: []*Case{
+			{
+				Id:         case1ID,
+				Name:       "Case 1",
+				State:      StateCreated,
+				CreateTime: time.Now().Format("2006-01-02 15:04:05"),
+				StateTime:  time.Now().Format("2006-01-02 15:04:05"),
+			},
+			{
+				Id:         case2ID,
+				Name:       "Case 2",
+				State:      StateCreated,
+				CreateTime: time.Now().Format("2006-01-02 15:04:05"),
+				StateTime:  time.Now().Format("2006-01-02 15:04:05"),
+			},
+		},
+	}
+
+	// Create project directory
+	if err := os.MkdirAll(project.ProjectPath, 0755); err != nil {
+		t.Fatalf("Failed to create project dir: %v", err)
+	}
+
+	// Save initial project
+	if err := project.SaveProject(); err != nil {
+		t.Fatalf("Failed to save initial project: %v", err)
+	}
+
+	// Update case1's state
+	newStateTime := time.Now().Add(1 * time.Hour).Format("2006-01-02 15:04:05")
+	if err := project.UpdateCaseState(case1ID, StateRunning, newStateTime); err != nil {
+		t.Fatalf("Failed to update case state: %v", err)
+	}
+
+	// Reload the project
+	reloadedProject, err := ProjectByName(projectName)
+	if err != nil {
+		t.Fatalf("Failed to reload project: %v", err)
+	}
+
+	// Verify case1 was updated
+	var case1Found, case2Found bool
+	for _, c := range reloadedProject.Case {
+		if c.Id == case1ID {
+			case1Found = true
+			if c.State != StateRunning {
+				t.Errorf("Expected case1 state to be running, got %s", c.State)
+			}
+			if c.StateTime != newStateTime {
+				t.Errorf("Expected case1 StateTime to be %s, got %s", newStateTime, c.StateTime)
+			}
+		}
+		if c.Id == case2ID {
+			case2Found = true
+			if c.State != StateCreated {
+				t.Errorf("Expected case2 state to remain created, got %s", c.State)
+			}
+		}
+	}
+
+	if !case1Found {
+		t.Error("Case 1 not found after update")
+	}
+	if !case2Found {
+		t.Error("Case 2 not found after update")
+	}
+}
+
+// TestFileLocking tests that file locking prevents concurrent modifications
+func TestFileLocking(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "redc-test-filelock-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Set the project path for testing
+	originalProjectPath := ProjectPath
+	ProjectPath = tmpDir
+	defer func() { ProjectPath = originalProjectPath }()
+
+	// Create a test project with one case
+	projectName := "test-filelock-project"
+	caseID := GenerateCaseID()
+
+	project := &RedcProject{
+		ProjectName: projectName,
+		ProjectPath: filepath.Join(tmpDir, projectName),
+		CreateTime:  time.Now().Format("2006-01-02 15:04:05"),
+		User:        "test-user",
+		Case: []*Case{
+			{
+				Id:         caseID,
+				Name:       "Test Case",
+				State:      StateCreated,
+				CreateTime: time.Now().Format("2006-01-02 15:04:05"),
+				StateTime:  time.Now().Format("2006-01-02 15:04:05"),
+			},
+		},
+	}
+
+	// Create project directory
+	if err := os.MkdirAll(project.ProjectPath, 0755); err != nil {
+		t.Fatalf("Failed to create project dir: %v", err)
+	}
+
+	// Save initial project
+	if err := project.SaveProject(); err != nil {
+		t.Fatalf("Failed to save initial project: %v", err)
+	}
+
+	// Test concurrent state updates with file locking
+	numUpdates := 20
+	var wg sync.WaitGroup
+	wg.Add(numUpdates)
+
+	for i := 0; i < numUpdates; i++ {
+		go func(index int) {
+			defer wg.Done()
+
+			// Load project instance
+			p, err := ProjectByName(projectName)
+			if err != nil {
+				t.Errorf("Failed to load project: %v", err)
+				return
+			}
+
+			// Update state
+			stateTime := time.Now().Add(time.Duration(index) * time.Second).Format("2006-01-02 15:04:05")
+			if err := p.UpdateCaseState(caseID, StateRunning, stateTime); err != nil {
+				t.Errorf("Failed to update case state: %v", err)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify the project still has exactly one case and is in a valid state
+	finalProject, err := ProjectByName(projectName)
+	if err != nil {
+		t.Fatalf("Failed to load final project: %v", err)
+	}
+
+	if len(finalProject.Case) != 1 {
+		t.Errorf("Expected 1 case, got %d", len(finalProject.Case))
+	}
+
+	if finalProject.Case[0].Id != caseID {
+		t.Errorf("Case ID changed unexpectedly")
+	}
+
+	if finalProject.Case[0].State != StateRunning {
+		t.Errorf("Expected final state to be running, got %s", finalProject.Case[0].State)
+	}
+}

@@ -8,13 +8,14 @@ import (
 	"red-cloud/mod/gologger"
 	"strings"
 	"sync"
+	"syscall"
 	"text/tabwriter"
 	"time"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-// Global mutex map to protect file operations per project
+// Global mutex map to protect file operations per project (within same process)
 var (
 	projectMutexes = make(map[string]*sync.Mutex)
 	projectMapMu   sync.Mutex
@@ -31,6 +32,48 @@ func getProjectMutex(projectName string) *sync.Mutex {
 	return projectMutexes[projectName]
 }
 
+// lockProjectFile acquires an exclusive file lock for cross-process synchronization
+func lockProjectFile(path string) (*os.File, error) {
+	lockPath := path + ".lock"
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("无法创建锁文件: %w", err)
+	}
+
+	// Try to acquire exclusive lock with retry
+	for i := 0; i < 10; i++ {
+		err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			return lockFile, nil
+		}
+		if err != syscall.EWOULDBLOCK {
+			lockFile.Close()
+			return nil, fmt.Errorf("无法获取文件锁: %w", err)
+		}
+		// Lock is held by another process, wait and retry
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Still couldn't get lock, block until available
+	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX)
+	if err != nil {
+		lockFile.Close()
+		return nil, fmt.Errorf("无法获取文件锁: %w", err)
+	}
+
+	return lockFile, nil
+}
+
+// unlockProjectFile releases the file lock
+func unlockProjectFile(lockFile *os.File) error {
+	if lockFile == nil {
+		return nil
+	}
+	syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+	lockFile.Close()
+	return nil
+}
+
 // RedcProject 项目结构体
 type RedcProject struct {
 	ProjectName string  `json:"project_name"`
@@ -43,20 +86,21 @@ type RedcProject struct {
 // Case 项目信息
 type Case struct {
 	// Id uuid
-	Id           string    `json:"id"`
-	Name         string    `json:"name"`
-	Type         string    `json:"type"`
-	Module       string    `json:"module,omitempty"`
-	Operator     string    `json:"operator"`
-	Path         string    `json:"path"`
-	Node         int       `json:"node"`
-	CreateTime   string    `json:"create_time"`
-	StateTime    string    `json:"state_time"`
-	Parameter    []string  `json:"parameter"`
-	State        CaseState `json:"state"`
-	output       map[string]tfexec.OutputMeta
-	saveHandler  func() error
-	removeHandle func() error
+	Id                 string    `json:"id"`
+	Name               string    `json:"name"`
+	Type               string    `json:"type"`
+	Module             string    `json:"module,omitempty"`
+	Operator           string    `json:"operator"`
+	Path               string    `json:"path"`
+	Node               int       `json:"node"`
+	CreateTime         string    `json:"create_time"`
+	StateTime          string    `json:"state_time"`
+	Parameter          []string  `json:"parameter"`
+	State              CaseState `json:"state"`
+	output             map[string]tfexec.OutputMeta
+	saveHandler        func() error
+	removeHandle       func() error
+	stateUpdateHandler func(CaseState, string) error // Handler for state-only updates
 }
 
 type ChangeCommand struct {
@@ -133,6 +177,16 @@ func ProjectByName(name string) (*RedcProject, error) {
 	defer mu.Unlock()
 
 	path := filepath.Join(ProjectPath, name, ProjectFile)
+
+	// Acquire file lock for cross-process synchronization
+	lockFile, err := lockProjectFile(path)
+	if err != nil {
+		gologger.Debug().Msgf("获取文件锁失败 [%s]: %v", name, err)
+		// Try to read without lock if lock fails (backwards compatibility)
+	} else {
+		defer unlockProjectFile(lockFile)
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		gologger.Debug().Msgf("读取项目文件失败 [%s]: %v", name, err)
@@ -288,7 +342,7 @@ func (p *RedcProject) CaseList() {
 
 // SaveProject 将修改后的项目配置写回 JSON 文件
 func (p *RedcProject) SaveProject() error {
-	// Get the project-specific mutex and lock it
+	// Get the project-specific mutex and lock it (for same process)
 	mu := getProjectMutex(p.ProjectName)
 	mu.Lock()
 	defer mu.Unlock()
@@ -301,6 +355,13 @@ func (p *RedcProject) SaveProject() error {
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		return fmt.Errorf("无法恢复项目目录: %w", err)
 	}
+
+	// Acquire file lock for cross-process synchronization
+	lockFile, err := lockProjectFile(path)
+	if err != nil {
+		return fmt.Errorf("获取文件锁失败: %w", err)
+	}
+	defer unlockProjectFile(lockFile)
 
 	// Re-read the project file to get the latest state
 	// This ensures we don't overwrite changes made by other concurrent operations
@@ -353,6 +414,63 @@ func (p *RedcProject) SaveProject() error {
 
 	// 3. 写入文件
 	// 0644 表示：所有者有读写权限，其他人只读
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return fmt.Errorf("写入文件失败: %v", err)
+	}
+
+	return nil
+}
+
+// UpdateCaseState 只更新指定 case 的状态，不修改其他内容
+// 这个方法专门用于状态变更，避免全量覆盖导致的并发问题
+func (p *RedcProject) UpdateCaseState(caseID string, state CaseState, stateTime string) error {
+	// Get the project-specific mutex and lock it (for same process)
+	mu := getProjectMutex(p.ProjectName)
+	mu.Lock()
+	defer mu.Unlock()
+
+	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
+
+	// Acquire file lock for cross-process synchronization
+	lockFile, err := lockProjectFile(path)
+	if err != nil {
+		return fmt.Errorf("获取文件锁失败: %w", err)
+	}
+	defer unlockProjectFile(lockFile)
+
+	// Read the current project state
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("读取项目文件失败: %w", err)
+	}
+
+	var project RedcProject
+	if err := json.Unmarshal(data, &project); err != nil {
+		return fmt.Errorf("解析项目配置失败: %w", err)
+	}
+
+	// Find and update only the specific case
+	found := false
+	for i, c := range project.Case {
+		if c.Id == caseID {
+			project.Case[i].State = state
+			project.Case[i].StateTime = stateTime
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("未找到 case ID: %s", caseID)
+	}
+
+	// Write back the updated project
+	data, err = json.MarshalIndent(&project, "", "    ")
+	if err != nil {
+		return fmt.Errorf("序列化失败: %v", err)
+	}
+
 	err = os.WriteFile(path, data, 0644)
 	if err != nil {
 		return fmt.Errorf("写入文件失败: %v", err)
