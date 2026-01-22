@@ -76,7 +76,7 @@ func CaseScene(t string, m map[string]string) ([]string, error) {
 			fmt.Sprintf("node_count=%d", Node),
 			fmt.Sprintf("domain=%s", Domain),
 		)
-	case "proxy","aws-proxy", "aliyun-proxy", "asm":
+	case "proxy", "aws-proxy", "aliyun-proxy", "asm":
 		par = RVar(fmt.Sprintf("node_count=%d", Node))
 	case "dnslog", "xraydnslog", "interactsh":
 		if Domain == "360.com" {

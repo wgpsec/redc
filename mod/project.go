@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"red-cloud/mod/gologger"
 	"strings"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -15,11 +16,12 @@ import (
 
 // RedcProject 项目结构体
 type RedcProject struct {
-	ProjectName string  `json:"project_name"`
-	ProjectPath string  `json:"project_path"`
-	CreateTime  string  `json:"create_time"`
-	User        string  `json:"user"`
-	Case        []*Case `json:"case"`
+	ProjectName string     `json:"project_name"`
+	ProjectPath string     `json:"project_path"`
+	CreateTime  string     `json:"create_time"`
+	User        string     `json:"user"`
+	Case        []*Case    `json:"case"`
+	mu          sync.Mutex `json:"-"` // Mutex to protect concurrent file operations
 }
 
 // Case 项目信息
@@ -265,13 +267,61 @@ func (p *RedcProject) CaseList() {
 
 // SaveProject 将修改后的项目配置写回 JSON 文件
 func (p *RedcProject) SaveProject() error {
+	// Lock to prevent concurrent writes
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	dirPath := p.ProjectPath
 	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
+
 	// 2. 防御性编程：确保目录存在
 	// 防止用户手动删除了目录，导致保存文件失败
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		return fmt.Errorf("无法恢复项目目录: %w", err)
 	}
+
+	// Re-read the project file to get the latest state
+	// This ensures we don't overwrite changes made by other concurrent operations
+	var latestProject RedcProject
+	if data, err := os.ReadFile(path); err == nil {
+		// File exists, read it
+		if err := json.Unmarshal(data, &latestProject); err == nil {
+			// Successfully parsed, merge the cases
+			// Create a map of current case IDs for fast lookup
+			currentCases := make(map[string]*Case)
+			for _, c := range p.Case {
+				currentCases[c.Id] = c
+			}
+
+			// Update or keep cases from latest file
+			mergedCases := make([]*Case, 0)
+			seenIDs := make(map[string]bool)
+
+			// First, add/update cases from the latest file with our current changes
+			for _, latestCase := range latestProject.Case {
+				if currentCase, exists := currentCases[latestCase.Id]; exists {
+					// We have this case, use our version (it has the latest changes)
+					mergedCases = append(mergedCases, currentCase)
+					seenIDs[currentCase.Id] = true
+				} else {
+					// This case exists in file but not in our memory, keep it
+					mergedCases = append(mergedCases, latestCase)
+					seenIDs[latestCase.Id] = true
+				}
+			}
+
+			// Then add any new cases that we have but weren't in the file
+			for id, currentCase := range currentCases {
+				if !seenIDs[id] {
+					mergedCases = append(mergedCases, currentCase)
+				}
+			}
+
+			// Update our case list with merged result
+			p.Case = mergedCases
+		}
+	}
+
 	// 2. 序列化数据
 	// MarshalIndent 会生成带缩进的 JSON，方便人类阅读；如果追求体积小，可用 json.Marshal
 	data, err := json.MarshalIndent(p, "", "    ")
