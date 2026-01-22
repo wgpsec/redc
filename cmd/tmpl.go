@@ -2,6 +2,7 @@ package cmd
 
 import (
 	redc "red-cloud/mod"
+	"red-cloud/mod/gologger"
 
 	"github.com/spf13/cobra"
 )
@@ -27,14 +28,12 @@ var tmplLsCmd = &cobra.Command{
 var tmplRMCmd = &cobra.Command{
 	Use:   "rm [case]",
 	Short: "删除模版文件",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 2 {
-			cmd.Help()
-			return // 直接 return，返回 nil，这样 main 函数就不会打印 [ERR]
-		}
 		id := args[0]
-		// 将剩余参数组合成命令
-		redc.RemoveTemplate(id)
+		if err := redc.RemoveTemplate(id); err != nil {
+			gologger.Error().Msgf("remove template failed: %v", err)
+		}
 	},
 }
 
