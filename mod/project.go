@@ -40,23 +40,8 @@ func lockProjectFile(path string) (*os.File, error) {
 		return nil, fmt.Errorf("无法创建锁文件: %w", err)
 	}
 
-	// Try to acquire exclusive lock with retry
-	for i := 0; i < 10; i++ {
-		err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		if err == nil {
-			return lockFile, nil
-		}
-		if err != syscall.EWOULDBLOCK {
-			lockFile.Close()
-			return nil, fmt.Errorf("无法获取文件锁: %w", err)
-		}
-		// Lock is held by another process, wait and retry
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	// Still couldn't get lock, block until available
-	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX)
-	if err != nil {
+	// Acquire exclusive lock (blocks if necessary)
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
 		lockFile.Close()
 		return nil, fmt.Errorf("无法获取文件锁: %w", err)
 	}
@@ -65,13 +50,26 @@ func lockProjectFile(path string) (*os.File, error) {
 }
 
 // unlockProjectFile releases the file lock
-func unlockProjectFile(lockFile *os.File) error {
-	if lockFile == nil {
-		return nil
+func unlockProjectFile(lockFile *os.File) {
+	if lockFile != nil {
+		syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+		lockFile.Close()
 	}
-	syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-	lockFile.Close()
-	return nil
+}
+
+// withProjectLock executes a function with both mutex and file lock held
+func withProjectLock(projectName, filePath string, fn func() error) error {
+	mu := getProjectMutex(projectName)
+	mu.Lock()
+	defer mu.Unlock()
+
+	lockFile, err := lockProjectFile(filePath)
+	if err != nil {
+		return err
+	}
+	defer unlockProjectFile(lockFile)
+
+	return fn()
 }
 
 // RedcProject 项目结构体
@@ -171,31 +169,20 @@ func ProjectParse(name string, user string) (*RedcProject, error) {
 
 // ProjectByName 读取项目配置
 func ProjectByName(name string) (*RedcProject, error) {
-	// Get the project-specific mutex and lock it for reading
-	mu := getProjectMutex(name)
-	mu.Lock()
-	defer mu.Unlock()
-
 	path := filepath.Join(ProjectPath, name, ProjectFile)
+	var project RedcProject
 
-	// Acquire file lock for cross-process synchronization
-	lockFile, err := lockProjectFile(path)
-	if err != nil {
-		gologger.Debug().Msgf("获取文件锁失败 [%s]: %v", name, err)
-		// Try to read without lock if lock fails (backwards compatibility)
-	} else {
-		defer unlockProjectFile(lockFile)
-	}
+	err := withProjectLock(name, path, func() error {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(data, &project)
+	})
 
-	data, err := os.ReadFile(path)
 	if err != nil {
 		gologger.Debug().Msgf("读取项目文件失败 [%s]: %v", name, err)
 		return nil, err
-	}
-
-	var project RedcProject
-	if err := json.Unmarshal(data, &project); err != nil {
-		return nil, fmt.Errorf("解析项目配置失败: %w", err)
 	}
 
 	return &project, nil
@@ -342,141 +329,84 @@ func (p *RedcProject) CaseList() {
 
 // SaveProject 将修改后的项目配置写回 JSON 文件
 func (p *RedcProject) SaveProject() error {
-	// Get the project-specific mutex and lock it (for same process)
-	mu := getProjectMutex(p.ProjectName)
-	mu.Lock()
-	defer mu.Unlock()
-
-	dirPath := p.ProjectPath
-	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
-
-	// 2. 防御性编程：确保目录存在
-	// 防止用户手动删除了目录，导致保存文件失败
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
+	if err := os.MkdirAll(p.ProjectPath, 0755); err != nil {
 		return fmt.Errorf("无法恢复项目目录: %w", err)
 	}
 
-	// Acquire file lock for cross-process synchronization
-	lockFile, err := lockProjectFile(path)
-	if err != nil {
-		return fmt.Errorf("获取文件锁失败: %w", err)
+	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
+	return withProjectLock(p.ProjectName, path, func() error {
+		// Re-read and merge with latest state
+		if data, err := os.ReadFile(path); err == nil {
+			var latest RedcProject
+			if json.Unmarshal(data, &latest) == nil {
+				p.Case = mergeCases(latest.Case, p.Case)
+			}
+		}
+
+		// Write updated state
+		data, err := json.MarshalIndent(p, "", "    ")
+		if err != nil {
+			return fmt.Errorf("序列化失败: %v", err)
+		}
+		return os.WriteFile(path, data, 0644)
+	})
+}
+
+// mergeCases merges two case lists, preferring current over latest
+func mergeCases(latestCases, currentCases []*Case) []*Case {
+	caseMap := make(map[string]*Case)
+	for _, c := range currentCases {
+		caseMap[c.Id] = c
 	}
-	defer unlockProjectFile(lockFile)
 
-	// Re-read the project file to get the latest state
-	// This ensures we don't overwrite changes made by other concurrent operations
-	var latestProject RedcProject
-	if data, err := os.ReadFile(path); err == nil {
-		// File exists, read it
-		if err := json.Unmarshal(data, &latestProject); err == nil {
-			// Successfully parsed, merge the cases
-			// Create a map of current case IDs for fast lookup
-			currentCases := make(map[string]*Case)
-			for _, c := range p.Case {
-				currentCases[c.Id] = c
-			}
-
-			// Update or keep cases from latest file
-			mergedCases := make([]*Case, 0, len(latestProject.Case)+len(p.Case))
-			seenIDs := make(map[string]bool)
-
-			// First, add/update cases from the latest file with our current changes
-			for _, latestCase := range latestProject.Case {
-				if currentCase, exists := currentCases[latestCase.Id]; exists {
-					// We have this case, use our version (it has the latest changes)
-					mergedCases = append(mergedCases, currentCase)
-					seenIDs[currentCase.Id] = true
-				} else {
-					// This case exists in file but not in our memory, keep it
-					mergedCases = append(mergedCases, latestCase)
-					seenIDs[latestCase.Id] = true
-				}
-			}
-
-			// Then add any new cases that we have but weren't in the file
-			for id, currentCase := range currentCases {
-				if !seenIDs[id] {
-					mergedCases = append(mergedCases, currentCase)
-				}
-			}
-
-			// Update our case list with merged result
-			p.Case = mergedCases
+	merged := make([]*Case, 0, len(latestCases))
+	for _, c := range latestCases {
+		if current, exists := caseMap[c.Id]; exists {
+			merged = append(merged, current)
+			delete(caseMap, c.Id)
+		} else {
+			merged = append(merged, c)
 		}
 	}
 
-	// 2. 序列化数据
-	// MarshalIndent 会生成带缩进的 JSON，方便人类阅读；如果追求体积小，可用 json.Marshal
-	data, err := json.MarshalIndent(p, "", "    ")
-	if err != nil {
-		return fmt.Errorf("序列化失败: %v", err)
+	// Add new cases not in latest
+	for _, c := range caseMap {
+		merged = append(merged, c)
 	}
-
-	// 3. 写入文件
-	// 0644 表示：所有者有读写权限，其他人只读
-	err = os.WriteFile(path, data, 0644)
-	if err != nil {
-		return fmt.Errorf("写入文件失败: %v", err)
-	}
-
-	return nil
+	return merged
 }
 
 // UpdateCaseState 只更新指定 case 的状态，不修改其他内容
-// 这个方法专门用于状态变更，避免全量覆盖导致的并发问题
 func (p *RedcProject) UpdateCaseState(caseID string, state CaseState, stateTime string) error {
-	// Get the project-specific mutex and lock it (for same process)
-	mu := getProjectMutex(p.ProjectName)
-	mu.Lock()
-	defer mu.Unlock()
-
 	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
-
-	// Acquire file lock for cross-process synchronization
-	lockFile, err := lockProjectFile(path)
-	if err != nil {
-		return fmt.Errorf("获取文件锁失败: %w", err)
-	}
-	defer unlockProjectFile(lockFile)
-
-	// Read the current project state
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("读取项目文件失败: %w", err)
-	}
-
-	var project RedcProject
-	if err := json.Unmarshal(data, &project); err != nil {
-		return fmt.Errorf("解析项目配置失败: %w", err)
-	}
-
-	// Find and update only the specific case
-	found := false
-	for i, c := range project.Case {
-		if c.Id == caseID {
-			project.Case[i].State = state
-			project.Case[i].StateTime = stateTime
-			found = true
-			break
+	return withProjectLock(p.ProjectName, path, func() error {
+		// Read current state
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("读取项目文件失败: %w", err)
 		}
-	}
 
-	if !found {
+		var project RedcProject
+		if err := json.Unmarshal(data, &project); err != nil {
+			return fmt.Errorf("解析项目配置失败: %w", err)
+		}
+
+		// Update the specific case
+		for i, c := range project.Case {
+			if c.Id == caseID {
+				project.Case[i].State = state
+				project.Case[i].StateTime = stateTime
+
+				// Write back
+				data, err := json.MarshalIndent(&project, "", "    ")
+				if err != nil {
+					return fmt.Errorf("序列化失败: %v", err)
+				}
+				return os.WriteFile(path, data, 0644)
+			}
+		}
 		return fmt.Errorf("未找到 case ID: %s", caseID)
-	}
-
-	// Write back the updated project
-	data, err = json.MarshalIndent(&project, "", "    ")
-	if err != nil {
-		return fmt.Errorf("序列化失败: %v", err)
-	}
-
-	err = os.WriteFile(path, data, 0644)
-	if err != nil {
-		return fmt.Errorf("写入文件失败: %v", err)
-	}
-
-	return nil
+	})
 }
 
 // 简单的时长计算，返回 "2 hours", "5 minutes" 等
