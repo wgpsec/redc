@@ -163,9 +163,9 @@ func TestConcurrentStatusChange(t *testing.T) {
 		t.Fatalf("Failed to save initial project: %v", err)
 	}
 
-	// Bind handlers for all cases
+	// Bind project reference for all cases
 	for _, c := range cases {
-		c.bindHandlers(project)
+		c.project = project
 	}
 
 	// Concurrently change the status of all cases

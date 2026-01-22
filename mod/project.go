@@ -15,19 +15,19 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
-// Global mutex map to protect file operations per project (within same process)
+// Global mutex map to protect file operations per project
 var (
-	projectMutexes = make(map[string]*sync.Mutex)
+	projectMutexes = make(map[string]*sync.RWMutex)
 	projectMapMu   sync.Mutex
 )
 
 // getProjectMutex returns a mutex for the given project name
-func getProjectMutex(projectName string) *sync.Mutex {
+func getProjectMutex(projectName string) *sync.RWMutex {
 	projectMapMu.Lock()
 	defer projectMapMu.Unlock()
 
 	if _, exists := projectMutexes[projectName]; !exists {
-		projectMutexes[projectName] = &sync.Mutex{}
+		projectMutexes[projectName] = &sync.RWMutex{}
 	}
 	return projectMutexes[projectName]
 }
@@ -84,21 +84,19 @@ type RedcProject struct {
 // Case 项目信息
 type Case struct {
 	// Id uuid
-	Id                 string    `json:"id"`
-	Name               string    `json:"name"`
-	Type               string    `json:"type"`
-	Module             string    `json:"module,omitempty"`
-	Operator           string    `json:"operator"`
-	Path               string    `json:"path"`
-	Node               int       `json:"node"`
-	CreateTime         string    `json:"create_time"`
-	StateTime          string    `json:"state_time"`
-	Parameter          []string  `json:"parameter"`
-	State              CaseState `json:"state"`
-	output             map[string]tfexec.OutputMeta
-	saveHandler        func() error
-	removeHandle       func() error
-	stateUpdateHandler func(CaseState, string) error // Handler for state-only updates
+	Id         string    `json:"id"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"`
+	Module     string    `json:"module,omitempty"`
+	Operator   string    `json:"operator"`
+	Path       string    `json:"path"`
+	Node       int       `json:"node"`
+	CreateTime string    `json:"create_time"`
+	StateTime  string    `json:"state_time"`
+	Parameter  []string  `json:"parameter"`
+	State      CaseState `json:"state"`
+	output     map[string]tfexec.OutputMeta
+	project    *RedcProject // Reference to parent project for state updates
 }
 
 type ChangeCommand struct {
@@ -195,22 +193,15 @@ func (p *RedcProject) GetCase(identifier string) (*Case, error) {
 
 	// 遍历所有 Case
 	for i := range p.Case {
-		// 使用指针引用，避免大结构体复制，且允许返回原始切片中的地址
 		c := p.Case[i]
-
-		// 先绑定项目操作函数
-		c.bindHandlers(p)
+		c.project = p // 绑定项目引用
 
 		// 1. 第一优先级：精确匹配 (ID 或 Name)
-		// 如果输入的字符串完全等于 ID 或 Name，直接认定为目标
 		if c.Id == identifier || c.Name == identifier {
-			// 绑定 project 参数
 			return c, nil
 		}
 
-		// 2. 第二优先级：ID 前缀模糊匹配 (Docker 风格)
-		// 只有当 identifier 是 ID 的前缀时才算 (例如输入 "abc" 匹配 "abcde")
-		// 注意：通常不对 Name 做前缀匹配，防止误操作，这里只针对 ID
+		// 2. 第二优先级：ID 前缀模糊匹配
 		if strings.HasPrefix(c.Id, identifier) {
 			candidates = append(candidates, c)
 		}
@@ -228,7 +219,6 @@ func (p *RedcProject) GetCase(identifier string) (*Case, error) {
 	}
 
 	// 4. 歧义处理 (匹配到多个 ID 前缀)
-	// 例如输入 "a1", 既匹配了 "a1b2..." 也匹配了 "a1c3..."
 	return nil, fmt.Errorf("输入 '%s' 存在歧义，匹配到 %d 个场景 (请提供更完整的 ID)", identifier, len(candidates))
 }
 

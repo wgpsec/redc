@@ -163,9 +163,8 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 		Module:     moduleName,
 		Parameter:  par,
 		State:      StatePending,
+		project:    p, // 绑定项目引用
 	}
-	// 绑定 project 参数
-	c.bindHandlers(p)
 
 	// 构建场景
 	if err := c.TfPlan(); err != nil {
@@ -244,8 +243,8 @@ func (c *Case) runModuleHook() error {
 	if c.Module == "" {
 		if meta, err := readTemplateMeta(c.Path); err == nil {
 			c.Module = meta.RedcModule
-			if c.saveHandler != nil {
-				_ = c.saveHandler()
+			if c.project != nil {
+				_ = c.project.SaveProject()
 			}
 		}
 	}
@@ -285,21 +284,6 @@ func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
 	return o, nil
 }
 
-// bindHandlers 绑定项目方法
-func (c *Case) bindHandlers(p *RedcProject) {
-	// 随时删除自己
-	c.removeHandle = func() error {
-		return p.HandleCase(c)
-	}
-	c.saveHandler = func() error {
-		return p.SaveProject()
-	}
-	// 状态更新专用处理器，只更新状态不全量保存
-	c.stateUpdateHandler = func(state CaseState, stateTime string) error {
-		return p.UpdateCaseState(c.Id, state, stateTime)
-	}
-}
-
 func (c *Case) TfPlan() error {
 	gologger.Info().Msgf("正在构建场景「%s(%s)」...", c.Name, c.GetId())
 	if err := TfPlan(c.Path, c.Parameter...); err != nil {
@@ -312,14 +296,9 @@ func (c *Case) TfPlan() error {
 func (c *Case) StatusChange(s CaseState) {
 	c.State = s
 	c.StateTime = time.Now().Format("2006-01-02 15:04:05")
-	// 优先使用状态更新专用处理器，避免全量覆盖
-	if c.stateUpdateHandler != nil {
-		if err := c.stateUpdateHandler(s, c.StateTime); err != nil {
-			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
-		}
-	} else if c.saveHandler != nil {
-		// 回退到全量保存（向后兼容）
-		if err := c.saveHandler(); err != nil {
+
+	if c.project != nil {
+		if err := c.project.UpdateCaseState(c.Id, s, c.StateTime); err != nil {
 			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
 		}
 	}
@@ -343,9 +322,11 @@ func (c *Case) Remove() error {
 	if err != nil {
 		return fmt.Errorf("删除场景文件失败！%s", err.Error())
 	}
-	err = c.removeHandle()
+	if c.project != nil {
+		err = c.project.HandleCase(c)
+	}
 	gologger.Info().Msgf("场景删除成功")
-	return nil
+	return err
 }
 
 // Stop 停止场景
