@@ -292,7 +292,7 @@ redc cp [caseid]:/root/test.txt ./
 redc change [caseid]
 ````
 
-## 编排服务compose
+## 编排服务compose （WIP）
 
 redc 提供了一个编排服务
 

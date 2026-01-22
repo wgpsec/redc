@@ -284,7 +284,7 @@ This requires template support for changes, can switch elastic public IP
 redc change [caseid]
 ````
 
-## Compose Orchestration Service
+## Compose Orchestration Service （WIP）
 
 redc provides an orchestration service
 
