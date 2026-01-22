@@ -24,7 +24,7 @@ var (
 func getProjectMutex(projectName string) *sync.Mutex {
 	projectMapMu.Lock()
 	defer projectMapMu.Unlock()
-	
+
 	if _, exists := projectMutexes[projectName]; !exists {
 		projectMutexes[projectName] = &sync.Mutex{}
 	}
@@ -131,7 +131,7 @@ func ProjectByName(name string) (*RedcProject, error) {
 	mu := getProjectMutex(name)
 	mu.Lock()
 	defer mu.Unlock()
-	
+
 	path := filepath.Join(ProjectPath, name, ProjectFile)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -316,7 +316,7 @@ func (p *RedcProject) SaveProject() error {
 			}
 
 			// Update or keep cases from latest file
-			mergedCases := make([]*Case, 0)
+			mergedCases := make([]*Case, 0, len(latestProject.Case)+len(p.Case))
 			seenIDs := make(map[string]bool)
 
 			// First, add/update cases from the latest file with our current changes

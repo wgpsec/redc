@@ -2,6 +2,7 @@ package mod
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -64,7 +65,7 @@ func TestConcurrentSaveProject(t *testing.T) {
 			caseID := GenerateCaseID()
 			newCase := &Case{
 				Id:         caseID,
-				Name:       "test-case-" + string(rune('A'+id)),
+				Name:       fmt.Sprintf("test-case-%d", id),
 				Type:       "test",
 				Operator:   "test-user",
 				Path:       filepath.Join(loadedProject.ProjectPath, caseID),
@@ -129,12 +130,12 @@ func TestConcurrentStatusChange(t *testing.T) {
 	projectName := "test-status-project"
 	numCases := 5
 	cases := make([]*Case, numCases)
-	
+
 	for i := 0; i < numCases; i++ {
 		caseID := GenerateCaseID()
 		cases[i] = &Case{
 			Id:         caseID,
-			Name:       "test-case-" + string(rune('A'+i)),
+			Name:       fmt.Sprintf("test-case-%d", i),
 			Type:       "test",
 			Operator:   "test-user",
 			Path:       filepath.Join(tmpDir, projectName, caseID),
@@ -174,7 +175,7 @@ func TestConcurrentStatusChange(t *testing.T) {
 	for i := 0; i < numCases; i++ {
 		go func(caseIndex int) {
 			defer wg.Done()
-			
+
 			// Change status to running
 			cases[caseIndex].StatusChange(StateRunning)
 			time.Sleep(10 * time.Millisecond)
@@ -206,7 +207,7 @@ func TestConcurrentStatusChange(t *testing.T) {
 	// All cases should be in running state
 	if runningCount != numCases {
 		t.Errorf("Expected all %d cases to be running, but only %d are running", numCases, runningCount)
-		
+
 		// Print detailed state information
 		for _, c := range finalProject.Case {
 			t.Logf("Case %s: State=%s", c.Name, c.State)
@@ -302,7 +303,7 @@ func TestSaveProjectPreservesExistingData(t *testing.T) {
 	// Verify both cases are present
 	if len(finalProject.Case) != 2 {
 		t.Errorf("Expected 2 cases, but got %d", len(finalProject.Case))
-		
+
 		// Debug: print the project file content
 		projectFile := filepath.Join(tmpDir, projectName, ProjectFile)
 		data, _ := os.ReadFile(projectFile)
@@ -348,7 +349,7 @@ func TestProjectByNameInitializesMutex(t *testing.T) {
 	// Create a test project
 	projectName := "test-mutex-project"
 	projectPath := filepath.Join(tmpDir, projectName)
-	
+
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		t.Fatalf("Failed to create project dir: %v", err)
 	}
