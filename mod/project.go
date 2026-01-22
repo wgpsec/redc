@@ -14,14 +14,30 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 )
 
+// Global mutex map to protect file operations per project
+var (
+	projectMutexes = make(map[string]*sync.Mutex)
+	projectMapMu   sync.Mutex
+)
+
+// getProjectMutex returns a mutex for the given project name
+func getProjectMutex(projectName string) *sync.Mutex {
+	projectMapMu.Lock()
+	defer projectMapMu.Unlock()
+	
+	if _, exists := projectMutexes[projectName]; !exists {
+		projectMutexes[projectName] = &sync.Mutex{}
+	}
+	return projectMutexes[projectName]
+}
+
 // RedcProject 项目结构体
 type RedcProject struct {
-	ProjectName string     `json:"project_name"`
-	ProjectPath string     `json:"project_path"`
-	CreateTime  string     `json:"create_time"`
-	User        string     `json:"user"`
-	Case        []*Case    `json:"case"`
-	mu          sync.Mutex `json:"-"` // Mutex to protect concurrent file operations
+	ProjectName string  `json:"project_name"`
+	ProjectPath string  `json:"project_path"`
+	CreateTime  string  `json:"create_time"`
+	User        string  `json:"user"`
+	Case        []*Case `json:"case"`
 }
 
 // Case 项目信息
@@ -111,6 +127,11 @@ func ProjectParse(name string, user string) (*RedcProject, error) {
 
 // ProjectByName 读取项目配置
 func ProjectByName(name string) (*RedcProject, error) {
+	// Get the project-specific mutex and lock it for reading
+	mu := getProjectMutex(name)
+	mu.Lock()
+	defer mu.Unlock()
+	
 	path := filepath.Join(ProjectPath, name, ProjectFile)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -267,9 +288,10 @@ func (p *RedcProject) CaseList() {
 
 // SaveProject 将修改后的项目配置写回 JSON 文件
 func (p *RedcProject) SaveProject() error {
-	// Lock to prevent concurrent writes
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// Get the project-specific mutex and lock it
+	mu := getProjectMutex(p.ProjectName)
+	mu.Lock()
+	defer mu.Unlock()
 
 	dirPath := p.ProjectPath
 	path := filepath.Join(ProjectPath, p.ProjectName, ProjectFile)
