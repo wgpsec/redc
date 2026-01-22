@@ -3,7 +3,7 @@
     <img src="./img/banner.jpg" width="100%" alt="redc">
   </a>
   <p align="center">
-    红队基础设施多云自动化部署工具
+    Red Team Infrastructure Multi-Cloud Automated Deployment Tool
     <br />
     <br />
 <a href="https://github.com/wgpsec/redc/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/wgpsec/redc"/></a>
@@ -14,59 +14,59 @@
 <a href="https://twitter.com/wgpsec"><img alt="Twitter" src="https://img.shields.io/twitter/follow/wgpsec?label=Followers&style=social" /></a>
 <br>
 <br>
-<a href="https://redc.wgpsec.org/"><strong>探索更多模板 »</strong></a>
+<a href="https://redc.wgpsec.org/"><strong>Explore More Templates »</strong></a>
     <br/>
     <br />
-      <a href="https://github.com/wgpsec/redc?tab=readme-ov-file#%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97">🧐如何使用</a>
+      <a href="https://github.com/wgpsec/redc?tab=readme-ov-file#quick-start">🧐How to Use</a>
       ·
-    <a href="https://github.com/wgpsec/redc/releases">⬇️下载程序</a>
+    <a href="https://github.com/wgpsec/redc/releases">⬇️Download</a>
     ·
-    <a href="https://github.com/wgpsec/redc/issues">❔反馈Bug</a>
+    <a href="https://github.com/wgpsec/redc/issues">❔Report Bug</a>
     ·
-    <a href="https://github.com/wgpsec/redc/discussions">🍭提交需求</a>
+    <a href="https://github.com/wgpsec/redc/discussions">🍭Request Feature</a>
   </p>
 
-中文 | [English](readme_en.md)
+[中文](README_CN.md) | English
 
 ---
 
-Redc 基于 Terraform 封装，将红队基础设施的完整生命周期（创建、配置、销毁）进一步简化。
+Redc is built on Terraform, further simplifying the complete lifecycle (create, configure, destroy) of red team infrastructure.
 
-Redc 不仅仅是开机工具，更是对云资源的自动化调度器！
+Redc is not just a machine provisioning tool, but an automated cloud resource scheduler!
 
-- **一条命令交付**，从购买机器到服务跑起来一条龙，无需人工干预
-- **多云部署支持**，适配阿里云、腾讯云、AWS 等主流云厂商
-- **场景预制封装**，红队环境 ”预制菜“，再也不用到处找资源
-- **状态资源管理**，本地保存资源状态，随时销毁环境，杜绝资源费用浪费
+- **One-command deployment**, from purchasing machines to running services, fully automated without manual intervention
+- **Multi-cloud support**, compatible with Alibaba Cloud, Tencent Cloud, AWS and other mainstream cloud providers
+- **Pre-configured scenarios**, red team environment ready-to-use templates, no more hunting for resources
+- **State resource management**, locally saves resource state, destroy environments anytime, eliminate wasted resource costs
 
 ---
 
-## 安装配置
+## Installation and Configuration
 
-### redc 引擎安装 (第一步)
-#### 下载二进制包
+### redc Engine Installation
+#### Download Binary Package
 
-REDC 下载地址：https://github.com/wgpsec/redc/releases
+REDC download address: https://github.com/wgpsec/redc/releases
 
-下载系统对应的压缩文件，解压后在命令行中运行即可。
+Download the compressed file for your system, extract it and run it from the command line.
 
-#### HomeBrew 安装 （WIP）
+#### HomeBrew Installation (WIP)
 
-**安装**
+**Install**
 
 ```bash
 brew tap wgpsec/tap
 brew install wgpsec/tap/redc
 ```
 
-**更新**
+**Update**
 
 ```bash
 brew update
 brew upgrade redc
 ```
 
-#### 从源码编译安装
+#### Build from Source
 
 **goreleaser**
 ```bash
@@ -74,40 +74,37 @@ git clone https://github.com/wgpsec/redc.git
 cd redc
 goreleaser --snapshot --clean
 
-# 编译成功后会在 dist 路径下
+# Build artifacts are generated under the dist directory
 ```
 
-### 模版选择 (第二步)
+### Template Selection
 
-默认下 redc 会读取用户目录下的 ~/.redc/redc-templates 模板文件夹，对应的 "文件夹名称" 就是部署时的场景名称
+By default, redc reads the template folder at `~/redc/redc-templates`; the folder name is the scenario name when deploying.
 
-可以自行下载模板场景，场景名称对应模板仓库 https://github.com/wgpsec/redc-template
+You can download template scenarios yourself; scenario names correspond to the template repository https://github.com/wgpsec/redc-template
 
-在线地址：https://redc.wgpsec.org/
+Online address: https://redc.wgpsec.org/
 
-例如，一键拉取ecs场景
 ```bash
 redc pull aliyun/ecs
-
-# 此时，模板会下载到 ~/.redc/redc-templates 目录下
 ```
 
 ![redc pull](./img/image9.png)
 
-每个场景的具体使用和命令请查看模板仓库 https://github.com/wgpsec/redc-template 里具体场景的 readme
+For specific usage and commands for each scenario, please check the readme of the specific scenario in the template repository https://github.com/wgpsec/redc-template
 
-### 引擎配置文件 (第三步)
+### Engine Configuration File
 
-redc 开启机器需要依靠 aksk
+redc needs AK/SK credentials to start machines.
 
-默认下 redc 会读取用户路径的 config.yaml 配置文件，格式如下
+By default, redc reads the config.yaml configuration file from your home directory at `~/redc/config.yaml`. Create it if missing:
 ```
-mkdir -p ~/.redc/
-vim ~/.redc/config.yaml
+vim ~/redc/config.yaml
 ```
 
+Example content:
 ```yaml
-# 多云身份凭证与默认区域
+# Multi-cloud credentials and default regions
 providers:
   aws:
     AWS_ACCESS_KEY_ID: "AKIDXXXXXXXXXXXXXXXX"
@@ -123,125 +120,121 @@ providers:
     region: "ap-guangzhou"
 ```
 
-在配置文件加载失败的情况下，会尝试读取系统环境变量，使用前请配置好
+If the configuration file fails to load, it will attempt to read system environment variables, please configure them before use.
 
-**AWS 环境变量**
-- 详情参考 : https://docs.aws.amazon.com/sdkref/latest/guide/feature-static-credentials.html
+**AWS environment variables**
+- Docs: https://docs.aws.amazon.com/sdkref/latest/guide/feature-static-credentials.html
 
-Linux/macOS 示例通过命令行设置环境变量：
+Linux/macOS example:
 ```bash
 export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 ```
 
-Windows 示例通过命令行设置环境变量：
+Windows example:
 ```powershell
 setx AWS_ACCESS_KEY_ID AKIAIOSFODNN7EXAMPLE
 setx AWS_SECRET_ACCESS_KEY wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 ```
 
-**阿里云环境变量**
-- 详情参考 : https://help.aliyun.com/zh/terraform/terraform-authentication
+**Alibaba Cloud environment variables**
+- Docs: https://help.aliyun.com/zh/terraform/terraform-authentication
 
-Linux/macOS 系统
-> 使用 export 命令配置的临时环境变量仅对当前 Shell 会话有效。如需长期保留，可将 export 命令写入 Shell 的启动配置文件（如 .bash_profile 或 .zshrc）。
-```
-# AccessKey ID
-$ export ALICLOUD_ACCESS_KEY="<AccessKey ID>"
-# AccessKey Secret
-$ export ALICLOUD_SECRET_KEY="<AccessKey Secret>"
-# 如果使用 STS 凭证，需配置 security_token
-$ export ALICLOUD_SECURITY_TOKEN="<STS Token>"
+Linux/macOS example (use a shell init file like .bash_profile or .zshrc to persist):
+```bash
+export ALICLOUD_ACCESS_KEY="<AccessKey ID>"
+export ALICLOUD_SECRET_KEY="<AccessKey Secret>"
+# If you use STS credentials, also set security_token
+export ALICLOUD_SECURITY_TOKEN="<STS Token>"
 ```
 
-Windows 系统
+Windows example:
 ```
-在桌面右键单击 此电脑，选择 属性 > 高级系统设置 > 环境变量。
-在 系统变量 或 用户变量 中，单击 新建，创建以下环境变量：ALICLOUD_ACCESS_KEY、ALICLOUD_SECRET_KEY、ALICLOUD_SECURITY_TOKEN（可选）。
-```
-
-**腾讯云环境变量**
-- 详情参考 : https://cloud.tencent.com/document/product/1278/85305
-
-Linux/macOS 系统
-```
-export TENCENTCLOUD_SECRET_ID=您的SecretId
-export TENCENTCLOUD_SECRET_KEY=您的SecretKey
+In System Properties > Advanced > Environment Variables, add ALICLOUD_ACCESS_KEY, ALICLOUD_SECRET_KEY, and ALICLOUD_SECURITY_TOKEN (optional).
 ```
 
-Windows 系统
+**Tencent Cloud environment variables**
+- Docs: https://cloud.tencent.com/document/product/1278/85305
+
+Linux/macOS example:
+```bash
+export TENCENTCLOUD_SECRET_ID=<YourSecretId>
+export TENCENTCLOUD_SECRET_KEY=<YourSecretKey>
 ```
-set TENCENTCLOUD_SECRET_ID=您的SecretId
-set TENCENTCLOUD_SECRET_KEY=您的SecretKey
+
+Windows example:
+```powershell
+set TENCENTCLOUD_SECRET_ID=<YourSecretId>
+set TENCENTCLOUD_SECRET_KEY=<YourSecretKey>
 ```
 
 ---
 
-## 快速上手
+## Quick Start
 
-redc设计为docker like命令设计
+redc is designed with Docker-like commands
 
-使用 `redc -h` 可以查看常用命令帮助
+Use `redc -h` to view common command help
 
-**初始化模版**
+**Initialize Template**
 
-首次使用模版需要运行。为了加快模版部署速度，建议运行 init 选项加快后续部署速度
+Required for first-time use of templates. To speed up template deployment, it's recommended to run init after modifying `redc-templates` content to speed up subsequent deployments
 
 ````bash
 redc init
 ````
 
-![默认init效果](./img/image.png)
+![Default init effect](./img/image.png)
 
-默认会 init 在 ~/.redc/redc-templates 路径下的所有场景，作用就是刷一遍 tf provider 的 cache
+By default, init sweeps all scenarios under `~/redc/redc-templates` to warm the Terraform provider cache.
 
-**列出模版列表**
+**List Template List**
 
 ```bash
 redc image ls
 ```
 
-默认会列出在 ~/.redc/redc-templates 路径下的所有场景
+![redc image ls](./img/image10.png)
 
-**创建实例并启动**
+**Create and Start Instance**
 
-ecs 为模版文件名称
+ecs is the template file name
 
 ````bash
-redc create --name boring_sheep_ecs  [模版名称] # 创建一个实例并plan（该过程不会创建实例，只是检查信息）
-# create创建完成后会返回caseid 可使用start命令启动
+redc create --name boring_sheep_ecs  [template_name] # Create an instance and plan (this process does not create the instance, just checks information)
+# After create completes, it returns a caseid which can be used with the start command
 redc start [caseid]
 redc start [casename]
 ````
 
-直接创建模版名称为 ecs 的 case 并启动
+Directly create and start a case with template name ecs
 
 ```
-redc run ecs
+redc run aliyun/ecs
 ```
 
-![redc run ecs](./img/image2.png)
+![redc run aliyun/ecs](./img/image11.png)
 
-> 开启后会给出 case id ，这是标识场景唯一性的识别 id，后续操作都需要用到 case id
-> 例如 8a57078ee8567cf2459a0358bc27e534cb87c8a02eadc637ce8335046c16cb3c 可以用 8a57078ee856 效果一样
+> After starting, it will provide a case id, which is the unique identifier for the scenario, required for subsequent operations
+> For example, 8a57078ee8567cf2459a0358bc27e534cb87c8a02eadc637ce8335046c16cb3c can use 8a57078ee856 with the same effect
 
-使用`-e` 参数可配置变量
+Use `-e` parameter to configure variables
 
 ```
 redc run -e xxx=xxx ecs
 ```
 
-停止实例
+Stop instance
 
 ````bash
-redc stop [caseid] # 停止实例
-redc rm [caseid] # 删除实例（删除前确认实例是否已经停止）
-redc kill [caseid] # init模版后停止实例并删除
+redc stop [caseid] # Stop instance
+redc rm [caseid] # Delete instance (confirm the instance is stopped before deleting)
+redc kill [caseid] # After init template, stop and delete instance
 ````
 
 ![redc stop [caseid]](./img/image7.png)
 
-**查看case情况**
+**View case status**
 
 ````
 redc ps
@@ -249,9 +242,9 @@ redc ps
 
 ![redc ps](./img/image8.png)
 
-**执行命令**
+**Execute commands**
 
-直接执行命令并返回结果
+Directly execute command and return result
 
 ````
 redc exec [caseid] whoami
@@ -259,7 +252,7 @@ redc exec [caseid] whoami
 
 ![redc exec [caseid] whoami](./img/image3.png)
 
-进入交互式命令
+Enter interactive command mode
 
 ````
 redc exec -t [caseid] bash
@@ -267,7 +260,7 @@ redc exec -t [caseid] bash
 
 ![redc exec -t [caseid] bash](./img/image4.png)
 
-复制文件到服务器
+Copy files to server
 
 ```
 redc cp test.txt [caseid]:/root/
@@ -275,7 +268,7 @@ redc cp test.txt [caseid]:/root/
 
 ![redc cp test.txt [caseid]:/root/](./img/image5.png)
 
-下载文件到本地
+Download files to local
 
 ```
 redc cp [caseid]:/root/test.txt ./
@@ -283,47 +276,47 @@ redc cp [caseid]:/root/test.txt ./
 
 ![redc cp [caseid]:/root/test.txt ./](./img/image6.png)
 
-**更改服务**
+**Change service**
 
-这个需要模版支持更改，可实现更换弹性公网ip
+This requires template support for changes, can switch elastic public IP
 
 ````
 redc change [caseid]
 ````
 
-## 编排服务compose
+## Compose Orchestration Service
 
-redc 提供了一个编排服务
+redc provides an orchestration service
 
-**启动编排服务**
+**Start orchestration service**
 
 ```
 redc compose up
 ```
 
-**关闭compose**
+**Stop compose**
 
 ````
 redc compose down
 ````
 
-文件名称：`redc-compose.yaml`
+File name: `redc-compose.yaml`
 
-**compose 模版**
+**Compose Template**
 
 ```yaml
 version: "3.9"
 
 # ==============================================================================
-# 1. Configs: 全局配置中心
-# 作用: 定义可复用的静态资源，redc 会将其注入到 Terraform 变量中
+# 1. Configs: Global Configuration Center
+# Purpose: Define reusable static resources, redc will inject them into Terraform variables
 # ==============================================================================
 configs:
-  # [文件型] SSH 公钥
+  # [File type] SSH public key
   admin_ssh_key:
     file: ~/.ssh/id_rsa.pub
 
-  # [结构型] 安全组白名单 (将被序列化为 JSON 传递)
+  # [Structure type] Security group whitelist (will be serialized to JSON)
   global_whitelist:
     rules:
       - port: 22
@@ -337,15 +330,15 @@ configs:
         desc: "HTTPS Listener"
 
 # ==============================================================================
-# 2. Plugins: 插件服务 (非计算资源)
-# 作用: 独立于服务器的云资源，如 DNS 解析、对象存储、VPC 对等连接等
+# 2. Plugins: Plugin Services (Non-compute resources)
+# Purpose: Cloud resources independent of servers, such as DNS resolution, object storage, VPC peering, etc.
 # ==============================================================================
 plugins:
-  # 插件 A: 阿里云 DNS 解析
-  # 场景: 基础设施启动后，自动将域名指向 Teamserver IP
+  # Plugin A: Alibaba Cloud DNS resolution
+  # Scenario: After infrastructure starts, automatically point domain to Teamserver IP
   dns_record:
     image: plugin-dns-aliyun
-    # 引用外部定义的 provider 名称
+    # Reference externally defined provider name
     provider: ali_hk_main
     environment:
       - domain=redteam-ops.com
@@ -353,8 +346,8 @@ plugins:
       - type=A
       - value=${teamserver.outputs.public_ip}
 
-  # 插件 B: AWS S3 存储桶 (Loot Box)
-  # 场景: 仅在生产环境 ('prod') 启用，用于存放回传数据
+  # Plugin B: AWS S3 storage bucket (Loot Box)
+  # Scenario: Only enabled in production environment ('prod'), used to store returned data
   loot_bucket:
     image: plugin-s3
     profiles:
@@ -365,20 +358,20 @@ plugins:
       - acl=private
 
 # ==============================================================================
-# 3. Services: Case场景
+# 3. Services: Case Scenarios
 # ==============================================================================
 services:
 
   # ---------------------------------------------------------------------------
-  # Service A: 核心控制端 (Teamserver)
-  # 特性: 总是启动 (无 profile)，包含完整生命周期钩子和文件流转
+  # Service A: Core Control End (Teamserver)
+  # Features: Always starts (no profile), includes complete lifecycle hooks and file transfer
   # ---------------------------------------------------------------------------
   teamserver:
     image: ecs
     provider: ali_hk_main
     container_name: ts_leader
 
-    # [Configs] 注入全局配置 (tf_var=config_key)
+    # [Configs] Inject global configuration (tf_var=config_key)
     configs:
       - ssh_public_key=admin_ssh_key
       - security_rules=global_whitelist
@@ -387,40 +380,40 @@ services:
       - password=StrongPassword123!
       - region=ap-southeast-1
 
-    # [Volumes] 文件上传 (Local -> Remote)
-    # 机器 SSH 连通后立即执行
+    # [Volumes] File upload (Local -> Remote)
+    # Execute immediately after machine SSH is connected
     volumes:
       - ./tools/cobaltstrike.jar:/root/cs/cobaltstrike.jar
       - ./profiles/amazon.profile:/root/cs/c2.profile
       - ./scripts/init_server.sh:/root/init.sh
 
-    # [Command] 实例内部自启动
+    # [Command] Instance internal auto-start
     command: |
       chmod +x /root/init.sh
       /root/init.sh start --profile /root/cs/c2.profile
 
-    # [Downloads] 文件回传 (Remote -> Local)
-    # 启动完成后抓取凭证
+    # [Downloads] File return (Remote -> Local)
+    # Grab credentials after startup completes
     downloads:
       - /root/cs/.cobaltstrike.beacon_keys:./loot/beacon.keys
       - /root/cs/teamserver.prop:./loot/ts.prop
 
   # ---------------------------------------------------------------------------
-  # Service B: 全球代理矩阵 (Global Redirectors)
-  # 特性: 矩阵部署 (Matrix Deployment) + Profiles
+  # Service B: Global Proxy Matrix (Global Redirectors)
+  # Features: Matrix Deployment + Profiles
   # ---------------------------------------------------------------------------
   global_redirectors:
     image: nginx-proxy
 
-    # [Profiles] 仅在指定模式下启动 (e.g., redc up --profile prod)
+    # [Profiles] Only start in specified mode (e.g., redc up --profile prod)
     profiles:
       - prod
 
-    # [Matrix] 多 Provider 引用
-    # redc 会自动裂变出:
+    # [Matrix] Multiple Provider references
+    # redc will automatically split into:
     # 1. global_redirectors_aws_us_east
     # 2. global_redirectors_tencent_sg
-    # 3. global_redirectors_ali_jp (假设 providers.yaml 里有这个)
+    # 3. global_redirectors_ali_jp (assuming this exists in providers.yaml)
     provider:
       - aws_us_east
       - tencent_sg
@@ -432,7 +425,7 @@ services:
     configs:
       - ingress_rules=global_whitelist
 
-    # 注入当前 provider 的别名
+    # Inject current provider's alias
     environment:
       - upstream_ip=${teamserver.outputs.public_ip}
       - node_tag=${provider.alias}
@@ -440,8 +433,8 @@ services:
     command: docker run -d -p 80:80 -e UPSTREAM=${teamserver.outputs.public_ip} nginx-proxy
 
   # ---------------------------------------------------------------------------
-  # Service C: 攻击/扫描节点
-  # 特性: 攻击模式专用
+  # Service C: Attack/Scan Nodes
+  # Features: Attack mode specific
   # ---------------------------------------------------------------------------
   scan_workers:
     image: aws-ec2-spot
@@ -453,20 +446,20 @@ services:
     command: /app/run_scan.sh
 
 # ==============================================================================
-# 4. Setup: 联合编排 (Post-Deployment Hooks)
-# 作用: 基础设施全部 Ready 后，执行跨机器的注册/交互逻辑
-# 注意: redc 会根据当前激活的 Profile 自动跳过未启动服务的相关任务
+# 4. Setup: Joint Orchestration (Post-Deployment Hooks)
+# Purpose: After all infrastructure is Ready, execute cross-machine registration/interaction logic
+# Note: redc will automatically skip related tasks for services not started based on currently activated Profile
 # ==============================================================================
 setup:
 
-  # 任务 1: 基础检查 (总是执行)
-  - name: "检查 Teamserver 状态"
+  # Task 1: Basic check (always execute)
+  - name: "Check Teamserver status"
     service: teamserver
     command: ./ts_cli status
 
-  # 任务 2: 注册 AWS 代理 (仅 prod 模式有效)
-  # 引用裂变后的实例名称: {service}_{provider}
-  - name: "注册 AWS 代理节点"
+  # Task 2: Register AWS proxy (only effective in prod mode)
+  # Reference split instance name: {service}_{provider}
+  - name: "Register AWS proxy node"
     service: teamserver
     command: >
       ./aggressor_cmd listener_create 
@@ -474,8 +467,8 @@ setup:
       --host ${global_redirectors_aws_us_east.outputs.public_ip} 
       --port 80
 
-  # 任务 3: 注册 Tencent 代理 (仅 prod 模式有效)
-  - name: "注册 Tencent 代理节点"
+  # Task 3: Register Tencent proxy (only effective in prod mode)
+  - name: "Register Tencent proxy node"
     service: teamserver
     command: >
       ./aggressor_cmd listener_create 
@@ -483,8 +476,8 @@ setup:
       --host ${global_redirectors_tencent_sg.outputs.public_ip} 
       --port 80
 
-  # 任务 4: 注册 Aliyun 代理 (仅 prod 模式有效)
-  - name: "注册 Aliyun 代理节点"
+  # Task 4: Register Aliyun proxy (only effective in prod mode)
+  - name: "Register Aliyun proxy node"
     service: teamserver
     command: >
       ./aggressor_cmd listener_create 
@@ -496,15 +489,15 @@ setup:
 
 ---
 
-## 配置缓存和加速
+## Configure Cache and Acceleration
 
-仅配置缓存地址：
+Configure cache address only:
 
 ```bash
 echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 ```
 
-配置阿里云加速 修改 `/.terraformrc` 文件
+Configure Alibaba Cloud acceleration, modify `~/.terraformrc` file
 
 ```
 plugin_cache_dir  = "$HOME/.terraform.d/plugin-cache"
@@ -512,13 +505,13 @@ disable_checkpoint = true
 provider_installation {
   network_mirror {
     url = "https://mirrors.aliyun.com/terraform/"
-    # 限制只有阿里云相关 Provider 从国内镜像源下载
+    # Restrict only Alibaba Cloud related Providers to download from domestic mirror source
     include = ["registry.terraform.io/aliyun/alicloud",
                "registry.terraform.io/hashicorp/alicloud",
               ]
   }
   direct {
-    # 声明除了阿里云相关Provider, 其它Provider保持原有的下载链路
+    # Declare that except for Alibaba Cloud related Providers, other Providers keep original download link
     exclude = ["registry.terraform.io/aliyun/alicloud",
                "registry.terraform.io/hashicorp/alicloud",
               ]
@@ -528,36 +521,36 @@ provider_installation {
 
 ---
 
-## 设计规划
+## Design Plan
 
-1. 先创建新项目
-2. 指定项目下要创建场景会从场景库复制一份场景文件夹到项目文件夹下
-3. 不同项目下创建同一场景互不干扰
-4. 同一项目下创建同一场景互不干扰
-5. 多用户操作互不干扰(本地有做鉴权,但这个实际上要在平台上去做)
+1. Create a new project first
+2. Creating a scenario under a specified project will copy a scenario folder from the scenario library to the project folder
+3. Creating the same scenario under different projects will not interfere with each other
+4. Creating the same scenario under the same project will not interfere with each other
+5. Multiple user operations will not interfere with each other (local authentication is done, but this should actually be done on the platform)
 
-- redc 配置文件 (.redc.ini)
-- 项目1 (./project1)
-    - 场景1 (./project1/[uuid1])
+- redc configuration file (`~/redc/config.yaml`)
+- Project1 (./project1)
+    - Scenario1 (./project1/[uuid1])
         - main.tf
         - version.tf
         - output.tf
-    - 场景2 (./project1/[uuid2])
+    - Scenario2 (./project1/[uuid2])
         - main.tf
         - version.tf
         - output.tf
-    - 项目状态文件 (project.ini)
-- 项目2 (./project2)
-    - 场景1 (./project2/[uuid1])
+    - Project status file (project.ini)
+- Project2 (./project2)
+    - Scenario1 (./project2/[uuid1])
         - main.tf
         - version.tf
         - output.tf
-    - 场景2 (./project2/[uuid2])
+    - Scenario2 (./project2/[uuid2])
         - ...
-    - 项目状态文件 (project.ini)
-- 项目3 (./project3)
+    - Project status file (project.ini)
+- Project3 (./project3)
     - ...
 
-## 文章介绍
+## Article Introduction
 
 - https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ
