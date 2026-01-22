@@ -20,7 +20,7 @@ var runCmd = &cobra.Command{
 	Use:     "run [template_name]",
 	Short:   "创建并立即启动一个场景",
 	Example: "redc run ecs",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
 		if c, err := createLogic(templateName); err == nil {
@@ -74,6 +74,4 @@ func init() {
 	CRCommonFlagSet.StringToStringVarP(&envVars, "env", "e", nil, "设置环境变量 (格式: key=value)")
 	createCmd.Flags().AddFlagSet(CRCommonFlagSet)
 	runCmd.Flags().AddFlagSet(CRCommonFlagSet)
-	// 禁用参数混排
-	runCmd.Flags().SetInterspersed(false)
 }
