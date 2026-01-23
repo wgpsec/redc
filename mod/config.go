@@ -42,6 +42,29 @@ type Config struct {
 			SecretKey string `yaml:"VOLCENGINE_SECRET_KEY" env:"VOLCENGINE_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"volcengine"`
+		Huaweicloud struct {
+			AccessKey string `yaml:"HUAWEICLOUD_ACCESS_KEY" env:"HUAWEICLOUD_ACCESS_KEY"`
+			SecretKey string `yaml:"HUAWEICLOUD_SECRET_KEY" env:"HUAWEICLOUD_SECRET_KEY"`
+			Region    string `yaml:"region"`
+		} `yaml:"huaweicloud"`
+		Google struct {
+			Credentials string `yaml:"GOOGLE_CREDENTIALS" env:"GOOGLE_CREDENTIALS"`
+			Project     string `yaml:"project"`
+			Region      string `yaml:"region"`
+		} `yaml:"google"`
+		Azure struct {
+			ClientId       string `yaml:"ARM_CLIENT_ID" env:"ARM_CLIENT_ID"`
+			ClientSecret   string `yaml:"ARM_CLIENT_SECRET" env:"ARM_CLIENT_SECRET"`
+			SubscriptionId string `yaml:"ARM_SUBSCRIPTION_ID" env:"ARM_SUBSCRIPTION_ID"`
+			TenantId       string `yaml:"ARM_TENANT_ID" env:"ARM_TENANT_ID"`
+		} `yaml:"azure"`
+		Oracle struct {
+			User        string `yaml:"OCI_CLI_USER" env:"OCI_CLI_USER"`
+			Tenancy     string `yaml:"OCI_CLI_TENANCY" env:"OCI_CLI_TENANCY"`
+			Fingerprint string `yaml:"OCI_CLI_FINGERPRINT" env:"OCI_CLI_FINGERPRINT"`
+			KeyFile     string `yaml:"OCI_CLI_KEY_FILE" env:"OCI_CLI_KEY_FILE"`
+			Region      string `yaml:"OCI_CLI_REGION" env:"OCI_CLI_REGION"`
+		} `yaml:"oracle"`
 	} `yaml:"providers"`
 	Cloudflare struct {
 		Email  string `yaml:"CF_EMAIL" env:"CF_EMAIL"`
