@@ -63,11 +63,11 @@ func CaseScene(t string, m map[string]string) ([]string, error) {
 	switch scene {
 	case "cs-49", "c2-new", "snowc2":
 		par = RVar(
-			fmt.Sprintf("node_count=%d", Node),
+			fmt.Sprintf("node=%d", Node),
 			fmt.Sprintf("domain=%s", Domain),
 		)
 	case "proxy", "aws-proxy", "aliyun-proxy", "asm":
-		par = RVar(fmt.Sprintf("node_count=%d", Node))
+		par = RVar(fmt.Sprintf("node=%d", Node))
 	case "dnslog", "xraydnslog", "interactsh":
 		if Domain == "360.com" {
 			return par, fmt.Errorf("创建 dnslog 时,域名不可为默认值")
@@ -81,7 +81,7 @@ func CaseScene(t string, m map[string]string) ([]string, error) {
 		par = []string{fmt.Sprintf("base64_command=%s", Base64Command)}
 	case "asm-node":
 		par = RVar(
-			fmt.Sprintf("node_count=%d", Node),
+			fmt.Sprintf("node=%d", Node),
 			fmt.Sprintf("domain2=%s", Domain2),
 			fmt.Sprintf("domain=%s", Domain),
 		)
