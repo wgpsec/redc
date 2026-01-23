@@ -181,19 +181,29 @@ func buildClashConfig(ips []string, port string, password string) (string, error
 	return sb.String(), nil
 }
 
-func runRcloneUpload(workdir, filePath string) error {
+func runRcloneUpload(workdir, filePath, bucketName, bucketPath string) error {
+	// 允许 tfvars 配置桶与路径，未配置时沿用旧默认
+	if bucketName == "" {
+		bucketName = "test"
+	}
+	trimmed := strings.Trim(bucketPath, "/")
+	if trimmed != "" {
+		trimmed += "/"
+	}
+	remoteDir := fmt.Sprintf("r2:%s/%s", bucketName, trimmed)
+
 	// 先删除，再上传
-	delCmd := exec.Command("bash", "-c", fmt.Sprintf("cd %s && rclone deletefile r2:test/proxyfile/%s", workdir, filepath.Base(filePath)))
+	delCmd := exec.Command("bash", "-c", fmt.Sprintf("cd %s && rclone deletefile %s%s", workdir, remoteDir, filepath.Base(filePath)))
 	if err := delCmd.Run(); err != nil {
 		gologger.Debug().Msgf("rclone deletefile 失败: %v", err)
 	}
 
-	upCmd := exec.Command("bash", "-c", fmt.Sprintf("cd %s && rclone copy %s r2:test/proxyfile/", workdir, filepath.Base(filePath)))
+	upCmd := exec.Command("bash", "-c", fmt.Sprintf("cd %s && rclone copy %s %s", workdir, filepath.Base(filePath), remoteDir))
 	if out, err := upCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("rclone copy 失败: %v, output: %s", err, string(out))
 	}
 
-	gologger.Info().Msgf("R2 上传完成: proxyfile/%s", filepath.Base(filePath))
+	gologger.Info().Msgf("R2 上传完成: %s%s", remoteDir, filepath.Base(filePath))
 	return nil
 }
 
@@ -204,11 +214,13 @@ func uploadR2(c *Case) error {
 	if fileName == "" {
 		fileName = "default-config.yaml"
 	}
+	bucketName := vars["buckets_name"]
+	bucketPath := vars["buckets_path"]
 	file := filepath.Join(c.Path, fileName)
 	if _, err := os.Stat(file); err != nil {
 		return fmt.Errorf("上传失败，未找到文件: %s", file)
 	}
-	return runRcloneUpload(c.Path, file)
+	return runRcloneUpload(c.Path, file, bucketName, bucketPath)
 }
 
 // changDNS 根据模板参数自动更新 Cloudflare A 记录，逻辑参考 deploy.sh 中的 CFAddRecords
