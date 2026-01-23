@@ -37,6 +37,11 @@ type Config struct {
 			SecretKey string `yaml:"TENCENTCLOUD_SECRET_KEY" env:"TENCENTCLOUD_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"tencentcloud"`
+		Volcengine struct {
+			AccessKey string `yaml:"VOLCENGINE_ACCESS_KEY" env:"VOLCENGINE_ACCESS_KEY"`
+			SecretKey string `yaml:"VOLCENGINE_SECRET_KEY" env:"VOLCENGINE_SECRET_KEY"`
+			Region    string `yaml:"region"`
+		} `yaml:"volcengine"`
 	} `yaml:"providers"`
 	Cloudflare struct {
 		Email  string `yaml:"CF_EMAIL" env:"CF_EMAIL"`

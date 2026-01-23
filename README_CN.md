@@ -120,6 +120,10 @@ providers:
     TENCENTCLOUD_SECRET_ID: "AKIDXXXXXXXXXXXXXXXX"
     TENCENTCLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "ap-guangzhou"
+  volcengine:
+    VOLCENGINE_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
+    VOLCENGINE_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "cn-beijing"
   cloudflare:
     CF_EMAIL: "you@example.com"
     CF_API_KEY: "your-cloudflare-api-key"
@@ -175,6 +179,21 @@ Windows 系统
 ```
 set TENCENTCLOUD_SECRET_ID=您的SecretId
 set TENCENTCLOUD_SECRET_KEY=您的SecretKey
+```
+
+**火山引擎环境变量**
+- 详情参考 : https://www.volcengine.com/docs/6291/65568
+
+Linux/macOS 系统
+```
+export VOLCENGINE_ACCESS_KEY=您的AccessKey
+export VOLCENGINE_SECRET_KEY=您的SecretKey
+```
+
+Windows 系统
+```
+set VOLCENGINE_ACCESS_KEY=您的AccessKey
+set VOLCENGINE_SECRET_KEY=您的SecretKey
 ```
 
 ---

@@ -118,6 +118,10 @@ providers:
     TENCENTCLOUD_SECRET_ID: "AKIDXXXXXXXXXXXXXXXX"
     TENCENTCLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "ap-guangzhou"
+  volcengine:
+    VOLCENGINE_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
+    VOLCENGINE_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "cn-beijing"
   cloudflare:
     CF_EMAIL: "you@example.com"
     CF_API_KEY: "your-cloudflare-api-key"
@@ -169,6 +173,21 @@ Windows example:
 ```powershell
 set TENCENTCLOUD_SECRET_ID=<YourSecretId>
 set TENCENTCLOUD_SECRET_KEY=<YourSecretKey>
+```
+
+**Volcengine environment variables**
+- Docs: https://www.volcengine.com/docs/6291/65568
+
+Linux/macOS example:
+```bash
+export VOLCENGINE_ACCESS_KEY=<YourAccessKey>
+export VOLCENGINE_SECRET_KEY=<YourSecretKey>
+```
+
+Windows example:
+```powershell
+set VOLCENGINE_ACCESS_KEY=<YourAccessKey>
+set VOLCENGINE_SECRET_KEY=<YourSecretKey>
 ```
 
 ---
