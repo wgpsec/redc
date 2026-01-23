@@ -1,7 +1,8 @@
 package mod
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -10,7 +11,7 @@ import (
 )
 
 var (
-	projectBucket = []byte("projects")
+	projectBucket = []byte("project")
 	caseBucket    = []byte("cases")
 )
 
@@ -53,35 +54,57 @@ func (s *Storage) Close() error {
 	return nil
 }
 
-// SaveProject saves project metadata
+// SaveProject saves project metadata using binary encoding
 func (s *Storage) SaveProject(p *RedcProject) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(projectBucket)
 
-		// Save project metadata (without cases)
-		projectData := struct {
-			ProjectName string `json:"project_name"`
-			ProjectPath string `json:"project_path"`
-			CreateTime  string `json:"create_time"`
-			User        string `json:"user"`
-		}{
-			ProjectName: p.ProjectName,
-			ProjectPath: p.ProjectPath,
-			CreateTime:  p.CreateTime,
-			User:        p.User,
-		}
+		// Convert to proto message
+		pbProject := p.ToProto()
 
-		data, err := json.Marshal(projectData)
-		if err != nil {
+		// Encode using gob (Go binary format)
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		if err := enc.Encode(pbProject); err != nil {
 			return fmt.Errorf("序列化项目数据失败: %w", err)
 		}
 
-		return b.Put([]byte("metadata"), data)
+		return b.Put([]byte("metadata"), buf.Bytes())
 	})
 }
 
-// LoadProject loads project metadata and all cases
+// LoadProject loads project metadata only (not cases)
 func (s *Storage) LoadProject(projectName string) (*RedcProject, error) {
+	var project RedcProject
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		// Load project metadata
+		pb := tx.Bucket(projectBucket)
+		projectData := pb.Get([]byte("metadata"))
+		if projectData == nil {
+			return fmt.Errorf("项目元数据不存在")
+		}
+
+		var pbProject RedcProjectProto
+		buf := bytes.NewBuffer(projectData)
+		dec := gob.NewDecoder(buf)
+		if err := dec.Decode(&pbProject); err != nil {
+			return fmt.Errorf("解析项目数据失败: %w", err)
+		}
+
+		project.FromProto(&pbProject)
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &project, nil
+}
+
+// LoadProjectWithCases loads project metadata and all cases
+func (s *Storage) LoadProjectWithCases(projectName string) (*RedcProject, error) {
 	var project RedcProject
 	var cases []*Case
 
@@ -93,19 +116,29 @@ func (s *Storage) LoadProject(projectName string) (*RedcProject, error) {
 			return fmt.Errorf("项目元数据不存在")
 		}
 
-		if err := json.Unmarshal(projectData, &project); err != nil {
+		var pbProject RedcProjectProto
+		buf := bytes.NewBuffer(projectData)
+		dec := gob.NewDecoder(buf)
+		if err := dec.Decode(&pbProject); err != nil {
 			return fmt.Errorf("解析项目数据失败: %w", err)
 		}
+
+		project.FromProto(&pbProject)
 
 		// Load all cases
 		cb := tx.Bucket(caseBucket)
 		c := cb.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var caseData Case
-			if err := json.Unmarshal(v, &caseData); err != nil {
+			var pbCase CaseProto
+			caseBuf := bytes.NewBuffer(v)
+			caseDec := gob.NewDecoder(caseBuf)
+			if err := caseDec.Decode(&pbCase); err != nil {
 				return fmt.Errorf("解析 case 数据失败: %w", err)
 			}
-			cases = append(cases, &caseData)
+
+			caseData := &Case{}
+			caseData.FromProto(&pbCase)
+			cases = append(cases, caseData)
 		}
 
 		return nil
@@ -119,17 +152,20 @@ func (s *Storage) LoadProject(projectName string) (*RedcProject, error) {
 	return &project, nil
 }
 
-// SaveCase saves a single case
+// SaveCase saves a single case using binary encoding
 func (s *Storage) SaveCase(c *Case) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(caseBucket)
 
-		data, err := json.Marshal(c)
-		if err != nil {
+		pbCase := c.ToProto()
+
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		if err := enc.Encode(pbCase); err != nil {
 			return fmt.Errorf("序列化 case 数据失败: %w", err)
 		}
 
-		return b.Put([]byte(c.Id), data)
+		return b.Put([]byte(c.Id), buf.Bytes())
 	})
 }
 
@@ -144,22 +180,25 @@ func (s *Storage) UpdateCaseState(caseID string, state CaseState, stateTime stri
 			return fmt.Errorf("未找到 case ID: %s", caseID)
 		}
 
-		var c Case
-		if err := json.Unmarshal(data, &c); err != nil {
+		var pbCase CaseProto
+		buf := bytes.NewBuffer(data)
+		dec := gob.NewDecoder(buf)
+		if err := dec.Decode(&pbCase); err != nil {
 			return fmt.Errorf("解析 case 数据失败: %w", err)
 		}
 
 		// Update state
-		c.State = state
-		c.StateTime = stateTime
+		pbCase.State = string(state)
+		pbCase.StateTime = stateTime
 
 		// Save back
-		updatedData, err := json.Marshal(&c)
-		if err != nil {
+		var outBuf bytes.Buffer
+		enc := gob.NewEncoder(&outBuf)
+		if err := enc.Encode(&pbCase); err != nil {
 			return fmt.Errorf("序列化 case 数据失败: %w", err)
 		}
 
-		return b.Put([]byte(caseID), updatedData)
+		return b.Put([]byte(caseID), outBuf.Bytes())
 	})
 }
 
@@ -182,7 +221,15 @@ func (s *Storage) GetCase(caseID string) (*Case, error) {
 			return fmt.Errorf("未找到 case ID: %s", caseID)
 		}
 
-		return json.Unmarshal(data, &c)
+		var pbCase CaseProto
+		buf := bytes.NewBuffer(data)
+		dec := gob.NewDecoder(buf)
+		if err := dec.Decode(&pbCase); err != nil {
+			return fmt.Errorf("解析 case 数据失败: %w", err)
+		}
+
+		c.FromProto(&pbCase)
+		return nil
 	})
 
 	if err != nil {
@@ -201,11 +248,16 @@ func (s *Storage) ListCases() ([]*Case, error) {
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var caseData Case
-			if err := json.Unmarshal(v, &caseData); err != nil {
+			var pbCase CaseProto
+			buf := bytes.NewBuffer(v)
+			dec := gob.NewDecoder(buf)
+			if err := dec.Decode(&pbCase); err != nil {
 				return fmt.Errorf("解析 case 数据失败: %w", err)
 			}
-			cases = append(cases, &caseData)
+
+			caseData := &Case{}
+			caseData.FromProto(&pbCase)
+			cases = append(cases, caseData)
 		}
 
 		return nil

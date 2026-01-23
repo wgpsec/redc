@@ -1,6 +1,7 @@
 package mod
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -228,5 +229,100 @@ func TestBboltBasicOperations(t *testing.T) {
 
 	if len(finalProject.Case) != 0 {
 		t.Errorf("Expected 0 cases after deletion, got %d", len(finalProject.Case))
+	}
+}
+
+// TestBboltSeparatedStorage tests that project and cases are stored separately
+func TestBboltSeparatedStorage(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "redc-bbolt-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	originalProjectPath := ProjectPath
+	ProjectPath = tmpDir
+	defer func() { ProjectPath = originalProjectPath }()
+
+	// Create project
+	projectName := "test-separated"
+	project, err := NewProjectConfig(projectName, "test-user")
+	if err != nil {
+		t.Fatalf("Failed to create project: %v", err)
+	}
+	defer project.Close()
+
+	// Add multiple cases
+	numCases := 3
+	caseIDs := make([]string, numCases)
+	for i := 0; i < numCases; i++ {
+		caseID := GenerateCaseID()
+		caseIDs[i] = caseID
+		c := &Case{
+			Id:         caseID,
+			Name:       fmt.Sprintf("test-case-%d", i),
+			Type:       "test",
+			Operator:   "test-user",
+			Path:       filepath.Join(project.ProjectPath, caseID),
+			CreateTime: time.Now().Format("2006-01-02 15:04:05"),
+			StateTime:  time.Now().Format("2006-01-02 15:04:05"),
+			State:      StateCreated,
+			project:    project,
+		}
+		if err := project.AddCase(c); err != nil {
+			t.Fatalf("Failed to add case: %v", err)
+		}
+	}
+
+	// Close first connection
+	project.Close()
+
+	// Test 1: Load only project metadata (without cases)
+	metadataProject, err := ProjectMetadataByName(projectName)
+	if err != nil {
+		t.Fatalf("Failed to load project metadata: %v", err)
+	}
+	defer metadataProject.Close()
+
+	if len(metadataProject.Case) != 0 {
+		t.Errorf("Expected 0 cases in metadata-only load, got %d", len(metadataProject.Case))
+	}
+
+	if metadataProject.ProjectName != projectName {
+		t.Errorf("Expected project name %s, got %s", projectName, metadataProject.ProjectName)
+	}
+
+	// Close metadata connection
+	metadataProject.Close()
+
+	// Test 2: Get individual case without loading all cases
+	fullProject, err := ProjectMetadataByName(projectName)
+	if err != nil {
+		t.Fatalf("Failed to load project for case retrieval: %v", err)
+	}
+	defer fullProject.Close()
+
+	// Get a single case directly from storage
+	singleCase, err := fullProject.GetCaseFromStorage(caseIDs[0])
+	if err != nil {
+		t.Fatalf("Failed to get single case: %v", err)
+	}
+
+	if singleCase.Id != caseIDs[0] {
+		t.Errorf("Expected case ID %s, got %s", caseIDs[0], singleCase.Id)
+	}
+
+	// Close and reopen with all cases
+	fullProject.Close()
+
+	// Test 3: Load project with all cases
+	projectWithCases, err := ProjectByName(projectName)
+	if err != nil {
+		t.Fatalf("Failed to load project with cases: %v", err)
+	}
+	defer projectWithCases.Close()
+
+	if len(projectWithCases.Case) != numCases {
+		t.Errorf("Expected %d cases, got %d", numCases, len(projectWithCases.Case))
 	}
 }

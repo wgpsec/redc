@@ -115,7 +115,7 @@ func ProjectParse(name string, user string) (*RedcProject, error) {
 	return NewProjectConfig(name, user)
 }
 
-// ProjectByName 读取项目配置
+// ProjectByName 读取项目配置（包含所有 cases）
 func ProjectByName(name string) (*RedcProject, error) {
 	// Open storage
 	storage, err := OpenStorage(name)
@@ -124,7 +124,28 @@ func ProjectByName(name string) (*RedcProject, error) {
 		return nil, err
 	}
 
-	// Load project
+	// Load project with all cases
+	project, err := storage.LoadProjectWithCases(name)
+	if err != nil {
+		storage.Close()
+		gologger.Debug().Msgf("读取项目失败 [%s]: %v", name, err)
+		return nil, err
+	}
+
+	project.storage = storage
+	return project, nil
+}
+
+// ProjectMetadataByName 仅读取项目元数据（不含 cases）
+func ProjectMetadataByName(name string) (*RedcProject, error) {
+	// Open storage
+	storage, err := OpenStorage(name)
+	if err != nil {
+		gologger.Debug().Msgf("打开数据库失败 [%s]: %v", name, err)
+		return nil, err
+	}
+
+	// Load project metadata only
 	project, err := storage.LoadProject(name)
 	if err != nil {
 		storage.Close()
@@ -136,9 +157,33 @@ func ProjectByName(name string) (*RedcProject, error) {
 	return project, nil
 }
 
+// GetCaseFromStorage 直接从存储中获取单个 case（无需加载所有 cases）
+func (p *RedcProject) GetCaseFromStorage(caseID string) (*Case, error) {
+	if p.storage == nil {
+		return nil, fmt.Errorf("storage not initialized")
+	}
+
+	c, err := p.storage.GetCase(caseID)
+	if err != nil {
+		return nil, err
+	}
+
+	c.project = p // 绑定项目引用
+	return c, nil
+}
+
 // GetCase 支持通过 ID(精确/模糊) 或 Name(精确) 查找 Case
 // 逻辑参考 Docker: 优先精确匹配，其次 ID 前缀匹配。如果 ID 前缀匹配到多个，则报错歧义。
 func (p *RedcProject) GetCase(identifier string) (*Case, error) {
+	// 首先尝试从 storage 直接获取（如果是完整 ID）
+	if p.storage != nil {
+		if c, err := p.storage.GetCase(identifier); err == nil {
+			c.project = p
+			return c, nil
+		}
+	}
+
+	// 如果 storage 中没有或不是完整 ID，从内存中的 Case 列表查找
 	var candidates []*Case
 
 	// 遍历所有 Case

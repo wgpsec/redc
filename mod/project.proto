@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package mod;
+
+option go_package = "red-cloud/mod";
+
+// RedcProject represents a project
+message RedcProject {
+  string project_name = 1;
+  string project_path = 2;
+  string create_time = 3;
+  string user = 4;
+}
+
+// Case represents a scenario/case
+message Case {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string module = 4;
+  string operator = 5;
+  string path = 6;
+  int32 node = 7;
+  string create_time = 8;
+  string state_time = 9;
+  repeated string parameter = 10;
+  string state = 11;
+}
