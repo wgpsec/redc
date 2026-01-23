@@ -124,6 +124,25 @@ providers:
     VOLCENGINE_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
     VOLCENGINE_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
     region: "cn-beijing"
+  huaweicloud:
+    HUAWEICLOUD_ACCESS_KEY: "AKIDXXXXXXXXXXXXXXXX"
+    HUAWEICLOUD_SECRET_KEY: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    region: "cn-north-4"
+  google:
+    GOOGLE_CREDENTIALS: '{"type":"service_account","project_id":"your-project",...}'
+    project: "your-project-id"
+    region: "us-central1"
+  azure:
+    ARM_CLIENT_ID: "00000000-0000-0000-0000-000000000000"
+    ARM_CLIENT_SECRET: "your-client-secret"
+    ARM_SUBSCRIPTION_ID: "00000000-0000-0000-0000-000000000000"
+    ARM_TENANT_ID: "00000000-0000-0000-0000-000000000000"
+  oracle:
+    OCI_CLI_USER: "ocid1.user.oc1..aaaaaaa..."
+    OCI_CLI_TENANCY: "ocid1.tenancy.oc1..aaaaaaa..."
+    OCI_CLI_FINGERPRINT: "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+    OCI_CLI_KEY_FILE: "~/.oci/oci_api_key.pem"
+    OCI_CLI_REGION: "us-ashburn-1"
   cloudflare:
     CF_EMAIL: "you@example.com"
     CF_API_KEY: "your-cloudflare-api-key"
