@@ -379,6 +379,29 @@ redc mcp sse localhost:9000
 - `get_case_status` - 检查场景状态
 - `exec_command` - 在场景上执行命令
 
+### 示例: 与 Chrerry stdio 集成
+
+以Chrerry stdio为例 填入 http://localhost:9000/sse 即可获得到工具信息
+
+![mcp](./img/image12.png)
+
+使用示例
+- 测试
+
+  ![测试](./img/image13.png)
+
+- 开启机器
+
+  ![开启机器](./img/image14.png)
+
+- 执行命令
+
+  ![执行命令](./img/image15.png)
+
+- 关闭机器
+
+  ![关闭机器](./img/image16.png)
+
 ### 示例：与 Claude Desktop 集成
 
 添加到 `~/Library/Application Support/Claude/claude_desktop_config.json`：

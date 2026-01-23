@@ -371,6 +371,29 @@ redc mcp sse localhost:9000
 - `get_case_status` - Check case status
 - `exec_command` - Execute commands on cases
 
+### Example: Integrate with Chrerry stdio
+
+Taking Chrerry stdio as an example, simply fill in http://localhost:9000/sse to get the tool information
+
+![mcp](./img/image12.png)
+
+Usage examples:
+- Test
+
+  ![Test](./img/image13.png)
+
+- Start machine
+
+  ![Start machine](./img/image14.png)
+
+- Execute command
+
+  ![Execute command](./img/image15.png)
+
+- Stop machine
+
+  ![Stop machine](./img/image16.png)
+
 ### Example: Integrate with Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
