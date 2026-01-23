@@ -1008,6 +1008,7 @@ For AI agents and automation tools:
 ```python
 import subprocess
 import json
+import re
 
 def redc_run(template, name, env_vars=None):
     """Run a redc deployment."""
@@ -1021,7 +1022,10 @@ def redc_run(template, name, env_vars=None):
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         # Parse output to extract case ID
         # Look for pattern like: 8a57078ee8567cf2459a0358bc27e534
-        return result.stdout
+        match = re.search(r'[a-f0-9]{64}', result.stdout)
+        if match:
+            return match.group(0)
+        return None
     except subprocess.CalledProcessError as e:
         print(f"Error: {e.stderr}")
         return None

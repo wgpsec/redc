@@ -694,7 +694,7 @@ redc kill 8a57078ee856
 
 **错误：**
 ```
-配置载失败！open /home/user/redc/config.yaml: no such file or directory
+配置加载失败！open /home/user/redc/config.yaml: no such file or directory
 ```
 
 **解决方案：**
