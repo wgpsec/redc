@@ -347,8 +347,13 @@
     pullingTemplates = pullingTemplates;
     try {
       await PullTemplate(templateName, force);
+      // Refresh registry templates after successful pull
+      await loadRegistryTemplates();
     } catch (e) {
       error = e.message || String(e);
+    } finally {
+      pullingTemplates[templateName] = false;
+      pullingTemplates = pullingTemplates;
     }
   }
 
