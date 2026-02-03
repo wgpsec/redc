@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
@@ -40,12 +40,22 @@
   let editFields = {};
   let customConfigPath = '';
 
+  // Local templates state
+  let localTemplates = [];
+  let localTemplatesLoading = false;
+  let localTemplatesSearch = '';
+  let localTemplateDetail = null;
+  let localTemplateVars = [];
+  let localTemplateVarsLoading = false;
+  let deleteTemplateConfirm = { show: false, name: '' };
+  let deletingTemplate = {};
+
   // i18n state
   let lang = localStorage.getItem('lang') || 'zh';
   const i18n = {
     zh: {
-      dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成',
-      sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成',
+      dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成', localTemplates: '本地模板',
+      sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板管理',
       template: '模板', selectTemplate: '选择模板...', name: '名称', optional: '可选',
       create: '创建', createAndRun: '创建并运行', templateParams: '模板参数',
       id: 'ID', type: '类型', state: '状态', time: '时间', actions: '操作',
@@ -69,10 +79,17 @@
       edit: '编辑', cancel: '取消', save: '保存', notSet: '未设置', enterNew: '输入新值覆盖', clickLoad: '点击"加载配置"查看凭据',
       confirmDelete: '确认删除', cannotUndo: '此操作不可撤销', confirmDeleteScene: '确定要删除场景', region: '区域', credentialsJson: '凭据 JSON',
       selectTemplateErr: '请选择一个模板',
+      // Local templates i18n
+      version: '版本', author: '作者', module: '模块', description: '描述', viewParams: '查看参数',
+      noLocalTemplates: '暂无本地模板', goToRegistry: '前往模板仓库拉取',
+      confirmDeleteTemplate: '确定要删除模板', deleteWarning: '删除后需要重新从仓库拉取才能使用',
+      deleting: '删除中...', refresh: '刷新', close: '关闭',
+      paramName: '参数名', paramType: '类型', paramDesc: '描述', paramDefault: '默认值', paramRequired: '必填',
+      noParams: '该模板没有可配置参数', loadingParams: '正在加载参数...',
     },
     en: {
-      dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration',
-      sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration',
+      dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates',
+      sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
       template: 'Template', selectTemplate: 'Select template...', name: 'Name', optional: 'Optional',
       create: 'Create', createAndRun: 'Create & Run', templateParams: 'Template Parameters',
       id: 'ID', type: 'Type', state: 'State', time: 'Time', actions: 'Actions',
@@ -96,6 +113,13 @@
       edit: 'Edit', cancel: 'Cancel', save: 'Save', notSet: 'Not set', enterNew: 'Enter new value', clickLoad: 'Click "Load Config" to view credentials',
       confirmDelete: 'Confirm Delete', cannotUndo: 'This cannot be undone', confirmDeleteScene: 'Are you sure you want to delete scene', region: 'Region', credentialsJson: 'Credentials JSON',
       selectTemplateErr: 'Please select a template',
+      // Local templates i18n
+      version: 'Version', author: 'Author', module: 'Module', description: 'Description', viewParams: 'View Params',
+      noLocalTemplates: 'No local templates', goToRegistry: 'Go to registry to pull',
+      confirmDeleteTemplate: 'Are you sure you want to delete template', deleteWarning: 'You need to pull from registry again to use it',
+      deleting: 'Deleting...', refresh: 'Refresh', close: 'Close',
+      paramName: 'Name', paramType: 'Type', paramDesc: 'Description', paramDefault: 'Default', paramRequired: 'Required',
+      noParams: 'No configurable parameters', loadingParams: 'Loading parameters...',
     }
   };
   $: t = i18n[lang];
@@ -488,6 +512,74 @@
     const secrets = ['accessKey', 'secretKey', 'secretId', 'credentials', 'clientId', 'clientSecret', 'subscriptionId', 'tenantId', 'user', 'tenancy', 'fingerprint', 'apiKey'];
     return secrets.includes(key);
   }
+
+  // Local templates functions
+  async function loadLocalTemplates() {
+    localTemplatesLoading = true;
+    try {
+      localTemplates = await ListTemplates() || [];
+    } catch (e) {
+      error = e.message || String(e);
+      localTemplates = [];
+    } finally {
+      localTemplatesLoading = false;
+    }
+  }
+
+  async function showTemplateDetail(tmpl) {
+    localTemplateDetail = tmpl;
+    localTemplateVars = [];
+    localTemplateVarsLoading = true;
+    try {
+      const vars = await GetTemplateVariables(tmpl.name);
+      localTemplateVars = vars || [];
+    } catch (e) {
+      console.error('Failed to load template variables:', e);
+      localTemplateVars = [];
+    } finally {
+      localTemplateVarsLoading = false;
+    }
+  }
+
+  function closeTemplateDetail() {
+    localTemplateDetail = null;
+    localTemplateVars = [];
+  }
+
+  function showDeleteTemplateConfirm(name) {
+    deleteTemplateConfirm = { show: true, name };
+  }
+
+  function cancelDeleteTemplate() {
+    deleteTemplateConfirm = { show: false, name: '' };
+  }
+
+  async function confirmDeleteTemplate() {
+    const name = deleteTemplateConfirm.name;
+    deleteTemplateConfirm = { show: false, name: '' };
+    deletingTemplate[name] = true;
+    deletingTemplate = deletingTemplate;
+    try {
+      await RemoveTemplate(name);
+      await loadLocalTemplates();
+      // Also refresh main templates list
+      templates = await ListTemplates() || [];
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      deletingTemplate[name] = false;
+      deletingTemplate = deletingTemplate;
+    }
+  }
+
+  $: filteredLocalTemplates = localTemplates
+    .filter(t => 
+      !localTemplatesSearch || 
+      t.name.toLowerCase().includes(localTemplatesSearch.toLowerCase()) ||
+      (t.description && t.description.toLowerCase().includes(localTemplatesSearch.toLowerCase())) ||
+      (t.module && t.module.toLowerCase().includes(localTemplatesSearch.toLowerCase()))
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 </script>
 
 <div class="h-screen flex bg-[#fafbfc]">
@@ -557,6 +649,16 @@
         </button>
         <button 
           class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
+            {activeTab === 'localTemplates' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
+          on:click={() => { activeTab = 'localTemplates'; loadLocalTemplates(); }}
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+          </svg>
+          {t.localTemplates}
+        </button>
+        <button 
+          class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
             {activeTab === 'ai' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
           on:click={() => { activeTab = 'ai'; loadMCPStatus(); }}
         >
@@ -596,11 +698,11 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else}{t.settings}{/if}
+        {#if activeTab === 'dashboard'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else}{t.settings}{/if}
       </h1>
       <button 
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'credentials') loadProvidersConfig(); }}
+        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'localTemplates') loadLocalTemplates(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'credentials') loadProvidersConfig(); }}
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -1301,6 +1403,111 @@
             </div>
           {/if}
         </div>
+
+      {:else if activeTab === 'localTemplates'}
+        <div class="space-y-5">
+          <!-- Search and Actions -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-center gap-4">
+              <div class="flex-1 relative">
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input 
+                  type="text" 
+                  placeholder={t.search}
+                  class="w-full h-10 pl-10 pr-4 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                  bind:value={localTemplatesSearch} 
+                />
+              </div>
+              <button 
+                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                on:click={loadLocalTemplates}
+                disabled={localTemplatesLoading}
+              >
+                {localTemplatesLoading ? t.loading : t.refresh}
+              </button>
+            </div>
+          </div>
+
+          {#if localTemplatesLoading}
+            <div class="flex items-center justify-center h-64">
+              <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+            </div>
+          {:else}
+            <!-- Template Table -->
+            <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b border-gray-100">
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name}</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.version}</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.author}</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.module}</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.description}</th>
+                    <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.actions}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each filteredLocalTemplates as tmpl}
+                    <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td class="px-5 py-3.5">
+                        <span class="text-[13px] font-medium text-gray-900">{tmpl.name}</span>
+                      </td>
+                      <td class="px-5 py-3.5">
+                        <span class="text-[13px] text-gray-600">{tmpl.version || '-'}</span>
+                      </td>
+                      <td class="px-5 py-3.5">
+                        <span class="text-[13px] text-gray-600">{tmpl.user || '-'}</span>
+                      </td>
+                      <td class="px-5 py-3.5">
+                        {#if tmpl.module}
+                          <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-medium rounded-full">{tmpl.module}</span>
+                        {:else}
+                          <span class="text-[13px] text-gray-400">-</span>
+                        {/if}
+                      </td>
+                      <td class="px-5 py-3.5">
+                        <span class="text-[12px] text-gray-500 line-clamp-1" title={tmpl.description}>{tmpl.description || '-'}</span>
+                      </td>
+                      <td class="px-5 py-3.5 text-right">
+                        <div class="inline-flex items-center gap-1">
+                          <button 
+                            class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                            on:click={() => showTemplateDetail(tmpl)}
+                          >{t.viewParams}</button>
+                          {#if deletingTemplate[tmpl.name]}
+                            <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600">{t.deleting}</span>
+                          {:else}
+                            <button 
+                              class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                              on:click={() => showDeleteTemplateConfirm(tmpl.name)}
+                            >{t.delete}</button>
+                          {/if}
+                        </div>
+                      </td>
+                    </tr>
+                  {:else}
+                    <tr>
+                      <td colspan="6" class="py-16">
+                        <div class="flex flex-col items-center text-gray-400">
+                          <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                          </svg>
+                          <p class="text-[13px]">{t.noLocalTemplates}</p>
+                          <button 
+                            class="mt-2 text-[12px] text-blue-600 hover:underline"
+                            on:click={() => { activeTab = 'registry'; loadRegistryTemplates(); }}
+                          >{t.goToRegistry}</button>
+                        </div>
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+        </div>
       {/if}
     </main>
   </div>
@@ -1335,6 +1542,153 @@
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
           on:click={confirmDelete}
         >{t.delete}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Template Confirmation Modal -->
+{#if deleteTemplateConfirm.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelDeleteTemplate}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmDelete}</h3>
+            <p class="text-[13px] text-gray-500">{t.deleteWarning}</p>
+          </div>
+        </div>
+        <p class="text-[13px] text-gray-600">
+          {t.confirmDeleteTemplate} <span class="font-medium text-gray-900">"{deleteTemplateConfirm.name}"</span>?
+        </p>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={cancelDeleteTemplate}
+        >{t.cancel}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          on:click={confirmDeleteTemplate}
+        >{t.delete}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Template Detail Drawer -->
+{#if localTemplateDetail}
+  <div class="fixed inset-0 bg-black/50 flex justify-end z-50" on:click={closeTemplateDetail}>
+    <div class="w-full max-w-lg bg-white h-full overflow-auto shadow-xl" on:click|stopPropagation>
+      <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-[16px] font-semibold text-gray-900">{localTemplateDetail.name}</h2>
+          <p class="text-[12px] text-gray-500 mt-0.5">v{localTemplateDetail.version || '-'}</p>
+        </div>
+        <button 
+          class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          on:click={closeTemplateDetail}
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div class="p-6 space-y-6">
+        <!-- Template Info -->
+        <div class="space-y-3">
+          {#if localTemplateDetail.description}
+            <div>
+              <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.description}</div>
+              <p class="text-[13px] text-gray-700">{localTemplateDetail.description}</p>
+            </div>
+          {/if}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.author}</div>
+              <p class="text-[13px] text-gray-900">{localTemplateDetail.user || '-'}</p>
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.module}</div>
+              {#if localTemplateDetail.module}
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[12px] font-medium rounded-full">{localTemplateDetail.module}</span>
+              {:else}
+                <p class="text-[13px] text-gray-400">-</p>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <!-- Template Parameters -->
+        <div>
+          <div class="text-[14px] font-semibold text-gray-900 mb-3">{t.templateParams}</div>
+          {#if localTemplateVarsLoading}
+            <div class="flex items-center justify-center py-8">
+              <div class="w-5 h-5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+              <span class="ml-2 text-[13px] text-gray-500">{t.loadingParams}</span>
+            </div>
+          {:else if localTemplateVars.length === 0}
+            <div class="py-8 text-center text-[13px] text-gray-400">
+              {t.noParams}
+            </div>
+          {:else}
+            <div class="border border-gray-100 rounded-lg overflow-hidden">
+              <table class="w-full text-[12px]">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-100">
+                    <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.paramName}</th>
+                    <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.paramType}</th>
+                    <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.paramDefault}</th>
+                    <th class="text-center px-4 py-2.5 font-semibold text-gray-600">{t.paramRequired}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each localTemplateVars as v}
+                    <tr class="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">{v.name}</div>
+                        {#if v.description}
+                          <div class="text-[11px] text-gray-500 mt-0.5">{v.description}</div>
+                        {/if}
+                      </td>
+                      <td class="px-4 py-3">
+                        <code class="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-[11px]">{v.type}</code>
+                      </td>
+                      <td class="px-4 py-3">
+                        {#if v.defaultValue}
+                          <code class="text-gray-600">{v.defaultValue}</code>
+                        {:else}
+                          <span class="text-gray-400">-</span>
+                        {/if}
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        {#if v.required}
+                          <span class="inline-flex items-center justify-center w-5 h-5 bg-red-100 text-red-600 rounded-full">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </span>
+                        {:else}
+                          <span class="inline-flex items-center justify-center w-5 h-5 bg-emerald-100 text-emerald-600 rounded-full">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </span>
+                        {/if}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
   </div>

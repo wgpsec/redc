@@ -1007,6 +1007,20 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 	return result, nil
 }
 
+// RemoveTemplate removes a local template (aligns with CLI `image rm`)
+func (a *App) RemoveTemplate(templateName string) error {
+	a.emitLog(fmt.Sprintf("正在删除模板: %s", templateName))
+
+	if err := redc.RemoveTemplate(templateName); err != nil {
+		a.emitLog(fmt.Sprintf("删除失败: %v", err))
+		return err
+	}
+
+	a.emitLog(fmt.Sprintf("模板删除成功: %s", templateName))
+	a.emitRefresh()
+	return nil
+}
+
 // PullTemplate pulls a template from the registry
 func (a *App) PullTemplate(templateName string, force bool) error {
 	a.emitLog(fmt.Sprintf("正在拉取模板: %s", templateName))
