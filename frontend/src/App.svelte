@@ -28,6 +28,8 @@
   let registryError = '';
   let registrySearch = '';
   let pullingTemplates = {};
+  let registryNotice = { type: '', message: '' };
+  let registryNoticeTimer = null;
 
   // MCP state
   let mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
@@ -78,6 +80,7 @@
       saving: '保存中...', saveProxy: '保存代理配置', proxyHint: '配置后将用于 Terraform 的网络请求',
       search: '搜索模板...', loading: '加载中...', refreshRepo: '刷新仓库', installed: '已安装',
       update: '更新', pull: '拉取', pulling: '拉取中...', noMatch: '未找到匹配的模板', clickRefresh: '点击"刷新仓库"加载模板列表',
+      pullSuccess: '拉取成功', pullFailed: '拉取失败',
       mcpServer: 'MCP 服务器', mcpDesc: 'Model Context Protocol 服务',
       transportMode: '传输模式', listenAddr: '监听地址', protocolVersion: '协议版本', msgEndpoint: '消息端点',
       stopServer: '停止服务器', startServer: '启动服务器', stoppingServer: '停止中...', startingServer: '启动中...',
@@ -114,6 +117,7 @@
       saving: 'Saving...', saveProxy: 'Save Proxy Config', proxyHint: 'Used for Terraform network requests',
       search: 'Search templates...', loading: 'Loading...', refreshRepo: 'Refresh Registry', installed: 'Installed',
       update: 'Update', pull: 'Pull', pulling: 'Pulling...', noMatch: 'No matching templates', clickRefresh: 'Click "Refresh Registry" to load templates',
+      pullSuccess: 'Pull success', pullFailed: 'Pull failed',
       mcpServer: 'MCP Server', mcpDesc: 'Model Context Protocol Service',
       transportMode: 'Transport Mode', listenAddr: 'Listen Address', protocolVersion: 'Protocol Version', msgEndpoint: 'Message Endpoint',
       stopServer: 'Stop Server', startServer: 'Start Server', stoppingServer: 'Stopping...', startingServer: 'Starting...',
@@ -143,6 +147,19 @@
 
   function openGitHub() {
     BrowserOpenURL('https://github.com/wgpsec/redc');
+  }
+
+  function setRegistryNotice(type, message, autoClear = true) {
+    registryNotice = { type, message };
+    if (registryNoticeTimer) {
+      clearTimeout(registryNoticeTimer);
+      registryNoticeTimer = null;
+    }
+    if (autoClear && message) {
+      registryNoticeTimer = setTimeout(() => {
+        registryNotice = { type: '', message: '' };
+      }, 3000);
+    }
   }
 
   function stripAnsi(value) {
@@ -217,6 +234,10 @@
     if (createStatusTimer) {
       clearTimeout(createStatusTimer);
       createStatusTimer = null;
+    }
+    if (registryNoticeTimer) {
+      clearTimeout(registryNoticeTimer);
+      registryNoticeTimer = null;
     }
   });
 
@@ -449,12 +470,15 @@
   async function handlePullTemplate(templateName, force = false) {
     pullingTemplates[templateName] = true;
     pullingTemplates = pullingTemplates;
+    setRegistryNotice('info', `${t.pulling} ${templateName}`, false);
     try {
       await PullTemplate(templateName, force);
       // Refresh registry templates after successful pull
       await loadRegistryTemplates();
+      setRegistryNotice('success', `${t.pullSuccess}: ${templateName}`);
     } catch (e) {
       error = e.message || String(e);
+      setRegistryNotice('error', `${t.pullFailed}: ${templateName}`);
     } finally {
       pullingTemplates[templateName] = false;
       pullingTemplates = pullingTemplates;
@@ -1166,6 +1190,20 @@
                 {registryLoading ? t.loading : t.refreshRepo}
               </button>
             </div>
+            {#if registryNotice.message}
+              <div class="mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]
+                {registryNotice.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : registryNotice.type === 'error' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">
+                {#if registryNotice.type === 'info'}
+                  <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+                {/if}
+                <span class="flex-1 truncate">{registryNotice.message}</span>
+                <button class="text-gray-400 hover:text-gray-600" on:click={() => setRegistryNotice('', '')}>
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            {/if}
           </div>
 
           {#if registryError}
@@ -1226,7 +1264,8 @@
                       {#if tmpl.author}by {tmpl.author}{/if}
                     </div>
                     {#if pullingTemplates[tmpl.name]}
-                      <span class="px-3 py-1.5 text-[12px] font-medium text-amber-600">
+                      <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
+                        <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
                         {t.pulling}
                       </span>
                     {:else if tmpl.installed}
