@@ -14,9 +14,9 @@ builds:
     goarch:
       - amd64
       - arm64
-  ldflags:
-    - -s -w
-    - -X github.com/wgpsec/redc/mod.Version={{.Version}}
+    ldflags:
+      - -s -w
+      - -X github.com/wgpsec/redc/mod.Version={{.Version}}
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
     id: homebrew
