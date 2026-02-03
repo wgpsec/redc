@@ -19,6 +19,7 @@ import (
 	"red-cloud/mod/mcp"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/projectdiscovery/gologger/levels"
 )
 
 // App struct
@@ -63,6 +64,12 @@ func (a *App) startup(ctx context.Context) {
 	if p, err := redc.ProjectParse(redc.Project, redc.U); err == nil {
 		a.project = p
 		a.logMgr = gologger.NewLogManager(p.ProjectPath)
+		gologger.DefaultLogger.SetWriter(&guiWriter{out: a.createLogWriter("core")})
+		if redc.Debug {
+			gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
+		} else {
+			gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
+		}
 		runtime.LogInfof(ctx, "项目加载成功: %s", a.project.ProjectName)
 	} else {
 		a.initError = fmt.Sprintf("项目加载失败: %v", err)
@@ -118,6 +125,19 @@ type ConfigInfo struct {
 	HttpProxy   string `json:"httpProxy"`
 	HttpsProxy  string `json:"httpsProxy"`
 	NoProxy     string `json:"noProxy"`
+	DebugEnabled bool  `json:"debugEnabled"`
+}
+
+// guiWriter adapts an io.Writer to gologger writer.Writer
+type guiWriter struct {
+	out io.Writer
+}
+
+func (w *guiWriter) Write(data []byte, level levels.Level) {
+	if w.out == nil {
+		return
+	}
+	_, _ = w.out.Write(data)
 }
 
 // ProviderCredential represents a single provider's credentials (masked for display)
@@ -146,6 +166,7 @@ func (a *App) GetConfig() ConfigInfo {
 		HttpProxy:   os.Getenv("HTTP_PROXY"),
 		HttpsProxy:  os.Getenv("HTTPS_PROXY"),
 		NoProxy:     os.Getenv("NO_PROXY"),
+		DebugEnabled: redc.Debug,
 	}
 }
 
@@ -177,6 +198,22 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	}
 
 	a.emitLog(fmt.Sprintf("代理配置已更新 - HTTP: %s, HTTPS: %s, NO_PROXY: %s", httpProxy, httpsProxy, noProxy))
+	return nil
+}
+
+// SetDebugLogging enables or disables debug logging for GUI
+func (a *App) SetDebugLogging(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	redc.Debug = enabled
+	if enabled {
+		gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
+		a.emitLog("调试日志已开启")
+	} else {
+		gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
+		a.emitLog("调试日志已关闭")
+	}
 	return nil
 }
 
@@ -790,6 +827,7 @@ func (a *App) CreateCase(templateName string, name string, vars map[string]strin
 			a.emitRefresh()
 		}()
 
+		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {
 			a.emitLog(fmt.Sprintf("场景创建失败: %v", err))
@@ -821,6 +859,7 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 			a.emitRefresh()
 		}()
 
+		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
 		// Step 1: Create the case (same as planLogic in CLI)
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {

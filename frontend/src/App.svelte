@@ -1,12 +1,12 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
   let logs = [];
-  let config = { redcPath: '', projectPath: '', logPath: '', httpProxy: '', httpsProxy: '', noProxy: '' };
+  let config = { redcPath: '', projectPath: '', logPath: '', httpProxy: '', httpsProxy: '', noProxy: '', debugEnabled: false };
   let activeTab = 'dashboard';
   let selectedTemplate = '';
   let newCaseName = '';
@@ -19,6 +19,8 @@
   let variableValues = {};
   let proxyForm = { httpProxy: '', httpsProxy: '', noProxy: '' };
   let proxySaving = false;
+  let debugEnabled = false;
+  let debugSaving = false;
   
   // Registry state
   let registryTemplates = [];
@@ -26,6 +28,8 @@
   let registryError = '';
   let registrySearch = '';
   let pullingTemplates = {};
+  let registryNotice = { type: '', message: '' };
+  let registryNoticeTimer = null;
 
   // MCP state
   let mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
@@ -50,6 +54,12 @@
   let deleteTemplateConfirm = { show: false, name: '' };
   let deletingTemplate = {};
 
+  // Create status state
+  let createStatus = 'idle';
+  let createStatusMessage = '';
+  let createStatusDetail = '';
+  let createStatusTimer = null;
+
   // i18n state
   let lang = localStorage.getItem('lang') || 'zh';
   const i18n = {
@@ -58,6 +68,7 @@
       sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板管理',
       template: '模板', selectTemplate: '选择模板...', name: '名称', optional: '可选',
       create: '创建', createAndRun: '创建并运行', templateParams: '模板参数',
+      creating: '正在创建中...', initializing: '初始化中...', createSuccess: '创建成功', createFailed: '创建失败',
       id: 'ID', type: '类型', state: '状态', time: '时间', actions: '操作',
       start: '启动', stop: '停止', delete: '删除', noScene: '暂无场景',
       running: '运行中', stopped: '已停止', error: '异常', created: '已创建',
@@ -69,11 +80,13 @@
       saving: '保存中...', saveProxy: '保存代理配置', proxyHint: '配置后将用于 Terraform 的网络请求',
       search: '搜索模板...', loading: '加载中...', refreshRepo: '刷新仓库', installed: '已安装',
       update: '更新', pull: '拉取', pulling: '拉取中...', noMatch: '未找到匹配的模板', clickRefresh: '点击"刷新仓库"加载模板列表',
+      pullSuccess: '拉取成功', pullFailed: '拉取失败',
       mcpServer: 'MCP 服务器', mcpDesc: 'Model Context Protocol 服务',
       transportMode: '传输模式', listenAddr: '监听地址', protocolVersion: '协议版本', msgEndpoint: '消息端点',
       stopServer: '停止服务器', startServer: '启动服务器', stoppingServer: '停止中...', startingServer: '启动中...',
       aboutMcp: '关于 MCP', mcpInfo: 'Model Context Protocol (MCP) 是一种开放协议，允许 AI 助手与外部工具和数据源进行交互。启用 MCP 服务器后，您可以通过 Claude、Cursor 等支持 MCP 的 AI 工具直接管理 RedC 基础设施。',
       availableTools: '可用工具',
+      stdioHint: 'STDIO 通过 stdin/stdout 交换数据，无需在 GUI 启动或停止。',
       configPath: '配置文件路径', defaultPath: '留空使用默认路径 ~/redc/config.yaml', loadConfig: '加载配置',
       currentConfig: '当前配置', securityTip: '安全提示：', securityInfo: '凭据以脱敏形式显示，编辑时需重新输入完整值。空字段不会覆盖已有配置。',
       edit: '编辑', cancel: '取消', save: '保存', notSet: '未设置', enterNew: '输入新值覆盖', clickLoad: '点击"加载配置"查看凭据',
@@ -86,12 +99,14 @@
       deleting: '删除中...', refresh: '刷新', close: '关闭',
       paramName: '参数名', paramType: '类型', paramDesc: '描述', paramDefault: '默认值', paramRequired: '必填',
       noParams: '该模板没有可配置参数', loadingParams: '正在加载参数...',
+      debugLogs: '调试日志', debugLogsDesc: '启用后控制台输出更详细的日志信息', enable: '开启', disable: '关闭',
     },
     en: {
       dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates',
       sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
       template: 'Template', selectTemplate: 'Select template...', name: 'Name', optional: 'Optional',
       create: 'Create', createAndRun: 'Create & Run', templateParams: 'Template Parameters',
+      creating: 'Creating...', initializing: 'Initializing...', createSuccess: 'Created', createFailed: 'Create failed',
       id: 'ID', type: 'Type', state: 'State', time: 'Time', actions: 'Actions',
       start: 'Start', stop: 'Stop', delete: 'Delete', noScene: 'No scenes',
       running: 'Running', stopped: 'Stopped', error: 'Error', created: 'Created',
@@ -103,11 +118,13 @@
       saving: 'Saving...', saveProxy: 'Save Proxy Config', proxyHint: 'Used for Terraform network requests',
       search: 'Search templates...', loading: 'Loading...', refreshRepo: 'Refresh Registry', installed: 'Installed',
       update: 'Update', pull: 'Pull', pulling: 'Pulling...', noMatch: 'No matching templates', clickRefresh: 'Click "Refresh Registry" to load templates',
+      pullSuccess: 'Pull success', pullFailed: 'Pull failed',
       mcpServer: 'MCP Server', mcpDesc: 'Model Context Protocol Service',
       transportMode: 'Transport Mode', listenAddr: 'Listen Address', protocolVersion: 'Protocol Version', msgEndpoint: 'Message Endpoint',
       stopServer: 'Stop Server', startServer: 'Start Server', stoppingServer: 'Stopping...', startingServer: 'Starting...',
       aboutMcp: 'About MCP', mcpInfo: 'Model Context Protocol (MCP) is an open protocol that allows AI assistants to interact with external tools and data sources. With MCP server enabled, you can manage RedC infrastructure directly via Claude, Cursor and other MCP-compatible AI tools.',
       availableTools: 'Available Tools',
+      stdioHint: 'STDIO uses stdin/stdout for data exchange. No GUI start/stop required.',
       configPath: 'Config File Path', defaultPath: 'Leave empty for default ~/redc/config.yaml', loadConfig: 'Load Config',
       currentConfig: 'Current config', securityTip: 'Security Notice:', securityInfo: 'Credentials are displayed in masked form. Re-enter full values when editing. Empty fields won\'t overwrite existing config.',
       edit: 'Edit', cancel: 'Cancel', save: 'Save', notSet: 'Not set', enterNew: 'Enter new value', clickLoad: 'Click "Load Config" to view credentials',
@@ -120,6 +137,7 @@
       deleting: 'Deleting...', refresh: 'Refresh', close: 'Close',
       paramName: 'Name', paramType: 'Type', paramDesc: 'Description', paramDefault: 'Default', paramRequired: 'Required',
       noParams: 'No configurable parameters', loadingParams: 'Loading parameters...',
+      debugLogs: 'Debug Logs', debugLogsDesc: 'Show more verbose logs in console', enable: 'Enable', disable: 'Disable',
     }
   };
   $: t = i18n[lang];
@@ -132,6 +150,63 @@
   function openGitHub() {
     BrowserOpenURL('https://github.com/wgpsec/redc');
   }
+
+  function setRegistryNotice(type, message, autoClear = true) {
+    registryNotice = { type, message };
+    if (registryNoticeTimer) {
+      clearTimeout(registryNoticeTimer);
+      registryNoticeTimer = null;
+    }
+    if (autoClear && message) {
+      registryNoticeTimer = setTimeout(() => {
+        registryNotice = { type: '', message: '' };
+      }, 3000);
+    }
+  }
+
+  function stripAnsi(value) {
+    if (!value) return '';
+    return value.replace(/\x1B\[[0-9;]*m/g, '');
+  }
+
+  function setCreateStatus(status, message, detail = '') {
+    createStatus = status;
+    createStatusMessage = message || '';
+    createStatusDetail = detail || '';
+    if (createStatusTimer) {
+      clearTimeout(createStatusTimer);
+      createStatusTimer = null;
+    }
+    if (status === 'success') {
+      createStatusTimer = setTimeout(() => {
+        createStatus = 'idle';
+        createStatusMessage = '';
+        createStatusDetail = '';
+      }, 3000);
+    }
+  }
+
+  function updateCreateStatusFromLog(message) {
+    const cleanMessage = stripAnsi(message);
+    if (cleanMessage.includes('正在创建场景:') || cleanMessage.includes('正在创建并运行场景:')) {
+      setCreateStatus('creating', t.creating, message);
+      return;
+    }
+    if (cleanMessage.includes('场景初始化中:')) {
+      setCreateStatus('initializing', t.initializing, message);
+      return;
+    }
+    if (cleanMessage.includes('场景创建成功')) {
+      setCreateStatus('success', t.createSuccess, message);
+      return;
+    }
+    if (cleanMessage.includes('场景创建失败') || cleanMessage.includes('创建场景时发生错误')) {
+      setCreateStatus('error', t.createFailed, message);
+      return;
+    }
+  }
+
+  $: createBusy = createStatus === 'creating' || createStatus === 'initializing';
 
   $: stateConfig = {
     'running': { label: t.running, color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
@@ -147,6 +222,7 @@
   onMount(async () => {
     EventsOn('log', (message) => {
       logs = [...logs, { time: new Date().toLocaleTimeString(), message }];
+      updateCreateStatusFromLog(message);
     });
     EventsOn('refresh', async () => {
       await refreshData();
@@ -157,6 +233,14 @@
   onDestroy(() => {
     EventsOff('log');
     EventsOff('refresh');
+    if (createStatusTimer) {
+      clearTimeout(createStatusTimer);
+      createStatusTimer = null;
+    }
+    if (registryNoticeTimer) {
+      clearTimeout(registryNoticeTimer);
+      registryNoticeTimer = null;
+    }
   });
 
   async function refreshData() {
@@ -174,6 +258,7 @@
         httpsProxy: config.httpsProxy || '',
         noProxy: config.noProxy || ''
       };
+      debugEnabled = !!config.debugEnabled;
     } catch (e) {
       error = e.message || String(e);
       cases = [];
@@ -194,6 +279,20 @@
       error = e.message || String(e);
     } finally {
       proxySaving = false;
+    }
+  }
+
+  async function handleToggleDebug() {
+    const nextValue = !debugEnabled;
+    debugSaving = true;
+    try {
+      await SetDebugLogging(nextValue);
+      debugEnabled = nextValue;
+      config.debugEnabled = nextValue;
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      debugSaving = false;
     }
   }
 
@@ -266,6 +365,7 @@
       error = t.selectTemplateErr;
       return;
     }
+    setCreateStatus('creating', t.creating, '');
     try {
       // Build vars object from variableValues, only include non-empty values
       const vars = {};
@@ -282,6 +382,7 @@
       // 不需要立即刷新，后端完成后会发送 refresh 事件
     } catch (e) {
       error = e.message || String(e);
+      setCreateStatus('error', t.createFailed, error);
     }
   }
 
@@ -290,6 +391,7 @@
       error = t.selectTemplateErr;
       return;
     }
+    setCreateStatus('creating', t.creating, '');
     try {
       // Build vars object from variableValues, only include non-empty values
       const vars = {};
@@ -306,6 +408,7 @@
       // 不需要立即刷新，后端完成后会发送 refresh 事件
     } catch (e) {
       error = e.message || String(e);
+      setCreateStatus('error', t.createFailed, error);
     }
   }
 
@@ -369,12 +472,15 @@
   async function handlePullTemplate(templateName, force = false) {
     pullingTemplates[templateName] = true;
     pullingTemplates = pullingTemplates;
+    setRegistryNotice('info', `${t.pulling} ${templateName}`, false);
     try {
       await PullTemplate(templateName, force);
       // Refresh registry templates after successful pull
       await loadRegistryTemplates();
+      setRegistryNotice('success', `${t.pullSuccess}: ${templateName}`);
     } catch (e) {
       error = e.message || String(e);
+      setRegistryNotice('error', `${t.pullFailed}: ${templateName}`);
     } finally {
       pullingTemplates[templateName] = false;
       pullingTemplates = pullingTemplates;
@@ -385,6 +491,7 @@
     .filter(t => 
       !registrySearch || 
       t.name.toLowerCase().includes(registrySearch.toLowerCase()) ||
+      (t.author && t.author.toLowerCase().includes(registrySearch.toLowerCase())) ||
       (t.description && t.description.toLowerCase().includes(registrySearch.toLowerCase())) ||
       (t.tags && t.tags.some(tag => tag.toLowerCase().includes(registrySearch.toLowerCase())))
     )
@@ -758,18 +865,36 @@
                 />
               </div>
               <button 
-                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 on:click={handleCreate}
+                disabled={createBusy}
               >
                 {t.create}
               </button>
               <button 
-                class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors"
+                class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 on:click={handleCreateAndRun}
+                disabled={createBusy}
               >
                 {t.createAndRun}
               </button>
             </div>
+
+            {#if createStatus !== 'idle'}
+              <div class="mt-3 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[12px]">
+                {#if createStatus === 'creating' || createStatus === 'initializing'}
+                  <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                  <span class="text-gray-700">{createStatusMessage}</span>
+                {:else if createStatus === 'success'}
+                  <span class="text-emerald-600">{createStatusMessage}</span>
+                {:else if createStatus === 'error'}
+                  <span class="text-red-600">{createStatusMessage}</span>
+                {/if}
+                {#if createStatusDetail}
+                  <span class="text-gray-400 truncate">{createStatusDetail}</span>
+                {/if}
+              </div>
+            {/if}
             
             <!-- Template Variables -->
             {#if templateVariables.length > 0}
@@ -948,7 +1073,7 @@
             {#each logs as log}
               <div class="flex">
                 <span class="text-gray-600 select-none">[{log.time}]</span>
-                <span class="text-gray-300 ml-2">{log.message}</span>
+                <span class="text-gray-300 ml-2">{stripAnsi(log.message)}</span>
               </div>
             {:else}
               <div class="text-gray-600">$ {t.waitOutput}</div>
@@ -1017,6 +1142,30 @@
               </div>
             </div>
           </div>
+
+          <!-- 调试日志 -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium text-gray-900">{t.debugLogs}</div>
+                <div class="text-[12px] text-gray-500 mt-1">{t.debugLogsDesc}</div>
+              </div>
+              <button
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class:bg-emerald-500={debugEnabled}
+                class:bg-gray-300={!debugEnabled}
+                on:click={handleToggleDebug}
+                disabled={debugSaving}
+                aria-label={debugEnabled ? t.disable : t.enable}
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  class:translate-x-6={debugEnabled}
+                  class:translate-x-1={!debugEnabled}
+                ></span>
+              </button>
+            </div>
+          </div>
         </div>
 
       {:else if activeTab === 'registry'}
@@ -1043,6 +1192,20 @@
                 {registryLoading ? t.loading : t.refreshRepo}
               </button>
             </div>
+            {#if registryNotice.message}
+              <div class="mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px]
+                {registryNotice.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : registryNotice.type === 'error' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'}">
+                {#if registryNotice.type === 'info'}
+                  <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+                {/if}
+                <span class="flex-1 truncate">{registryNotice.message}</span>
+                <button class="text-gray-400 hover:text-gray-600" on:click={() => setRegistryNotice('', '')}>
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            {/if}
           </div>
 
           {#if registryError}
@@ -1103,7 +1266,8 @@
                       {#if tmpl.author}by {tmpl.author}{/if}
                     </div>
                     {#if pullingTemplates[tmpl.name]}
-                      <span class="px-3 py-1.5 text-[12px] font-medium text-amber-600">
+                      <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
+                        <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
                         {t.pulling}
                       </span>
                     {:else if tmpl.installed}
@@ -1176,27 +1340,33 @@
                     <span class="text-gray-500">{t.transportMode}</span>
                     <p class="font-medium text-gray-900 mt-0.5">{mcpStatus.mode === 'sse' ? 'SSE (HTTP)' : 'STDIO'}</p>
                   </div>
-                  <div>
-                    <span class="text-gray-500">{t.listenAddr}</span>
-                    <p class="font-mono font-medium text-gray-900 mt-0.5">{mcpStatus.address || '-'}</p>
-                  </div>
-                  <div>
-                    <span class="text-gray-500">{t.protocolVersion}</span>
-                    <p class="font-medium text-gray-900 mt-0.5">{mcpStatus.protocolVersion}</p>
-                  </div>
-                  <div>
-                    <span class="text-gray-500">{t.msgEndpoint}</span>
-                    <p class="font-mono font-medium text-gray-900 mt-0.5 text-[11px]">http://{mcpStatus.address}/message</p>
-                  </div>
+                  {#if mcpStatus.mode === 'sse'}
+                    <div>
+                      <span class="text-gray-500">{t.listenAddr}</span>
+                      <p class="font-mono font-medium text-gray-900 mt-0.5">{mcpStatus.address || '-'}</p>
+                    </div>
+                    <div>
+                      <span class="text-gray-500">{t.protocolVersion}</span>
+                      <p class="font-medium text-gray-900 mt-0.5">{mcpStatus.protocolVersion}</p>
+                    </div>
+                    <div>
+                      <span class="text-gray-500">{t.msgEndpoint}</span>
+                      <p class="font-mono font-medium text-gray-900 mt-0.5 text-[11px]">http://{mcpStatus.address}/message</p>
+                    </div>
+                  {:else}
+                    <div class="col-span-2 text-[12px] text-gray-500">{t.stdioHint}</div>
+                  {/if}
                 </div>
               </div>
-              <button 
-                class="w-full h-10 bg-red-500 text-white text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                on:click={handleStopMCP}
-                disabled={mcpLoading}
-              >
-                {mcpLoading ? t.stoppingServer : t.stopServer}
-              </button>
+              {#if mcpStatus.mode === 'sse'}
+                <button 
+                  class="w-full h-10 bg-red-500 text-white text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  on:click={handleStopMCP}
+                  disabled={mcpLoading}
+                >
+                  {mcpLoading ? t.stoppingServer : t.stopServer}
+                </button>
+              {/if}
             {:else}
               <!-- Configuration form -->
               <div class="space-y-4 mb-4">
@@ -1229,15 +1399,21 @@
                       bind:value={mcpForm.address} 
                     />
                   </div>
+                {:else}
+                  <div class="text-[12px] text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                    {t.stdioHint}
+                  </div>
                 {/if}
               </div>
-              <button 
-                class="w-full h-10 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-                on:click={handleStartMCP}
-                disabled={mcpLoading}
-              >
-                {mcpLoading ? t.startingServer : t.startServer}
-              </button>
+              {#if mcpForm.mode === 'sse'}
+                <button 
+                  class="w-full h-10 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  on:click={handleStartMCP}
+                  disabled={mcpLoading}
+                >
+                  {mcpLoading ? t.startingServer : t.startServer}
+                </button>
+              {/if}
             {/if}
           </div>
 
