@@ -790,6 +790,7 @@ func (a *App) CreateCase(templateName string, name string, vars map[string]strin
 			a.emitRefresh()
 		}()
 
+		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {
 			a.emitLog(fmt.Sprintf("场景创建失败: %v", err))
@@ -821,6 +822,7 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 			a.emitRefresh()
 		}()
 
+		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
 		// Step 1: Create the case (same as planLogic in CLI)
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {

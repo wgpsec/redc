@@ -50,6 +50,12 @@
   let deleteTemplateConfirm = { show: false, name: '' };
   let deletingTemplate = {};
 
+  // Create status state
+  let createStatus = 'idle';
+  let createStatusMessage = '';
+  let createStatusDetail = '';
+  let createStatusTimer = null;
+
   // i18n state
   let lang = localStorage.getItem('lang') || 'zh';
   const i18n = {
@@ -58,6 +64,7 @@
       sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板管理',
       template: '模板', selectTemplate: '选择模板...', name: '名称', optional: '可选',
       create: '创建', createAndRun: '创建并运行', templateParams: '模板参数',
+      creating: '正在创建中...', initializing: '初始化中...', createSuccess: '创建成功', createFailed: '创建失败',
       id: 'ID', type: '类型', state: '状态', time: '时间', actions: '操作',
       start: '启动', stop: '停止', delete: '删除', noScene: '暂无场景',
       running: '运行中', stopped: '已停止', error: '异常', created: '已创建',
@@ -92,6 +99,7 @@
       sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
       template: 'Template', selectTemplate: 'Select template...', name: 'Name', optional: 'Optional',
       create: 'Create', createAndRun: 'Create & Run', templateParams: 'Template Parameters',
+      creating: 'Creating...', initializing: 'Initializing...', createSuccess: 'Created', createFailed: 'Create failed',
       id: 'ID', type: 'Type', state: 'State', time: 'Time', actions: 'Actions',
       start: 'Start', stop: 'Stop', delete: 'Delete', noScene: 'No scenes',
       running: 'Running', stopped: 'Stopped', error: 'Error', created: 'Created',
@@ -133,6 +141,44 @@
     BrowserOpenURL('https://github.com/wgpsec/redc');
   }
 
+  function setCreateStatus(status, message, detail = '') {
+    createStatus = status;
+    createStatusMessage = message || '';
+    createStatusDetail = detail || '';
+    if (createStatusTimer) {
+      clearTimeout(createStatusTimer);
+      createStatusTimer = null;
+    }
+    if (status === 'success') {
+      createStatusTimer = setTimeout(() => {
+        createStatus = 'idle';
+        createStatusMessage = '';
+        createStatusDetail = '';
+      }, 3000);
+    }
+  }
+
+  function updateCreateStatusFromLog(message) {
+    if (message.includes('正在创建场景:') || message.includes('正在创建并运行场景:')) {
+      setCreateStatus('creating', t.creating, message);
+      return;
+    }
+    if (message.includes('场景初始化中:')) {
+      setCreateStatus('initializing', t.initializing, message);
+      return;
+    }
+    if (message.includes('场景创建成功')) {
+      setCreateStatus('success', t.createSuccess, message);
+      return;
+    }
+    if (message.includes('场景创建失败') || message.includes('创建场景时发生错误')) {
+      setCreateStatus('error', t.createFailed, message);
+      return;
+    }
+  }
+
+  $: createBusy = createStatus === 'creating' || createStatus === 'initializing';
+
   $: stateConfig = {
     'running': { label: t.running, color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
     'stopped': { label: t.stopped, color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },
@@ -147,6 +193,7 @@
   onMount(async () => {
     EventsOn('log', (message) => {
       logs = [...logs, { time: new Date().toLocaleTimeString(), message }];
+      updateCreateStatusFromLog(message);
     });
     EventsOn('refresh', async () => {
       await refreshData();
@@ -157,6 +204,10 @@
   onDestroy(() => {
     EventsOff('log');
     EventsOff('refresh');
+    if (createStatusTimer) {
+      clearTimeout(createStatusTimer);
+      createStatusTimer = null;
+    }
   });
 
   async function refreshData() {
@@ -266,6 +317,7 @@
       error = t.selectTemplateErr;
       return;
     }
+    setCreateStatus('creating', t.creating, '');
     try {
       // Build vars object from variableValues, only include non-empty values
       const vars = {};
@@ -282,6 +334,7 @@
       // 不需要立即刷新，后端完成后会发送 refresh 事件
     } catch (e) {
       error = e.message || String(e);
+      setCreateStatus('error', t.createFailed, error);
     }
   }
 
@@ -290,6 +343,7 @@
       error = t.selectTemplateErr;
       return;
     }
+    setCreateStatus('creating', t.creating, '');
     try {
       // Build vars object from variableValues, only include non-empty values
       const vars = {};
@@ -306,6 +360,7 @@
       // 不需要立即刷新，后端完成后会发送 refresh 事件
     } catch (e) {
       error = e.message || String(e);
+      setCreateStatus('error', t.createFailed, error);
     }
   }
 
@@ -758,18 +813,36 @@
                 />
               </div>
               <button 
-                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 on:click={handleCreate}
+                disabled={createBusy}
               >
                 {t.create}
               </button>
               <button 
-                class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors"
+                class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 on:click={handleCreateAndRun}
+                disabled={createBusy}
               >
                 {t.createAndRun}
               </button>
             </div>
+
+            {#if createStatus !== 'idle'}
+              <div class="mt-3 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[12px]">
+                {#if createStatus === 'creating' || createStatus === 'initializing'}
+                  <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                  <span class="text-gray-700">{createStatusMessage}</span>
+                {:else if createStatus === 'success'}
+                  <span class="text-emerald-600">{createStatusMessage}</span>
+                {:else if createStatus === 'error'}
+                  <span class="text-red-600">{createStatusMessage}</span>
+                {/if}
+                {#if createStatusDetail}
+                  <span class="text-gray-400 truncate">{createStatusDetail}</span>
+                {/if}
+              </div>
+            {/if}
             
             <!-- Template Variables -->
             {#if templateVariables.length > 0}
