@@ -44,7 +44,7 @@
   let lang = localStorage.getItem('lang') || 'zh';
   const i18n = {
     zh: {
-      dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '仓库', ai: 'AI 集成',
+      dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成',
       sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成',
       template: '模板', selectTemplate: '选择模板...', name: '名称', optional: '可选',
       create: '创建', createAndRun: '创建并运行', templateParams: '模板参数',
@@ -71,7 +71,7 @@
       selectTemplateErr: '请选择一个模板',
     },
     en: {
-      dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Registry', ai: 'AI Integration',
+      dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration',
       sceneManage: 'Scene Management', templateRepo: 'Template Registry', aiIntegration: 'AI Integration',
       template: 'Template', selectTemplate: 'Select template...', name: 'Name', optional: 'Optional',
       create: 'Create', createAndRun: 'Create & Run', templateParams: 'Template Parameters',
