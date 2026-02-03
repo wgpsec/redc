@@ -1437,50 +1437,50 @@
           {:else}
             <!-- Template Table -->
             <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <table class="w-full">
+              <table class="w-full table-fixed">
                 <thead>
                   <tr class="border-b border-gray-100">
-                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name}</th>
-                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.version}</th>
-                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.author}</th>
-                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.module}</th>
-                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.description}</th>
-                    <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.actions}</th>
+                    <th class="text-left px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.name}</th>
+                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[60px]">{t.version}</th>
+                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[70px]">{t.author}</th>
+                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[100px]">{t.module}</th>
+                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.description}</th>
+                    <th class="text-right px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[130px]">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {#each filteredLocalTemplates as tmpl}
                     <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td class="px-5 py-3.5">
-                        <span class="text-[13px] font-medium text-gray-900">{tmpl.name}</span>
+                      <td class="px-4 py-3.5">
+                        <span class="text-[13px] font-medium text-gray-900 break-all">{tmpl.name}</span>
                       </td>
-                      <td class="px-5 py-3.5">
+                      <td class="px-3 py-3.5">
                         <span class="text-[13px] text-gray-600">{tmpl.version || '-'}</span>
                       </td>
-                      <td class="px-5 py-3.5">
-                        <span class="text-[13px] text-gray-600">{tmpl.user || '-'}</span>
+                      <td class="px-3 py-3.5">
+                        <span class="text-[13px] text-gray-600 truncate block">{tmpl.user || '-'}</span>
                       </td>
-                      <td class="px-5 py-3.5">
+                      <td class="px-3 py-3.5">
                         {#if tmpl.module}
-                          <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-medium rounded-full">{tmpl.module}</span>
+                          <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-medium rounded-full truncate block max-w-full">{tmpl.module}</span>
                         {:else}
                           <span class="text-[13px] text-gray-400">-</span>
                         {/if}
                       </td>
-                      <td class="px-5 py-3.5">
-                        <span class="text-[12px] text-gray-500 line-clamp-1" title={tmpl.description}>{tmpl.description || '-'}</span>
+                      <td class="px-3 py-3.5">
+                        <span class="text-[12px] text-gray-500 break-words" title={tmpl.description}>{tmpl.description || '-'}</span>
                       </td>
-                      <td class="px-5 py-3.5 text-right">
-                        <div class="inline-flex items-center gap-1">
+                      <td class="px-4 py-3.5 text-right">
+                        <div class="inline-flex items-center gap-1 flex-nowrap">
                           <button 
-                            class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                            class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
                             on:click={() => showTemplateDetail(tmpl)}
                           >{t.viewParams}</button>
                           {#if deletingTemplate[tmpl.name]}
-                            <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600">{t.deleting}</span>
+                            <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600 whitespace-nowrap">{t.deleting}</span>
                           {:else}
                             <button 
-                              class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                              class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors whitespace-nowrap"
                               on:click={() => showDeleteTemplateConfirm(tmpl.name)}
                             >{t.delete}</button>
                           {/if}
