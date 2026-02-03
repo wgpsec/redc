@@ -120,6 +120,19 @@ type ConfigInfo struct {
 	NoProxy     string `json:"noProxy"`
 }
 
+// ProviderCredential represents a single provider's credentials (masked for display)
+type ProviderCredential struct {
+	Name       string            `json:"name"`
+	Fields     map[string]string `json:"fields"`      // field name -> masked value
+	HasSecrets map[string]bool   `json:"hasSecrets"`  // field name -> has value
+}
+
+// ProvidersConfigInfo represents all providers' credentials
+type ProvidersConfigInfo struct {
+	ConfigPath  string               `json:"configPath"`
+	Providers   []ProviderCredential `json:"providers"`
+}
+
 // GetConfig returns current configuration
 func (a *App) GetConfig() ConfigInfo {
 	logPath := ""
@@ -164,6 +177,260 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	}
 
 	a.emitLog(fmt.Sprintf("代理配置已更新 - HTTP: %s, HTTPS: %s, NO_PROXY: %s", httpProxy, httpsProxy, noProxy))
+	return nil
+}
+
+// maskValue returns masked value for display (shows last 4 chars if length > 8)
+func maskValue(value string) string {
+	if value == "" {
+		return ""
+	}
+	if len(value) <= 4 {
+		return "****"
+	}
+	return "****" + value[len(value)-4:]
+}
+
+// GetProvidersConfig returns providers configuration with masked secrets
+func (a *App) GetProvidersConfig(customPath string) (ProvidersConfigInfo, error) {
+	conf, configPath, err := redc.ReadConfig(customPath)
+	if err != nil {
+		return ProvidersConfigInfo{}, err
+	}
+
+	providers := []ProviderCredential{
+		{
+			Name: "AWS",
+			Fields: map[string]string{
+				"accessKey": maskValue(conf.Providers.Aws.AccessKey),
+				"secretKey": maskValue(conf.Providers.Aws.SecretKey),
+				"region":    conf.Providers.Aws.Region,
+			},
+			HasSecrets: map[string]bool{
+				"accessKey": conf.Providers.Aws.AccessKey != "",
+				"secretKey": conf.Providers.Aws.SecretKey != "",
+			},
+		},
+		{
+			Name: "阿里云",
+			Fields: map[string]string{
+				"accessKey": maskValue(conf.Providers.Alicloud.AccessKey),
+				"secretKey": maskValue(conf.Providers.Alicloud.SecretKey),
+				"region":    conf.Providers.Alicloud.Region,
+			},
+			HasSecrets: map[string]bool{
+				"accessKey": conf.Providers.Alicloud.AccessKey != "",
+				"secretKey": conf.Providers.Alicloud.SecretKey != "",
+			},
+		},
+		{
+			Name: "腾讯云",
+			Fields: map[string]string{
+				"secretId":  maskValue(conf.Providers.Tencentcloud.SecretId),
+				"secretKey": maskValue(conf.Providers.Tencentcloud.SecretKey),
+				"region":    conf.Providers.Tencentcloud.Region,
+			},
+			HasSecrets: map[string]bool{
+				"secretId":  conf.Providers.Tencentcloud.SecretId != "",
+				"secretKey": conf.Providers.Tencentcloud.SecretKey != "",
+			},
+		},
+		{
+			Name: "火山引擎",
+			Fields: map[string]string{
+				"accessKey": maskValue(conf.Providers.Volcengine.AccessKey),
+				"secretKey": maskValue(conf.Providers.Volcengine.SecretKey),
+				"region":    conf.Providers.Volcengine.Region,
+			},
+			HasSecrets: map[string]bool{
+				"accessKey": conf.Providers.Volcengine.AccessKey != "",
+				"secretKey": conf.Providers.Volcengine.SecretKey != "",
+			},
+		},
+		{
+			Name: "华为云",
+			Fields: map[string]string{
+				"accessKey": maskValue(conf.Providers.Huaweicloud.AccessKey),
+				"secretKey": maskValue(conf.Providers.Huaweicloud.SecretKey),
+				"region":    conf.Providers.Huaweicloud.Region,
+			},
+			HasSecrets: map[string]bool{
+				"accessKey": conf.Providers.Huaweicloud.AccessKey != "",
+				"secretKey": conf.Providers.Huaweicloud.SecretKey != "",
+			},
+		},
+		{
+			Name: "Google Cloud",
+			Fields: map[string]string{
+				"credentials": maskValue(conf.Providers.Google.Credentials),
+				"project":     conf.Providers.Google.Project,
+				"region":      conf.Providers.Google.Region,
+			},
+			HasSecrets: map[string]bool{
+				"credentials": conf.Providers.Google.Credentials != "",
+			},
+		},
+		{
+			Name: "Azure",
+			Fields: map[string]string{
+				"clientId":       maskValue(conf.Providers.Azure.ClientId),
+				"clientSecret":   maskValue(conf.Providers.Azure.ClientSecret),
+				"subscriptionId": maskValue(conf.Providers.Azure.SubscriptionId),
+				"tenantId":       maskValue(conf.Providers.Azure.TenantId),
+			},
+			HasSecrets: map[string]bool{
+				"clientId":       conf.Providers.Azure.ClientId != "",
+				"clientSecret":   conf.Providers.Azure.ClientSecret != "",
+				"subscriptionId": conf.Providers.Azure.SubscriptionId != "",
+				"tenantId":       conf.Providers.Azure.TenantId != "",
+			},
+		},
+		{
+			Name: "Oracle Cloud",
+			Fields: map[string]string{
+				"user":        maskValue(conf.Providers.Oracle.User),
+				"tenancy":     maskValue(conf.Providers.Oracle.Tenancy),
+				"fingerprint": maskValue(conf.Providers.Oracle.Fingerprint),
+				"keyFile":     conf.Providers.Oracle.KeyFile,
+				"region":      conf.Providers.Oracle.Region,
+			},
+			HasSecrets: map[string]bool{
+				"user":        conf.Providers.Oracle.User != "",
+				"tenancy":     conf.Providers.Oracle.Tenancy != "",
+				"fingerprint": conf.Providers.Oracle.Fingerprint != "",
+			},
+		},
+		{
+			Name: "Cloudflare",
+			Fields: map[string]string{
+				"email":  conf.Cloudflare.Email,
+				"apiKey": maskValue(conf.Cloudflare.APIKey),
+			},
+			HasSecrets: map[string]bool{
+				"apiKey": conf.Cloudflare.APIKey != "",
+			},
+		},
+	}
+
+	return ProvidersConfigInfo{
+		ConfigPath: configPath,
+		Providers:  providers,
+	}, nil
+}
+
+// SaveProvidersConfig saves provider credentials (only non-empty values are updated)
+func (a *App) SaveProvidersConfig(providerName string, fields map[string]string, customPath string) error {
+	conf, _, err := redc.ReadConfig(customPath)
+	if err != nil {
+		return err
+	}
+
+	switch providerName {
+	case "AWS":
+		if v, ok := fields["accessKey"]; ok && v != "" {
+			conf.Providers.Aws.AccessKey = v
+		}
+		if v, ok := fields["secretKey"]; ok && v != "" {
+			conf.Providers.Aws.SecretKey = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Aws.Region = v
+		}
+	case "阿里云":
+		if v, ok := fields["accessKey"]; ok && v != "" {
+			conf.Providers.Alicloud.AccessKey = v
+		}
+		if v, ok := fields["secretKey"]; ok && v != "" {
+			conf.Providers.Alicloud.SecretKey = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Alicloud.Region = v
+		}
+	case "腾讯云":
+		if v, ok := fields["secretId"]; ok && v != "" {
+			conf.Providers.Tencentcloud.SecretId = v
+		}
+		if v, ok := fields["secretKey"]; ok && v != "" {
+			conf.Providers.Tencentcloud.SecretKey = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Tencentcloud.Region = v
+		}
+	case "火山引擎":
+		if v, ok := fields["accessKey"]; ok && v != "" {
+			conf.Providers.Volcengine.AccessKey = v
+		}
+		if v, ok := fields["secretKey"]; ok && v != "" {
+			conf.Providers.Volcengine.SecretKey = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Volcengine.Region = v
+		}
+	case "华为云":
+		if v, ok := fields["accessKey"]; ok && v != "" {
+			conf.Providers.Huaweicloud.AccessKey = v
+		}
+		if v, ok := fields["secretKey"]; ok && v != "" {
+			conf.Providers.Huaweicloud.SecretKey = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Huaweicloud.Region = v
+		}
+	case "Google Cloud":
+		if v, ok := fields["credentials"]; ok && v != "" {
+			conf.Providers.Google.Credentials = v
+		}
+		if v, ok := fields["project"]; ok {
+			conf.Providers.Google.Project = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Google.Region = v
+		}
+	case "Azure":
+		if v, ok := fields["clientId"]; ok && v != "" {
+			conf.Providers.Azure.ClientId = v
+		}
+		if v, ok := fields["clientSecret"]; ok && v != "" {
+			conf.Providers.Azure.ClientSecret = v
+		}
+		if v, ok := fields["subscriptionId"]; ok && v != "" {
+			conf.Providers.Azure.SubscriptionId = v
+		}
+		if v, ok := fields["tenantId"]; ok && v != "" {
+			conf.Providers.Azure.TenantId = v
+		}
+	case "Oracle Cloud":
+		if v, ok := fields["user"]; ok && v != "" {
+			conf.Providers.Oracle.User = v
+		}
+		if v, ok := fields["tenancy"]; ok && v != "" {
+			conf.Providers.Oracle.Tenancy = v
+		}
+		if v, ok := fields["fingerprint"]; ok && v != "" {
+			conf.Providers.Oracle.Fingerprint = v
+		}
+		if v, ok := fields["keyFile"]; ok {
+			conf.Providers.Oracle.KeyFile = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.Oracle.Region = v
+		}
+	case "Cloudflare":
+		if v, ok := fields["email"]; ok {
+			conf.Cloudflare.Email = v
+		}
+		if v, ok := fields["apiKey"]; ok && v != "" {
+			conf.Cloudflare.APIKey = v
+		}
+	default:
+		return fmt.Errorf("未知的云厂商: %s", providerName)
+	}
+
+	if err := redc.SaveConfig(conf, customPath); err != nil {
+		return err
+	}
+
+	a.emitLog(fmt.Sprintf("凭据配置已更新: %s", providerName))
 	return nil
 }
 

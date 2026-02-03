@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, GetMCPStatus, StartMCPServer, StopMCPServer } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
@@ -31,6 +31,14 @@
   let mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
   let mcpForm = { mode: 'sse', address: 'localhost:8080' };
   let mcpLoading = false;
+
+  // Credentials state
+  let providersConfig = { configPath: '', providers: [] };
+  let credentialsLoading = false;
+  let credentialsSaving = {};
+  let editingProvider = null;
+  let editFields = {};
+  let customConfigPath = '';
 
   const stateConfig = {
     'running': { label: '运行中', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
@@ -324,6 +332,80 @@
       mcpLoading = false;
     }
   }
+
+  // Credentials functions
+  async function loadProvidersConfig() {
+    credentialsLoading = true;
+    try {
+      providersConfig = await GetProvidersConfig(customConfigPath);
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      credentialsLoading = false;
+    }
+  }
+
+  function startEditProvider(provider) {
+    editingProvider = provider.name;
+    editFields = {};
+    // Initialize edit fields with empty values (user must re-enter secrets)
+    for (const key of Object.keys(provider.fields)) {
+      // For non-secret fields (like region), pre-fill with current value
+      if (!provider.hasSecrets || !provider.hasSecrets[key]) {
+        editFields[key] = provider.fields[key] || '';
+      } else {
+        editFields[key] = '';
+      }
+    }
+  }
+
+  function cancelEditProvider() {
+    editingProvider = null;
+    editFields = {};
+  }
+
+  async function saveProviderCredentials(providerName) {
+    credentialsSaving[providerName] = true;
+    credentialsSaving = credentialsSaving;
+    try {
+      await SaveProvidersConfig(providerName, editFields, customConfigPath);
+      editingProvider = null;
+      editFields = {};
+      await loadProvidersConfig();
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      credentialsSaving[providerName] = false;
+      credentialsSaving = credentialsSaving;
+    }
+  }
+
+  function getFieldLabel(key) {
+    const labels = {
+      accessKey: 'Access Key',
+      secretKey: 'Secret Key',
+      secretId: 'Secret ID',
+      region: '区域',
+      credentials: '凭据 JSON',
+      project: '项目 ID',
+      clientId: 'Client ID',
+      clientSecret: 'Client Secret',
+      subscriptionId: 'Subscription ID',
+      tenantId: 'Tenant ID',
+      user: '用户 OCID',
+      tenancy: 'Tenancy OCID',
+      fingerprint: '指纹',
+      keyFile: '私钥文件路径',
+      email: '邮箱',
+      apiKey: 'API Key',
+    };
+    return labels[key] || key;
+  }
+
+  function isSecretField(key) {
+    const secrets = ['accessKey', 'secretKey', 'secretId', 'credentials', 'clientId', 'clientSecret', 'subscriptionId', 'tenantId', 'user', 'tenancy', 'fingerprint', 'apiKey'];
+    return secrets.includes(key);
+  }
 </script>
 
 <div class="h-screen flex bg-[#fafbfc]">
@@ -373,6 +455,16 @@
         </button>
         <button 
           class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
+            {activeTab === 'credentials' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
+          on:click={() => { activeTab = 'credentials'; loadProvidersConfig(); }}
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+          </svg>
+          凭据管理
+        </button>
+        <button 
+          class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
             {activeTab === 'registry' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
           on:click={() => { activeTab = 'registry'; loadRegistryTemplates(); }}
         >
@@ -404,11 +496,11 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}场景管理{:else if activeTab === 'console'}控制台{:else if activeTab === 'registry'}模板仓库{:else if activeTab === 'ai'}AI 集成{:else}设置{/if}
+        {#if activeTab === 'dashboard'}场景管理{:else if activeTab === 'console'}控制台{:else if activeTab === 'registry'}模板仓库{:else if activeTab === 'ai'}AI 集成{:else if activeTab === 'credentials'}凭据管理{:else}设置{/if}
       </h1>
       <button 
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'ai') loadMCPStatus(); }}
+        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'credentials') loadProvidersConfig(); }}
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -992,6 +1084,123 @@
               </div>
             </div>
           </div>
+        </div>
+
+      {:else if activeTab === 'credentials'}
+        <div class="max-w-3xl space-y-5">
+          <!-- Config Path -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-center gap-4">
+              <div class="flex-1">
+                <label class="block text-[12px] font-medium text-gray-500 mb-1.5">配置文件路径</label>
+                <input 
+                  type="text" 
+                  placeholder="留空使用默认路径 ~/redc/config.yaml" 
+                  class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+                  bind:value={customConfigPath} 
+                />
+              </div>
+              <button 
+                class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 mt-5"
+                on:click={loadProvidersConfig}
+                disabled={credentialsLoading}
+              >
+                {credentialsLoading ? '加载中...' : '加载配置'}
+              </button>
+            </div>
+            {#if providersConfig.configPath}
+              <div class="mt-3 text-[12px] text-gray-500">
+                当前配置: <span class="font-mono">{providersConfig.configPath}</span>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Security Notice -->
+          <div class="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-lg">
+            <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div class="text-[12px] text-amber-800">
+              <strong>安全提示：</strong>凭据以脱敏形式显示，编辑时需重新输入完整值。空字段不会覆盖已有配置。
+            </div>
+          </div>
+
+          {#if credentialsLoading}
+            <div class="flex items-center justify-center h-32">
+              <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+            </div>
+          {:else}
+            <!-- Provider Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {#each providersConfig.providers || [] as provider}
+                <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-[14px] font-semibold text-gray-900">{provider.name}</h3>
+                    {#if editingProvider === provider.name}
+                      <div class="flex gap-2">
+                        <button 
+                          class="px-3 py-1 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                          on:click={cancelEditProvider}
+                        >取消</button>
+                        <button 
+                          class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                          on:click={() => saveProviderCredentials(provider.name)}
+                          disabled={credentialsSaving[provider.name]}
+                        >
+                          {credentialsSaving[provider.name] ? '保存中...' : '保存'}
+                        </button>
+                      </div>
+                    {:else}
+                      <button 
+                        class="px-3 py-1 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                        on:click={() => startEditProvider(provider)}
+                      >编辑</button>
+                    {/if}
+                  </div>
+                  <div class="p-5 space-y-3">
+                    {#each Object.entries(provider.fields) as [key, value]}
+                      <div>
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">
+                          {getFieldLabel(key)}
+                          {#if provider.hasSecrets && provider.hasSecrets[key]}
+                            <span class="ml-1 text-amber-500">🔒</span>
+                          {/if}
+                        </label>
+                        {#if editingProvider === provider.name}
+                          {#if isSecretField(key)}
+                            <input 
+                              type="password"
+                              placeholder="输入新值覆盖"
+                              class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+                              bind:value={editFields[key]}
+                            />
+                          {:else}
+                            <input 
+                              type="text"
+                              placeholder={value || '未设置'}
+                              class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+                              bind:value={editFields[key]}
+                            />
+                          {/if}
+                        {:else}
+                          <div class="h-9 px-3 flex items-center text-[12px] bg-gray-50 rounded-lg font-mono {value ? 'text-gray-900' : 'text-gray-400'}">
+                            {value || '未设置'}
+                          </div>
+                        {/if}
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {:else}
+                <div class="col-span-full py-16 text-center">
+                  <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                  </svg>
+                  <p class="text-[13px] text-gray-400">点击"加载配置"查看凭据</p>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/if}
     </main>

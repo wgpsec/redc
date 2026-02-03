@@ -156,3 +156,65 @@ func bindEnv(v interface{}) {
 		}
 	}
 }
+
+// GetConfigPath returns the current config file path (supports custom path)
+func GetConfigPath(customPath string) (string, error) {
+	if customPath != "" {
+		return customPath, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("无法获取用户目录: %s", err.Error())
+	}
+	if RedcPath == "" {
+		RedcPath = filepath.Join(home, "redc")
+	}
+	return filepath.Join(RedcPath, "config.yaml"), nil
+}
+
+// ReadConfig reads config from a specific path or default path
+func ReadConfig(customPath string) (*Config, string, error) {
+	configPath, err := GetConfigPath(customPath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &Config{}, configPath, nil
+		}
+		return nil, configPath, fmt.Errorf("读取配置文件失败: %v", err)
+	}
+
+	var conf Config
+	if err := yaml.Unmarshal(data, &conf); err != nil {
+		return nil, configPath, fmt.Errorf("解析配置文件失败: %v", err)
+	}
+	return &conf, configPath, nil
+}
+
+// SaveConfig writes config to a specific path or default path
+func SaveConfig(conf *Config, customPath string) error {
+	configPath, err := GetConfigPath(customPath)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return fmt.Errorf("创建配置目录失败: %v", err)
+	}
+
+	data, err := yaml.Marshal(conf)
+	if err != nil {
+		return fmt.Errorf("序列化配置失败: %v", err)
+	}
+
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		return fmt.Errorf("写入配置文件失败: %v", err)
+	}
+
+	// Rebind environment variables after saving
+	bindEnv(*conf)
+	return nil
+}
