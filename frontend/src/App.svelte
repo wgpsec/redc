@@ -1128,7 +1128,7 @@
 
     <div class="p-2 border-t border-gray-100">
       <div class="flex items-center justify-between px-2 py-2">
-        <span class="text-[10px] text-gray-400">v1.0.0</span>
+        <span class="text-[10px] text-gray-400">v2.1.0</span>
         <div class="flex items-center gap-1">
           <button
             class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium"

@@ -89,6 +89,9 @@ From the project root:
 
 ```bash
 wails build
+
+# windows
+wails build -platform windows/amd64
 ```
 
 Artifacts are output to [build/bin](build/bin).

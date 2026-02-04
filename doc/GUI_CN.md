@@ -184,13 +184,3 @@ wails.Run(&options.App{
 2. **Goroutine**: 耗时操作（如 Terraform Apply）在 goroutine 中运行
 3. **错误恢复**: 使用 `defer recover()` 防止 panic 导致应用崩溃
 4. **工作目录**: 注意 Wails 运行时的 CWD 问题
-
-## 更新日志
-
-### v1.0.0 (2026-02-02)
-
-- 初始版本
-- 支持场景的创建、启动、停止、删除
-- 实时日志输出
-- 展开查看 Terraform outputs
-- 复制 outputs 功能
