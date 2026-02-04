@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
@@ -59,6 +59,8 @@
   let localTemplateVarsLoading = false;
   let deleteTemplateConfirm = { show: false, name: '' };
   let deletingTemplate = {};
+  let cloneTemplateModal = { show: false, source: '', target: '' };
+  let templateEditor = { show: false, name: '', files: {}, active: '', saving: false, error: '' };
 
   // Resources state
   let resourceSummary = [];
@@ -130,6 +132,9 @@
       selectTemplateErr: '请选择一个模板',
       // Local templates i18n
       version: '版本', author: '作者', module: '模块', description: '描述', viewParams: '查看参数',
+      cloneTemplate: '复制模板',
+      editTemplate: '编辑模板', templateFiles: '模板文件', saveTemplate: '保存模板',
+      cloneTitle: '复制模板', cloneName: '新模板名称', cloneHint: '复制后可独立编辑',
       noLocalTemplates: '暂无本地模板', goToRegistry: '前往模板仓库拉取',
       confirmDeleteTemplate: '确定要删除模板', deleteWarning: '删除后需要重新从仓库拉取才能使用',
       deleting: '删除中...', refresh: '刷新', close: '关闭',
@@ -180,6 +185,9 @@
       selectTemplateErr: 'Please select a template',
       // Local templates i18n
       version: 'Version', author: 'Author', module: 'Module', description: 'Description', viewParams: 'View Params',
+      cloneTemplate: 'Clone',
+      editTemplate: 'Edit Template', templateFiles: 'Template Files', saveTemplate: 'Save Template',
+      cloneTitle: 'Clone Template', cloneName: 'New Template Name', cloneHint: 'The copy is editable',
       noLocalTemplates: 'No local templates', goToRegistry: 'Go to registry to pull',
       confirmDeleteTemplate: 'Are you sure you want to delete template', deleteWarning: 'You need to pull from registry again to use it',
       deleting: 'Deleting...', refresh: 'Refresh', close: 'Close',
@@ -945,6 +953,57 @@
     } finally {
       deletingTemplate[name] = false;
       deletingTemplate = deletingTemplate;
+    }
+  }
+
+  async function handleCloneTemplate(tmpl) {
+    cloneTemplateModal = { show: true, source: tmpl.name, target: `${tmpl.name}-copy` };
+  }
+
+  function cancelCloneTemplate() {
+    cloneTemplateModal = { show: false, source: '', target: '' };
+  }
+
+  async function confirmCloneTemplate() {
+    const targetName = cloneTemplateModal.target.trim();
+    const sourceName = cloneTemplateModal.source;
+    cloneTemplateModal = { show: false, source: '', target: '' };
+    if (!targetName) return;
+    try {
+      await CopyTemplate(sourceName, targetName);
+      await loadLocalTemplates();
+    } catch (e) {
+      error = e.message || String(e);
+    }
+  }
+
+  async function openTemplateEditor(tmpl) {
+    templateEditor = { show: true, name: tmpl.name, files: {}, active: '', saving: false, error: '' };
+    try {
+      const files = await GetTemplateFiles(tmpl.name);
+      const names = Object.keys(files || {});
+      templateEditor = {
+        ...templateEditor,
+        files: files || {},
+        active: names.length > 0 ? names[0] : '',
+      };
+    } catch (e) {
+      templateEditor = { ...templateEditor, error: e.message || String(e) };
+    }
+  }
+
+  function closeTemplateEditor() {
+    templateEditor = { show: false, name: '', files: {}, active: '', saving: false, error: '' };
+  }
+
+  async function saveTemplateEditor() {
+    if (!templateEditor.name) return;
+    templateEditor = { ...templateEditor, saving: true, error: '' };
+    try {
+      await SaveTemplateFiles(templateEditor.name, templateEditor.files);
+      templateEditor = { ...templateEditor, saving: false };
+    } catch (e) {
+      templateEditor = { ...templateEditor, saving: false, error: e.message || String(e) };
     }
   }
 
@@ -2144,7 +2203,7 @@
             </div>
           {:else}
             <!-- Template Table -->
-            <div class="bg-white rounded-xl border border-gray-100 overflow-hidden pr-6">
+            <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <table class="w-full table-fixed">
                 <thead>
                   <tr class="border-b border-gray-100">
@@ -2152,8 +2211,8 @@
                     <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[60px]">{t.version}</th>
                     <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.author}</th>
                     <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[180px]">{t.module}</th>
-                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.description}</th>
-                    <th class="text-right pl-4 pr-10 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[130px]">{t.actions}</th>
+                    <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[320px]">{t.description}</th>
+                    <th class="text-right pl-4 pr-6 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[220px]">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2175,23 +2234,35 @@
                           <span class="text-[13px] text-gray-400">-</span>
                         {/if}
                       </td>
-                      <td class="px-3 py-3.5">
-                        <span class="text-[12px] text-gray-500 break-words" title={tmpl.description}>{tmpl.description || '-'}</span>
+                      <td class="px-3 py-3.5 w-[320px]">
+                        <span class="text-[12px] text-gray-500 break-words whitespace-normal" title={tmpl.description}>{tmpl.description || '-'}</span>
                       </td>
-                      <td class="pl-4 pr-10 py-3.5 text-right">
-                        <div class="inline-flex items-center gap-1 flex-nowrap">
-                          <button 
-                            class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
-                            on:click={() => showTemplateDetail(tmpl)}
-                          >{t.viewParams}</button>
-                          {#if deletingTemplate[tmpl.name]}
-                            <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600 whitespace-nowrap">{t.deleting}</span>
-                          {:else}
+                      <td class="pl-4 pr-6 py-3.5 text-right w-[220px]">
+                        <div class="flex flex-col gap-2 items-end">
+                          <div class="flex items-center gap-3">
                             <button 
-                              class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors whitespace-nowrap"
-                              on:click={() => showDeleteTemplateConfirm(tmpl.name)}
-                            >{t.delete}</button>
-                          {/if}
+                              class="w-[90px] px-2.5 py-1 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                              on:click={() => handleCloneTemplate(tmpl)}
+                            >{t.cloneTemplate}</button>
+                            <button 
+                              class="w-[90px] px-2.5 py-1 text-[12px] font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors"
+                              on:click={() => openTemplateEditor(tmpl)}
+                            >{t.editTemplate}</button>
+                          </div>
+                          <div class="flex items-center gap-3">
+                            <button 
+                              class="w-[90px] px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                              on:click={() => showTemplateDetail(tmpl)}
+                            >{t.viewParams}</button>
+                            {#if deletingTemplate[tmpl.name]}
+                              <span class="w-[90px] px-2.5 py-1 text-[12px] font-medium text-amber-600">{t.deleting}</span>
+                            {:else}
+                              <button 
+                                class="w-[90px] px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                                on:click={() => showDeleteTemplateConfirm(tmpl.name)}
+                              >{t.delete}</button>
+                            {/if}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -2284,6 +2355,43 @@
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
           on:click={confirmDeleteTemplate}
         >{t.delete}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Clone Template Modal -->
+{#if cloneTemplateModal.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelCloneTemplate}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-6 8h6a2 2 0 002-2V8a2 2 0 00-2-2h-2l-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.cloneTitle}</h3>
+            <p class="text-[13px] text-gray-500">{t.cloneHint}</p>
+          </div>
+        </div>
+        <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.cloneName}</label>
+        <input
+          type="text"
+          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+          bind:value={cloneTemplateModal.target}
+        />
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={cancelCloneTemplate}
+        >{t.cancel}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          on:click={confirmCloneTemplate}
+        >{t.cloneTemplate}</button>
       </div>
     </div>
   </div>
@@ -2395,6 +2503,55 @@
                 </tbody>
               </table>
             </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Template Editor Modal -->
+{#if templateEditor.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={closeTemplateEditor}>
+    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.editTemplate}</h3>
+          <p class="text-[12px] text-gray-500">{templateEditor.name}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            class="px-3 py-1.5 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            on:click={closeTemplateEditor}
+          >{t.close}</button>
+          <button
+            class="px-3 py-1.5 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
+            on:click={saveTemplateEditor}
+            disabled={templateEditor.saving}
+          >{templateEditor.saving ? t.saving : t.saveTemplate}</button>
+        </div>
+      </div>
+      <div class="flex h-[520px]">
+        <div class="w-52 border-r border-gray-100 overflow-auto">
+          <div class="px-4 py-3 text-[12px] font-semibold text-gray-600">{t.templateFiles}</div>
+          {#each Object.keys(templateEditor.files) as fname}
+            <button
+              class="w-full text-left px-4 py-2 text-[12px] transition-colors {templateEditor.active === fname ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
+              on:click={() => templateEditor = { ...templateEditor, active: fname }}
+            >{fname}</button>
+          {/each}
+        </div>
+        <div class="flex-1 p-4">
+          {#if templateEditor.error}
+            <div class="text-[12px] text-red-500 mb-2">{templateEditor.error}</div>
+          {/if}
+          {#if templateEditor.active}
+            <textarea
+              class="w-full h-full text-[12px] font-mono bg-gray-50 border border-gray-100 rounded-lg p-3 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+              bind:value={templateEditor.files[templateEditor.active]}
+            ></textarea>
+          {:else}
+            <div class="text-[12px] text-gray-400">{t.noParams}</div>
           {/if}
         </div>
       </div>

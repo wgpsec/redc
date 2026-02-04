@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"red-cloud/mod/gologger"
+	"red-cloud/utils"
 
 	"github.com/schollz/progressbar/v3"
 )
@@ -362,6 +363,31 @@ func RemoveTemplate(imageName string) error {
 		return fmt.Errorf("failed to remove: %w", err)
 	}
 	gologger.Info().Msg("✅ Successfully removed.")
+	return nil
+}
+
+// CopyTemplate copies a local template to a new template name
+func CopyTemplate(sourceName string, targetName string) error {
+	if strings.TrimSpace(sourceName) == "" || strings.TrimSpace(targetName) == "" {
+		return fmt.Errorf("template name cannot be empty")
+	}
+	if sourceName == targetName {
+		return fmt.Errorf("target template name must be different")
+	}
+	sourcePath, err := GetTemplatePath(sourceName)
+	if err != nil {
+		return err
+	}
+	targetPath, err := resolveSafePath(targetName)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(targetPath); err == nil {
+		return fmt.Errorf("template '%s' already exists", targetName)
+	}
+	if err := utils.Dir(sourcePath, targetPath); err != nil {
+		return fmt.Errorf("copy template failed: %w", err)
+	}
 	return nil
 }
 

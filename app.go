@@ -1434,6 +1434,61 @@ func (a *App) PullTemplate(templateName string, force bool) error {
 	return nil
 }
 
+// CopyTemplate creates an editable local copy of a template
+func (a *App) CopyTemplate(sourceName string, targetName string) error {
+	if err := redc.CopyTemplate(sourceName, targetName); err != nil {
+		a.emitLog(fmt.Sprintf("模板复制失败: %v", err))
+		return err
+	}
+	a.emitLog(fmt.Sprintf("模板复制成功: %s -> %s", sourceName, targetName))
+	a.emitRefresh()
+	return nil
+}
+
+// GetTemplateFiles reads editable files from a template directory
+func (a *App) GetTemplateFiles(templateName string) (map[string]string, error) {
+	path, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	files := make(map[string]string)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name == "case.json" || name == "terraform.tfvars" || strings.HasSuffix(name, ".tf") {
+			data, err := os.ReadFile(filepath.Join(path, name))
+			if err != nil {
+				return nil, err
+			}
+			files[name] = string(data)
+		}
+	}
+	return files, nil
+}
+
+// SaveTemplateFiles writes editable files to a template directory
+func (a *App) SaveTemplateFiles(templateName string, files map[string]string) error {
+	path, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return err
+	}
+	for name, content := range files {
+		if name == "case.json" || name == "terraform.tfvars" || strings.HasSuffix(name, ".tf") {
+			if err := os.WriteFile(filepath.Join(path, name), []byte(content), 0644); err != nil {
+				return err
+			}
+		}
+	}
+	a.emitLog(fmt.Sprintf("模板保存成功: %s", templateName))
+	return nil
+}
+
 // MCPStatus represents the MCP server status for frontend display
 type MCPStatus struct {
 	Running         bool   `json:"running"`
