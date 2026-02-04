@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -17,9 +18,11 @@ import (
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
 	"red-cloud/mod/mcp"
+	"red-cloud/mod/compose"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/projectdiscovery/gologger/levels"
+	tfjson "github.com/hashicorp/terraform-json"
 )
 
 // App struct
@@ -540,6 +543,195 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 	return result, nil
 }
 
+// GetResourceSummary aggregates terraform resources by type across all cases
+func (a *App) GetResourceSummary() ([]ResourceSummary, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return nil, fmt.Errorf(a.initError)
+		}
+		return nil, fmt.Errorf("项目未加载")
+	}
+
+	cases, err := redc.LoadProjectCases(project.ProjectName)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[string]int)
+	for _, c := range cases {
+		if c.Path == "" {
+			continue
+		}
+		state, err := redc.TfStatus(c.Path)
+		if err != nil || state == nil || state.Values == nil {
+			continue
+		}
+		addModuleResources(counts, state.Values.RootModule)
+	}
+
+	result := make([]ResourceSummary, 0, len(counts))
+	for typ, count := range counts {
+		result = append(result, ResourceSummary{Type: typ, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Type < result[j].Type })
+	return result, nil
+}
+
+func addModuleResources(counts map[string]int, module *tfjson.StateModule) {
+	if module == nil {
+		return
+	}
+	for _, res := range module.Resources {
+		if res.Type != "" {
+			counts[res.Type]++
+		}
+	}
+	for _, child := range module.ChildModules {
+		addModuleResources(counts, child)
+	}
+}
+
+// ComposePreview parses a compose file and returns services summary
+func (a *App) ComposePreview(filePath string, profiles []string) (ComposeSummary, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return ComposeSummary{}, fmt.Errorf(a.initError)
+		}
+		return ComposeSummary{}, fmt.Errorf("项目未加载")
+	}
+
+	if strings.TrimSpace(filePath) == "" {
+		filePath = "redc-compose.yaml"
+	}
+
+	ctx, err := compose.NewComposeContext(compose.ComposeOptions{
+		File:     filePath,
+		Profiles: profiles,
+		Project:  project,
+	})
+	if err != nil {
+		return ComposeSummary{}, err
+	}
+
+	services := make([]ComposeServiceSummary, 0, len(ctx.SortedSvcKeys))
+	for _, name := range ctx.SortedSvcKeys {
+		svc := ctx.RuntimeSvcs[name]
+		services = append(services, ComposeServiceSummary{
+			Name:      svc.Name,
+			RawName:   svc.RawName,
+			Template:  svc.Spec.Image,
+			Provider:  formatComposeProvider(svc.Spec.Provider),
+			Profiles:  svc.Spec.Profiles,
+			DependsOn: svc.Spec.DependsOn,
+			Replicas:  svc.Spec.Deploy.Replicas,
+		})
+	}
+
+	return ComposeSummary{
+		File:     filePath,
+		Services: services,
+		Total:    len(services),
+	}, nil
+}
+
+// ComposeUp starts compose deployment asynchronously
+func (a *App) ComposeUp(filePath string, profiles []string) error {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return fmt.Errorf(a.initError)
+		}
+		return fmt.Errorf("项目未加载")
+	}
+
+	if strings.TrimSpace(filePath) == "" {
+		filePath = "redc-compose.yaml"
+	}
+
+	opts := compose.ComposeOptions{
+		File:     filePath,
+		Profiles: profiles,
+		Project:  project,
+	}
+
+	a.emitLog(fmt.Sprintf("开始执行 compose up: %s", filePath))
+	go func() {
+		defer a.emitRefresh()
+		if err := compose.RunComposeUp(opts); err != nil {
+			a.emitLog(fmt.Sprintf("compose up 失败: %v", err))
+			return
+		}
+		a.emitLog("compose up 完成")
+	}()
+	return nil
+}
+
+// ComposeDown destroys compose deployment asynchronously
+func (a *App) ComposeDown(filePath string, profiles []string) error {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		if a.initError != "" {
+			return fmt.Errorf(a.initError)
+		}
+		return fmt.Errorf("项目未加载")
+	}
+
+	if strings.TrimSpace(filePath) == "" {
+		filePath = "redc-compose.yaml"
+	}
+
+	opts := compose.ComposeOptions{
+		File:     filePath,
+		Profiles: profiles,
+		Project:  project,
+	}
+
+	a.emitLog(fmt.Sprintf("开始执行 compose down: %s", filePath))
+	go func() {
+		defer a.emitRefresh()
+		if err := compose.RunComposeDown(opts); err != nil {
+			a.emitLog(fmt.Sprintf("compose down 失败: %v", err))
+			return
+		}
+		a.emitLog("compose down 完成")
+	}()
+	return nil
+}
+
+func formatComposeProvider(provider interface{}) string {
+	if provider == nil {
+		return ""
+	}
+	switch v := provider.(type) {
+	case string:
+		return v
+	case []string:
+		return strings.Join(v, ",")
+	case []interface{}:
+		items := make([]string, 0, len(v))
+		for _, item := range v {
+			items = append(items, fmt.Sprintf("%v", item))
+		}
+		return strings.Join(items, ",")
+	default:
+		return fmt.Sprintf("%v", provider)
+	}
+}
+
 // TemplateInfo represents template information for frontend display
 type TemplateInfo struct {
 	Name        string `json:"name"`
@@ -547,6 +739,30 @@ type TemplateInfo struct {
 	Version     string `json:"version"`
 	User        string `json:"user"`
 	Module      string `json:"module"`
+}
+
+// ResourceSummary represents aggregated resource counts by type
+type ResourceSummary struct {
+	Type  string `json:"type"`
+	Count int    `json:"count"`
+}
+
+// ComposeServiceSummary represents a compose service preview
+type ComposeServiceSummary struct {
+	Name      string   `json:"name"`
+	RawName   string   `json:"rawName"`
+	Template  string   `json:"template"`
+	Provider  string   `json:"provider"`
+	Profiles  []string `json:"profiles"`
+	DependsOn []string `json:"dependsOn"`
+	Replicas  int      `json:"replicas"`
+}
+
+// ComposeSummary represents a compose file preview
+type ComposeSummary struct {
+	File     string                  `json:"file"`
+	Services []ComposeServiceSummary `json:"services"`
+	Total    int                     `json:"total"`
 }
 
 // ListTemplates returns available templates
