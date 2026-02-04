@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
@@ -21,6 +21,14 @@
   let proxySaving = false;
   let debugEnabled = false;
   let debugSaving = false;
+  let terraformMirror = { enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] };
+  let terraformMirrorForm = { enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } };
+  let terraformMirrorSaving = false;
+  let terraformMirrorError = '';
+  let terraformInitHint = { show: false, message: '', detail: '' };
+  let networkChecks = [];
+  let networkCheckLoading = false;
+  let networkCheckError = '';
   
   // Registry state
   let registryTemplates = [];
@@ -141,6 +149,14 @@
       paramName: '参数名', paramType: '类型', paramDesc: '描述', paramDefault: '默认值', paramRequired: '必填',
       noParams: '该模板没有可配置参数', loadingParams: '正在加载参数...',
       debugLogs: '调试日志', debugLogsDesc: '启用后控制台输出更详细的日志信息', enable: '开启', disable: '关闭',
+      terraformMirror: 'Terraform 镜像加速', mirrorEnabled: '启用镜像', mirrorConfigPath: '配置文件路径',
+      mirrorConfigHint: '留空使用默认路径', mirrorSetEnv: '设置 TF_CLI_CONFIG_FILE', mirrorSave: '保存镜像配置',
+      mirrorAliyunPreset: '一键使用阿里云镜像', mirrorTencentPreset: '一键使用腾讯云镜像', mirrorVolcPreset: '一键使用火山云镜像',
+      mirrorDetected: '检测到 Terraform 初始化网络异常', mirrorDetectedDesc: '可尝试启用国内镜像加速',
+      mirrorApplyAliyun: '一键启用阿里云镜像', mirrorGoSettings: '前往设置', mirrorConfigFromEnv: '当前路径来自 TF_CLI_CONFIG_FILE',
+      mirrorProviders: '适配云厂商', mirrorAliyun: '阿里云', mirrorTencent: '腾讯云', mirrorVolc: '火山云',
+      networkCheck: '网络诊断', networkCheckBtn: '检测 Terraform 连接', networkChecking: '检测中...',
+      networkEndpoint: '端点', networkStatus: '状态', networkLatency: '延迟', networkError: '错误',
     },
     en: {
       dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates',
@@ -194,6 +210,14 @@
       paramName: 'Name', paramType: 'Type', paramDesc: 'Description', paramDefault: 'Default', paramRequired: 'Required',
       noParams: 'No configurable parameters', loadingParams: 'Loading parameters...',
       debugLogs: 'Debug Logs', debugLogsDesc: 'Show more verbose logs in console', enable: 'Enable', disable: 'Disable',
+      terraformMirror: 'Terraform Mirror', mirrorEnabled: 'Enable mirror', mirrorConfigPath: 'Config file path',
+      mirrorConfigHint: 'Leave empty to use default path', mirrorSetEnv: 'Set TF_CLI_CONFIG_FILE', mirrorSave: 'Save mirror config',
+      mirrorAliyunPreset: 'Use Alibaba Cloud mirror', mirrorTencentPreset: 'Use Tencent Cloud mirror', mirrorVolcPreset: 'Use Volcengine mirror',
+      mirrorDetected: 'Terraform init network issue detected', mirrorDetectedDesc: 'Try enabling a local mirror',
+      mirrorApplyAliyun: 'Enable Alibaba Cloud mirror', mirrorGoSettings: 'Open settings', mirrorConfigFromEnv: 'Path is from TF_CLI_CONFIG_FILE',
+      mirrorProviders: 'Providers', mirrorAliyun: 'Alibaba Cloud', mirrorTencent: 'Tencent Cloud', mirrorVolc: 'Volcengine',
+      networkCheck: 'Network Diagnostics', networkCheckBtn: 'Test Terraform connectivity', networkChecking: 'Checking...',
+      networkEndpoint: 'Endpoint', networkStatus: 'Status', networkLatency: 'Latency', networkError: 'Error',
     }
   };
   $: t = i18n[lang];
@@ -282,8 +306,21 @@
     }
     if (cleanMessage.includes('场景创建失败') || cleanMessage.includes('创建场景时发生错误')) {
       setCreateStatus('error', t.createFailed, message);
+      detectTerraformInitIssue(cleanMessage);
       return;
     }
+  }
+
+  function detectTerraformInitIssue(message) {
+    const lower = message.toLowerCase();
+    const hit = lower.includes('registry.terraform.io') || lower.includes('failed to query available provider packages') || lower.includes('x509') || lower.includes('tls') || lower.includes('context deadline') || lower.includes('client.timeout') || lower.includes('could not connect');
+    if (hit) {
+      terraformInitHint = { show: true, message: t.mirrorDetected, detail: message };
+    }
+  }
+
+  function dismissTerraformInitHint() {
+    terraformInitHint = { show: false, message: '', detail: '' };
   }
 
   $: createBusy = createStatus === 'creating' || createStatus === 'initializing';
@@ -331,10 +368,11 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config] = await Promise.all([
+      [cases, templates, config, terraformMirror] = await Promise.all([
         ListCases(),
         ListTemplates(),
-        GetConfig()
+        GetConfig(),
+        GetTerraformMirrorConfig()
       ]);
       // Initialize proxy form with current config
       proxyForm = {
@@ -343,12 +381,95 @@
         noProxy: config.noProxy || ''
       };
       debugEnabled = !!config.debugEnabled;
+      terraformMirrorForm = {
+        enabled: !!terraformMirror.enabled,
+        configPath: terraformMirror.configPath || '',
+        setEnv: !!terraformMirror.fromEnv,
+        providers: {
+          aliyun: terraformMirror.providers?.includes('aliyun'),
+          tencent: terraformMirror.providers?.includes('tencent'),
+          volc: terraformMirror.providers?.includes('volc')
+        }
+      };
     } catch (e) {
       error = e.message || String(e);
       cases = [];
       templates = [];
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function handleSaveTerraformMirror() {
+    terraformMirrorSaving = true;
+    terraformMirrorError = '';
+    try {
+      const providers = Object.entries(terraformMirrorForm.providers)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key);
+      await SaveTerraformMirrorConfig(
+        terraformMirrorForm.enabled,
+        providers,
+        terraformMirrorForm.configPath,
+        terraformMirrorForm.setEnv
+      );
+      terraformMirror = await GetTerraformMirrorConfig();
+      terraformMirrorForm = {
+        enabled: !!terraformMirror.enabled,
+        configPath: terraformMirror.configPath || '',
+        setEnv: !!terraformMirror.fromEnv,
+        providers: {
+          aliyun: terraformMirror.providers?.includes('aliyun'),
+          tencent: terraformMirror.providers?.includes('tencent'),
+          volc: terraformMirror.providers?.includes('volc')
+        }
+      };
+    } catch (e) {
+      terraformMirrorError = e.message || String(e);
+    } finally {
+      terraformMirrorSaving = false;
+    }
+  }
+
+  async function enableAliyunMirrorQuick() {
+    terraformMirrorForm = {
+      ...terraformMirrorForm,
+      enabled: true,
+      setEnv: true,
+      providers: { ...terraformMirrorForm.providers, aliyun: true }
+    };
+    await handleSaveTerraformMirror();
+  }
+
+  async function enableTencentMirrorQuick() {
+    terraformMirrorForm = {
+      ...terraformMirrorForm,
+      enabled: true,
+      setEnv: true,
+      providers: { ...terraformMirrorForm.providers, tencent: true }
+    };
+    await handleSaveTerraformMirror();
+  }
+
+  async function enableVolcMirrorQuick() {
+    terraformMirrorForm = {
+      ...terraformMirrorForm,
+      enabled: true,
+      setEnv: true,
+      providers: { ...terraformMirrorForm.providers, volc: true }
+    };
+    await handleSaveTerraformMirror();
+  }
+
+  async function runTerraformNetworkCheck() {
+    networkCheckLoading = true;
+    networkCheckError = '';
+    try {
+      networkChecks = await TestTerraformEndpoints();
+    } catch (e) {
+      networkCheckError = e.message || String(e);
+    } finally {
+      networkCheckLoading = false;
     }
   }
 
@@ -1244,6 +1365,38 @@
                 {/if}
               </div>
             {/if}
+
+            {#if terraformInitHint.show}
+              <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
+                <div class="flex items-start gap-2">
+                  <svg class="w-4 h-4 mt-0.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M10.29 3.86l-7.4 12.8A2 2 0 004.61 19h14.78a2 2 0 001.72-2.34l-7.4-12.8a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <div class="flex-1">
+                    <div class="font-medium">{t.mirrorDetected}</div>
+                    <div class="text-amber-600 mt-1">{t.mirrorDetectedDesc}</div>
+                    {#if terraformInitHint.detail}
+                      <div class="text-amber-500 mt-1 truncate">{terraformInitHint.detail}</div>
+                    {/if}
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <button
+                        class="h-8 px-3 bg-amber-600 text-white text-[12px] font-medium rounded-md hover:bg-amber-700 transition-colors"
+                        on:click={enableAliyunMirrorQuick}
+                      >{t.mirrorApplyAliyun}</button>
+                      <button
+                        class="h-8 px-3 bg-white text-amber-700 text-[12px] font-medium rounded-md border border-amber-200 hover:bg-amber-100 transition-colors"
+                        on:click={() => activeTab = 'settings'}
+                      >{t.mirrorGoSettings}</button>
+                    </div>
+                  </div>
+                  <button class="text-amber-400 hover:text-amber-600" on:click={dismissTerraformInitHint}>
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            {/if}
             
             <!-- Template Variables -->
             {#if templateVariables.length > 0}
@@ -1680,6 +1833,140 @@
                 <span class="ml-3 text-[12px] text-gray-500">{t.proxyHint}</span>
               </div>
             </div>
+          </div>
+
+          <!-- Terraform 镜像加速 -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <div class="text-[14px] font-medium text-gray-900">{t.terraformMirror}</div>
+                <div class="text-[12px] text-gray-500 mt-1">{t.mirrorConfigHint}</div>
+              </div>
+              <button
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                class:bg-emerald-500={terraformMirrorForm.enabled}
+                class:bg-gray-300={!terraformMirrorForm.enabled}
+                on:click={() => terraformMirrorForm = { ...terraformMirrorForm, enabled: !terraformMirrorForm.enabled }}
+                aria-label={t.mirrorEnabled}
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  class:translate-x-6={terraformMirrorForm.enabled}
+                  class:translate-x-1={!terraformMirrorForm.enabled}
+                ></span>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.mirrorProviders}</label>
+                <div class="flex flex-wrap items-center gap-3 text-[12px] text-gray-700">
+                  <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.aliyun} />
+                    <span>{t.mirrorAliyun}</span>
+                  </label>
+                  <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.tencent} />
+                    <span>{t.mirrorTencent}</span>
+                  </label>
+                  <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.volc} />
+                    <span>{t.mirrorVolc}</span>
+                  </label>
+                </div>
+                <div class="mt-2 text-[11px] text-gray-500">
+                  阿里云: https://mirrors.aliyun.com/terraform/ · 腾讯云: https://mirrors.tencent.com/terraform/ · 火山云: https://mirrors.volces.com/terraform/
+                </div>
+              </div>
+              <div>
+                <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.mirrorConfigPath}</label>
+                <input
+                  type="text"
+                  placeholder={terraformMirror.configPath || t.mirrorConfigHint}
+                  class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+                  bind:value={terraformMirrorForm.configPath}
+                />
+                {#if terraformMirror.fromEnv}
+                  <div class="mt-1 text-[11px] text-amber-600">{t.mirrorConfigFromEnv}</div>
+                {/if}
+              </div>
+              <div class="flex items-center gap-2 text-[12px] text-gray-600">
+                <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.setEnv} />
+                <span>{t.mirrorSetEnv}</span>
+              </div>
+              <div class="pt-1 flex flex-wrap gap-2 items-center">
+                <button
+                  class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  on:click={handleSaveTerraformMirror}
+                  disabled={terraformMirrorSaving}
+                >
+                  {terraformMirrorSaving ? t.saving : t.mirrorSave}
+                </button>
+                <button
+                  class="h-9 px-4 bg-amber-500 text-white text-[12px] font-medium rounded-lg hover:bg-amber-600 transition-colors"
+                  on:click={enableAliyunMirrorQuick}
+                >
+                  {t.mirrorAliyunPreset}
+                </button>
+                <button
+                  class="h-9 px-4 bg-sky-500 text-white text-[12px] font-medium rounded-lg hover:bg-sky-600 transition-colors"
+                  on:click={enableTencentMirrorQuick}
+                >
+                  {t.mirrorTencentPreset}
+                </button>
+                <button
+                  class="h-9 px-4 bg-violet-500 text-white text-[12px] font-medium rounded-lg hover:bg-violet-600 transition-colors"
+                  on:click={enableVolcMirrorQuick}
+                >
+                  {t.mirrorVolcPreset}
+                </button>
+                {#if terraformMirrorError}
+                  <span class="text-[12px] text-red-500">{terraformMirrorError}</span>
+                {:else if terraformMirror.managed}
+                  <span class="text-[12px] text-emerald-600">OK</span>
+                {/if}
+              </div>
+            </div>
+          </div>
+
+          <!-- 网络诊断 -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-center justify-between">
+              <div class="text-[14px] font-medium text-gray-900">{t.networkCheck}</div>
+              <button
+                class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                on:click={runTerraformNetworkCheck}
+                disabled={networkCheckLoading}
+              >
+                {networkCheckLoading ? t.networkChecking : t.networkCheckBtn}
+              </button>
+            </div>
+            {#if networkCheckError}
+              <div class="mt-3 text-[12px] text-red-500">{networkCheckError}</div>
+            {/if}
+            {#if networkChecks.length > 0}
+              <div class="mt-4 border border-gray-100 rounded-lg overflow-hidden">
+                <table class="w-full text-[12px]">
+                  <thead>
+                    <tr class="bg-gray-50 border-b border-gray-100">
+                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.networkEndpoint}</th>
+                      <th class="text-right px-4 py-2.5 font-semibold text-gray-600">{t.networkStatus}</th>
+                      <th class="text-right px-4 py-2.5 font-semibold text-gray-600">{t.networkLatency}</th>
+                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.networkError}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each networkChecks as item}
+                      <tr class="border-b border-gray-50">
+                        <td class="px-4 py-3 text-gray-700">{item.name}</td>
+                        <td class="px-4 py-3 text-right {item.ok ? 'text-emerald-600' : 'text-red-600'}">{item.ok ? 'OK' : item.status || '-'}</td>
+                        <td class="px-4 py-3 text-right text-gray-700">{item.latencyMs} ms</td>
+                        <td class="px-4 py-3 text-gray-500 truncate" title={item.error}>{item.error || '-'}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            {/if}
           </div>
 
           <!-- 调试日志 -->
