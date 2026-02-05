@@ -363,6 +363,12 @@
     });
     EventsOn('refresh', async () => {
       await refreshData();
+      if (activeTab === 'registry') {
+        await loadRegistryTemplates();
+      }
+      if (activeTab === 'localTemplates') {
+        await loadLocalTemplates();
+      }
     });
     await refreshData();
   });
@@ -694,14 +700,34 @@
     }
   }
 
+  async function syncLocalTemplates() {
+    try {
+      const list = await ListTemplates();
+      templates = list || [];
+      localTemplates = list || [];
+    } catch (e) {
+      error = e.message || String(e);
+    }
+  }
+
   async function handlePullTemplate(templateName, force = false) {
     pullingTemplates[templateName] = true;
     pullingTemplates = pullingTemplates;
     setRegistryNotice('info', `${t.pulling} ${templateName}`, false);
     try {
       await PullTemplate(templateName, force);
-      // Refresh registry templates after successful pull
+      // Refresh registry and local templates after successful pull
       await loadRegistryTemplates();
+      await syncLocalTemplates();
+      registryTemplates = (registryTemplates || []).map((tmpl) => {
+        if (tmpl.name !== templateName) return tmpl;
+        const latest = tmpl.latest || tmpl.localVersion;
+        return {
+          ...tmpl,
+          installed: true,
+          localVersion: latest || tmpl.localVersion
+        };
+      });
       setRegistryNotice('success', `${t.pullSuccess}: ${templateName}`);
     } catch (e) {
       error = e.message || String(e);
