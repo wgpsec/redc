@@ -105,3 +105,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+// Use local patched version of terraform-exec to fix Windows GUI popup issue
+replace github.com/hashicorp/terraform-exec => ./internal/terraform-exec
