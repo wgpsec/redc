@@ -100,10 +100,86 @@ func CaseScene(t string, m map[string]string) ([]string, error) {
 	return par, nil
 }
 
+func providerFromTemplateName(templateName string) string {
+	parts := strings.Split(templateName, "/")
+	if len(parts) > 1 {
+		return strings.ToLower(strings.TrimSpace(parts[0]))
+	}
+	return ""
+}
+
+func ensureProviderVars(templateName string, vars map[string]string) map[string]string {
+	if vars == nil {
+		vars = map[string]string{}
+	}
+	provider := providerFromTemplateName(templateName)
+	if provider != "tencent" && provider != "tencentcloud" {
+		return vars
+	}
+	conf, _, err := ReadConfig(ActiveConfigPath)
+	if err != nil || conf == nil {
+		return vars
+	}
+	if (vars["tencentcloud_secret_id"] == "" || isPlaceholderSecret(vars["tencentcloud_secret_id"])) && conf.Providers.Tencentcloud.SecretId != "" {
+		vars["tencentcloud_secret_id"] = conf.Providers.Tencentcloud.SecretId
+	}
+	if (vars["tencentcloud_secret_key"] == "" || isPlaceholderSecret(vars["tencentcloud_secret_key"])) && conf.Providers.Tencentcloud.SecretKey != "" {
+		vars["tencentcloud_secret_key"] = conf.Providers.Tencentcloud.SecretKey
+	}
+	return vars
+}
+
+func isPlaceholderSecret(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return false
+	}
+	if strings.HasPrefix(trimmed, "****") {
+		return true
+	}
+	for _, r := range trimmed {
+		if r != 'x' && r != 'X' && r != '*' {
+			return false
+		}
+	}
+	return true
+}
+
+func ensureProviderParams(templateName string, params []string) []string {
+	paramMap := map[string]string{}
+	order := make([]string, 0, len(params))
+	for _, param := range params {
+		key, val, ok := strings.Cut(param, "=")
+		if !ok || key == "" {
+			continue
+		}
+		if _, exists := paramMap[key]; !exists {
+			order = append(order, key)
+		}
+		paramMap[key] = val
+	}
+	paramMap = ensureProviderVars(templateName, paramMap)
+	merged := make([]string, 0, len(paramMap))
+	seen := map[string]bool{}
+	for _, key := range order {
+		if val, ok := paramMap[key]; ok {
+			merged = append(merged, fmt.Sprintf("%s=%s", key, val))
+			seen[key] = true
+		}
+	}
+	for key, val := range paramMap {
+		if !seen[key] {
+			merged = append(merged, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+	return merged
+}
+
 func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars map[string]string) (*Case, error) {
 	// 创建新的 case 目录,这里不需要检测是否存在,因为名称是采用nanoID
 	gologger.Info().Msgf("正在创建场景 「%s」", CaseName)
 	uid := GenerateCaseID()
+	vars = ensureProviderVars(CaseName, vars)
 
 	// 从模版文件夹复制模版
 	tpPath, err := GetTemplatePath(CaseName)
@@ -296,6 +372,7 @@ func (c *Case) bindHandlers() {
 
 func (c *Case) TfPlan() error {
 	gologger.Info().Msgf("正在构建场景「%s(%s)」...", c.Name, c.GetId())
+	c.Parameter = ensureProviderParams(c.Type, c.Parameter)
 	if err := TfPlan(c.Path, c.Parameter...); err != nil {
 		return err
 	}
