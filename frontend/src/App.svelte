@@ -163,6 +163,7 @@
       mirrorFixStep2: '重新执行 init（在 GUI 中重新创建场景或运行 init）',
       mirrorFixStep3: '如使用镜像，请保持镜像配置启用后再 init',
       mirrorProviders: '适配云厂商', mirrorAliyun: '阿里云', mirrorTencent: '腾讯云', mirrorVolc: '火山云',
+      mirrorProvidersDesc: '阿里云: https://mirrors.aliyun.com/terraform/ · 腾讯云: https://mirrors.tencent.com/terraform/ · 火山云: https://mirrors.volces.com/terraform/',
       networkCheck: '网络诊断', networkCheckBtn: '检测 Terraform 连接', networkChecking: '检测中...',
       networkEndpoint: '端点', networkStatus: '状态', networkLatency: '延迟', networkError: '错误',
     },
@@ -230,6 +231,7 @@
       mirrorFixStep2: 'Re-run init (create a case again or run init in GUI)',
       mirrorFixStep3: 'If using mirror, keep it enabled before init',
       mirrorProviders: 'Providers', mirrorAliyun: 'Alibaba Cloud', mirrorTencent: 'Tencent Cloud', mirrorVolc: 'Volcengine',
+      mirrorProvidersDesc: 'Alibaba Cloud: https://mirrors.aliyun.com/terraform/ · Tencent Cloud: https://mirrors.tencent.com/terraform/ · Volcengine: https://mirrors.volces.com/terraform/',
       networkCheck: 'Network Diagnostics', networkCheckBtn: 'Test Terraform connectivity', networkChecking: 'Checking...',
       networkEndpoint: 'Endpoint', networkStatus: 'Status', networkLatency: 'Latency', networkError: 'Error',
     }
@@ -1042,7 +1044,7 @@
       accessKey: 'Access Key',
       secretKey: 'Secret Key',
       secretId: 'Secret ID',
-      region: '区域',
+      region: 'Region',
       credentials: '凭据 JSON',
       project: '项目 ID',
       clientId: 'Client ID',
@@ -1515,9 +1517,9 @@
                       <span class="text-[13px] text-gray-600">{c.type}</span>
                     </td>
                     <td class="px-5 py-3.5">
-                      <span class="inline-flex items-center gap-1.5 text-[12px] font-medium {getStateConfig(c.state).color}">
-                        <span class="w-1.5 h-1.5 rounded-full {getStateConfig(c.state).dot}"></span>
-                        {getStateConfig(c.state).label}
+                      <span class="inline-flex items-center gap-1.5 text-[12px] font-medium {(stateConfig[c.state] || stateConfig['pending']).color}">
+                        <span class="w-1.5 h-1.5 rounded-full {(stateConfig[c.state] || stateConfig['pending']).dot}"></span>
+                        {(stateConfig[c.state] || stateConfig['pending']).label}
                       </span>
                     </td>
                     <td class="px-5 py-3.5">
@@ -1928,7 +1930,7 @@
                   </label>
                 </div>
                 <div class="mt-2 text-[11px] text-gray-500">
-                  阿里云: https://mirrors.aliyun.com/terraform/ · 腾讯云: https://mirrors.tencent.com/terraform/ · 火山云: https://mirrors.volces.com/terraform/
+                  {t.mirrorProvidersDesc}
                 </div>
               </div>
               <div>
