@@ -3,6 +3,7 @@ package mod
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"red-cloud/mod/gologger"
 	"strings"
 
@@ -86,8 +87,13 @@ func TfApply(Path string, opts ...string) error {
 	if err != nil {
 		return fmt.Errorf("场景启动失败,terraform未找到或配置错误: %w", err)
 	}
-	o := ToApply(opts)
-	o = append(o, tfexec.DirOrPlan(RedcPlanPath))
+	var o []tfexec.ApplyOption
+	planFile := filepath.Join(Path, RedcPlanPath)
+	if _, err := os.Stat(planFile); err == nil {
+		o = append(o, tfexec.DirOrPlan(RedcPlanPath))
+	} else {
+		o = ToApply(opts)
+	}
 	
 	// Add stdout/stderr wrapper if needed for debugging
 	// But NewTerraformExecutor already handles it via options or default os.Stdout

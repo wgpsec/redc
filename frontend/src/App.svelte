@@ -26,6 +26,8 @@
   let terraformMirrorSaving = false;
   let terraformMirrorError = '';
   let terraformInitHint = { show: false, message: '', detail: '' };
+  let terraformInitHintDismissed = false;
+  let terraformInitHintLastDetail = '';
   let networkChecks = [];
   let networkCheckLoading = false;
   let networkCheckError = '';
@@ -154,6 +156,10 @@
       mirrorAliyunPreset: '一键使用阿里云镜像', mirrorTencentPreset: '一键使用腾讯云镜像', mirrorVolcPreset: '一键使用火山云镜像',
       mirrorDetected: '检测到 Terraform 初始化网络异常', mirrorDetectedDesc: '可尝试启用国内镜像加速',
       mirrorApplyAliyun: '一键启用阿里云镜像', mirrorGoSettings: '前往设置', mirrorConfigFromEnv: '当前路径来自 TF_CLI_CONFIG_FILE',
+      mirrorFixTitle: '一键修复（清理缓存 + 重新 init）',
+      mirrorFixStep1: '删除插件缓存与已下载 Provider（~/.terraform.d 与模板目录下的 .terraform）',
+      mirrorFixStep2: '重新执行 init（在 GUI 中重新创建场景或运行 init）',
+      mirrorFixStep3: '如使用镜像，请保持镜像配置启用后再 init',
       mirrorProviders: '适配云厂商', mirrorAliyun: '阿里云', mirrorTencent: '腾讯云', mirrorVolc: '火山云',
       networkCheck: '网络诊断', networkCheckBtn: '检测 Terraform 连接', networkChecking: '检测中...',
       networkEndpoint: '端点', networkStatus: '状态', networkLatency: '延迟', networkError: '错误',
@@ -215,6 +221,10 @@
       mirrorAliyunPreset: 'Use Alibaba Cloud mirror', mirrorTencentPreset: 'Use Tencent Cloud mirror', mirrorVolcPreset: 'Use Volcengine mirror',
       mirrorDetected: 'Terraform init network issue detected', mirrorDetectedDesc: 'Try enabling a local mirror',
       mirrorApplyAliyun: 'Enable Alibaba Cloud mirror', mirrorGoSettings: 'Open settings', mirrorConfigFromEnv: 'Path is from TF_CLI_CONFIG_FILE',
+      mirrorFixTitle: 'One-click fix (clear cache + re-init)',
+      mirrorFixStep1: 'Remove plugin cache and downloaded providers (~/.terraform.d and .terraform in template dirs)',
+      mirrorFixStep2: 'Re-run init (create a case again or run init in GUI)',
+      mirrorFixStep3: 'If using mirror, keep it enabled before init',
       mirrorProviders: 'Providers', mirrorAliyun: 'Alibaba Cloud', mirrorTencent: 'Tencent Cloud', mirrorVolc: 'Volcengine',
       networkCheck: 'Network Diagnostics', networkCheckBtn: 'Test Terraform connectivity', networkChecking: 'Checking...',
       networkEndpoint: 'Endpoint', networkStatus: 'Status', networkLatency: 'Latency', networkError: 'Error',
@@ -315,12 +325,18 @@
     const lower = message.toLowerCase();
     const hit = lower.includes('registry.terraform.io') || lower.includes('failed to query available provider packages') || lower.includes('x509') || lower.includes('tls') || lower.includes('context deadline') || lower.includes('client.timeout') || lower.includes('could not connect');
     if (hit) {
+      if (terraformInitHintDismissed && terraformInitHintLastDetail === message) {
+        return;
+      }
+      terraformInitHintDismissed = false;
+      terraformInitHintLastDetail = message;
       terraformInitHint = { show: true, message: t.mirrorDetected, detail: message };
     }
   }
 
   function dismissTerraformInitHint() {
     terraformInitHint = { show: false, message: '', detail: '' };
+    terraformInitHintDismissed = true;
   }
 
   $: createBusy = createStatus === 'creating' || createStatus === 'initializing';
@@ -1367,7 +1383,16 @@
             {/if}
 
             {#if terraformInitHint.show}
-              <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
+              <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700 relative">
+                <button
+                  class="absolute right-2 top-2 text-amber-400 hover:text-amber-600"
+                  on:click={dismissTerraformInitHint}
+                  aria-label="close"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
                 <div class="flex items-start gap-2">
                   <svg class="w-4 h-4 mt-0.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M10.29 3.86l-7.4 12.8A2 2 0 004.61 19h14.78a2 2 0 001.72-2.34l-7.4-12.8a2 2 0 00-3.42 0z" />
@@ -1378,22 +1403,21 @@
                     {#if terraformInitHint.detail}
                       <div class="text-amber-500 mt-1 truncate">{terraformInitHint.detail}</div>
                     {/if}
+                    <div class="mt-2 text-amber-700">
+                      <div class="font-medium">{t.mirrorFixTitle}</div>
+                      <ul class="mt-1 list-disc list-inside text-amber-600 space-y-0.5">
+                        <li>{t.mirrorFixStep1}</li>
+                        <li>{t.mirrorFixStep2}</li>
+                        <li>{t.mirrorFixStep3}</li>
+                      </ul>
+                    </div>
                     <div class="mt-2 flex flex-wrap gap-2">
-                      <button
-                        class="h-8 px-3 bg-amber-600 text-white text-[12px] font-medium rounded-md hover:bg-amber-700 transition-colors"
-                        on:click={enableAliyunMirrorQuick}
-                      >{t.mirrorApplyAliyun}</button>
                       <button
                         class="h-8 px-3 bg-white text-amber-700 text-[12px] font-medium rounded-md border border-amber-200 hover:bg-amber-100 transition-colors"
                         on:click={() => activeTab = 'settings'}
                       >{t.mirrorGoSettings}</button>
                     </div>
                   </div>
-                  <button class="text-amber-400 hover:text-amber-600" on:click={dismissTerraformInitHint}>
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             {/if}
