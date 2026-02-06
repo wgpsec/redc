@@ -28,17 +28,20 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	project     *redc.RedcProject
-	mu          sync.Mutex
-	initError   string
-	logMgr      *gologger.LogManager
-	mcpManager  *mcp.MCPServerManager
+	ctx                context.Context
+	project            *redc.RedcProject
+	mu                 sync.Mutex
+	initError          string
+	logMgr             *gologger.LogManager
+	mcpManager         *mcp.MCPServerManager
+	notificationMgr    *NotificationManager
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	return &App{
+		notificationMgr: NewNotificationManager(),
+	}
 }
 
 // startup is called when the app starts. The context is saved
@@ -454,6 +457,33 @@ func (a *App) SetDebugLogging(enabled bool) error {
 		a.emitLog("调试日志已关闭")
 	}
 	return nil
+}
+
+// SetNotificationEnabled enables or disables system notifications
+func (a *App) SetNotificationEnabled(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.notificationMgr != nil {
+		a.notificationMgr.SetEnabled(enabled)
+		if enabled {
+			a.emitLog("系统通知已开启")
+		} else {
+			a.emitLog("系统通知已关闭")
+		}
+	}
+	return nil
+}
+
+// GetNotificationEnabled returns whether system notifications are enabled
+func (a *App) GetNotificationEnabled() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.notificationMgr != nil {
+		return a.notificationMgr.IsEnabled()
+	}
+	return false
 }
 
 // maskValue returns masked value for display (shows last 4 chars if length > 8)
@@ -1275,17 +1305,23 @@ func (a *App) StartCase(caseID string) error {
 			if r := recover(); r != nil {
 				a.emitLog(fmt.Sprintf("启动场景时发生错误: %v", r))
 			}
-			a.emitRefresh() // 操作完成后刷新仪表盘
+			a.emitRefresh()
 		}()
 		
 		a.emitLog(fmt.Sprintf("正在启动场景: %s", caseName))
 		if err := c.TfApply(); err != nil {
 			a.emitLog(fmt.Sprintf("启动失败: %v", err))
+			if a.notificationMgr != nil {
+				a.notificationMgr.SendSceneFailed(caseName, "启动")
+			}
 			return
 		}
 		a.emitLog(fmt.Sprintf("场景启动成功: %s", caseName))
 		
-		// 获取并显示 outputs
+		if a.notificationMgr != nil {
+			a.notificationMgr.SendSceneStarted(caseName)
+		}
+		
 		if outputs, err := c.TfOutput(); err == nil {
 			for name, meta := range outputs {
 				a.emitLog(fmt.Sprintf("  %s = %s", name, string(meta.Value)))
@@ -1315,15 +1351,22 @@ func (a *App) StopCase(caseID string) error {
 			if r := recover(); r != nil {
 				a.emitLog(fmt.Sprintf("停止场景时发生错误: %v", r))
 			}
-			a.emitRefresh() // 操作完成后刷新仪表盘
+			a.emitRefresh()
 		}()
 		
 		a.emitLog(fmt.Sprintf("正在停止场景: %s", c.Name))
 		if err := c.Stop(); err != nil {
 			a.emitLog(fmt.Sprintf("停止失败: %v", err))
+			if a.notificationMgr != nil {
+				a.notificationMgr.SendSceneFailed(c.Name, "停止")
+			}
 			return
 		}
 		a.emitLog(fmt.Sprintf("场景停止成功: %s", c.Name))
+		
+		if a.notificationMgr != nil {
+			a.notificationMgr.SendSceneStopped(c.Name)
+		}
 	}()
 
 	return nil

@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, GetNotificationEnabled } from '../wailsjs/go/main/App.js';
 
   let cases = [];
   let templates = [];
@@ -21,6 +21,8 @@
   let proxySaving = false;
   let debugEnabled = false;
   let debugSaving = false;
+  let notificationEnabled = false;
+  let notificationSaving = false;
   let terraformMirror = { enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] };
   let terraformMirrorForm = { enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } };
   let terraformMirrorSaving = false;
@@ -151,6 +153,7 @@
       paramName: '参数名', paramType: '类型', paramDesc: '描述', paramDefault: '默认值', paramRequired: '必填',
       noParams: '该模板没有可配置参数', loadingParams: '正在加载参数...',
       debugLogs: '调试日志', debugLogsDesc: '启用后控制台输出更详细的日志信息', enable: '开启', disable: '关闭',
+      systemNotification: '系统通知', systemNotificationDesc: '启用后在场景启动/停止时接收系统通知',
       terraformMirror: 'Terraform 镜像加速', mirrorEnabled: '启用镜像', mirrorConfigPath: '配置文件路径',
       mirrorConfigHint: '留空使用默认路径', mirrorSetEnv: '设置 TF_CLI_CONFIG_FILE', mirrorSave: '保存镜像配置',
       mirrorAliyunPreset: '一键使用阿里云镜像', mirrorTencentPreset: '一键使用腾讯云镜像', mirrorVolcPreset: '一键使用火山云镜像',
@@ -219,6 +222,7 @@
       paramName: 'Name', paramType: 'Type', paramDesc: 'Description', paramDefault: 'Default', paramRequired: 'Required',
       noParams: 'No configurable parameters', loadingParams: 'Loading parameters...',
       debugLogs: 'Debug Logs', debugLogsDesc: 'Show more verbose logs in console', enable: 'Enable', disable: 'Disable',
+      systemNotification: 'System Notification', systemNotificationDesc: 'Receive system notifications when scenes start/stop',
       terraformMirror: 'Terraform Mirror', mirrorEnabled: 'Enable mirror', mirrorConfigPath: 'Config file path',
       mirrorConfigHint: 'Leave empty to use default path', mirrorSetEnv: 'Set TF_CLI_CONFIG_FILE', mirrorSave: 'Save mirror config',
       mirrorAliyunPreset: 'Use Alibaba Cloud mirror', mirrorTencentPreset: 'Use Tencent Cloud mirror', mirrorVolcPreset: 'Use Volcengine mirror',
@@ -396,13 +400,13 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config, terraformMirror] = await Promise.all([
+      [cases, templates, config, terraformMirror, notificationEnabled] = await Promise.all([
         ListCases(),
         ListTemplates(),
         GetConfig(),
-        GetTerraformMirrorConfig()
+        GetTerraformMirrorConfig(),
+        GetNotificationEnabled()
       ]);
-      // Initialize proxy form with current config
       proxyForm = {
         httpProxy: config.httpProxy || '',
         httpsProxy: config.httpsProxy || '',
@@ -526,6 +530,19 @@
       error = e.message || String(e);
     } finally {
       debugSaving = false;
+    }
+  }
+
+  async function handleToggleNotification() {
+    const nextValue = !notificationEnabled;
+    notificationSaving = true;
+    try {
+      await SetNotificationEnabled(nextValue);
+      notificationEnabled = nextValue;
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      notificationSaving = false;
     }
   }
 
@@ -1297,7 +1314,7 @@
 
     <div class="p-2 border-t border-gray-100">
       <div class="flex items-center justify-between px-2 py-2">
-        <span class="text-[10px] text-gray-400">v2.3.0</span>
+        <span class="text-[10px] text-gray-400">v2.3.0 by WgpSec</span>
         <div class="flex items-center gap-1">
           <button
             class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium"
@@ -2048,6 +2065,30 @@
                   class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
                   class:translate-x-6={debugEnabled}
                   class:translate-x-1={!debugEnabled}
+                ></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 系统通知 -->
+          <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[14px] font-medium text-gray-900">{t.systemNotification}</div>
+                <div class="text-[12px] text-gray-500 mt-1">{t.systemNotificationDesc}</div>
+              </div>
+              <button
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class:bg-emerald-500={notificationEnabled}
+                class:bg-gray-300={!notificationEnabled}
+                on:click={handleToggleNotification}
+                disabled={notificationSaving}
+                aria-label={notificationEnabled ? t.disable : t.enable}
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  class:translate-x-6={notificationEnabled}
+                  class:translate-x-1={!notificationEnabled}
                 ></span>
               </button>
             </div>
