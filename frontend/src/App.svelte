@@ -4,6 +4,7 @@
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetConfig, GetCaseOutputs, GetTemplateVariables, SaveProxyConfig, FetchRegistryTemplates, PullTemplate, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, GetMCPStatus, StartMCPServer, StopMCPServer, GetProvidersConfig, SaveProvidersConfig, SetDebugLogging, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, GetResourceSummary, GetBalances, ComposePreview, ComposeUp, ComposeDown, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, GetNotificationEnabled } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
+  import Compose from './components/Compose/Compose.svelte';
 
   let cases = [];
   let templates = [];
@@ -86,14 +87,6 @@
   let balanceError = '';
   let balanceCooldown = 0;
   let balanceCooldownTimer = null;
-
-  // Compose state
-  let composeFilePath = 'redc-compose.yaml';
-  let composeProfiles = '';
-  let composeSummary = null;
-  let composeLoading = false;
-  let composeActionLoading = false;
-  let composeError = '';
 
   // Create status state
   let createStatus = 'idle';
@@ -857,52 +850,6 @@
     }
   }
 
-  // Compose functions
-  function parseComposeProfiles(value) {
-    if (!value) return [];
-    return value
-      .split(',')
-      .map(v => v.trim())
-      .filter(Boolean);
-  }
-
-  async function previewCompose() {
-    composeLoading = true;
-    composeError = '';
-    try {
-      composeSummary = await ComposePreview(composeFilePath, parseComposeProfiles(composeProfiles));
-    } catch (e) {
-      composeError = e.message || String(e);
-      composeSummary = null;
-    } finally {
-      composeLoading = false;
-    }
-  }
-
-  async function handleComposeUp() {
-    composeActionLoading = true;
-    composeError = '';
-    try {
-      await ComposeUp(composeFilePath, parseComposeProfiles(composeProfiles));
-    } catch (e) {
-      composeError = e.message || String(e);
-    } finally {
-      composeActionLoading = false;
-    }
-  }
-
-  async function handleComposeDown() {
-    composeActionLoading = true;
-    composeError = '';
-    try {
-      await ComposeDown(composeFilePath, parseComposeProfiles(composeProfiles));
-    } catch (e) {
-      composeError = e.message || String(e);
-    } finally {
-      composeActionLoading = false;
-    }
-  }
-
   // Credentials functions
   async function loadProvidersConfig() {
     credentialsLoading = true;
@@ -1252,7 +1199,7 @@
         <button 
           class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
             {activeTab === 'compose' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
-          on:click={() => { activeTab = 'compose'; previewCompose(); }}
+          on:click={() => activeTab = 'compose'}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6z" />
@@ -1356,7 +1303,7 @@
       </h1>
       <button 
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'localTemplates') loadLocalTemplates(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'credentials') { loadProfiles(); loadProvidersConfig(); } if (activeTab === 'resources') loadResourceSummary(); if (activeTab === 'compose') previewCompose(); }}
+        on:click={() => { refreshData(); if (activeTab === 'registry') loadRegistryTemplates(); if (activeTab === 'localTemplates') loadLocalTemplates(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'credentials') { loadProfiles(); loadProvidersConfig(); } if (activeTab === 'resources') loadResourceSummary(); }}
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -1647,92 +1594,7 @@
         <CloudResources {t} />
 
       {:else if activeTab === 'compose'}
-        <div class="max-w-4xl space-y-5">
-          <div class="bg-white rounded-xl border border-gray-100 p-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.composeFile}</label>
-                <input
-                  type="text"
-                  placeholder="redc-compose.yaml"
-                  class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
-                  bind:value={composeFilePath}
-                />
-              </div>
-              <div>
-                <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.composeProfiles}</label>
-                <input
-                  type="text"
-                  placeholder="prod,dev"
-                  class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-                  bind:value={composeProfiles}
-                />
-              </div>
-            </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <button
-                class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-                on:click={previewCompose}
-                disabled={composeLoading}
-              >
-                {composeLoading ? t.loading : t.previewCompose}
-              </button>
-              <button
-                class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                on:click={handleComposeUp}
-                disabled={composeActionLoading}
-              >
-                {composeActionLoading ? t.processing : t.composeUp}
-              </button>
-              <button
-                class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                on:click={handleComposeDown}
-                disabled={composeActionLoading}
-              >
-                {composeActionLoading ? t.processing : t.composeDown}
-              </button>
-            </div>
-            {#if composeError}
-              <div class="mt-3 text-[12px] text-red-500">{composeError}</div>
-            {/if}
-          </div>
-
-          <div class="bg-white rounded-xl border border-gray-100 p-5">
-            <div class="text-[14px] font-semibold text-gray-900 mb-4">{t.composePreview}</div>
-            {#if composeLoading}
-              <div class="flex items-center justify-center h-24">
-                <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
-              </div>
-            {:else if composeSummary && composeSummary.services && composeSummary.services.length > 0}
-              <div class="border border-gray-100 rounded-lg overflow-hidden">
-                <table class="w-full text-[12px]">
-                  <thead>
-                    <tr class="bg-gray-50 border-b border-gray-100">
-                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceName}</th>
-                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceTemplate}</th>
-                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceProvider}</th>
-                      <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceDepends}</th>
-                      <th class="text-right px-4 py-2.5 font-semibold text-gray-600">{t.serviceReplicas}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each composeSummary.services as svc}
-                      <tr class="border-b border-gray-50">
-                        <td class="px-4 py-3 text-gray-700">{svc.name}</td>
-                        <td class="px-4 py-3 text-gray-700">{svc.template}</td>
-                        <td class="px-4 py-3 text-gray-700">{svc.provider || '-'}</td>
-                        <td class="px-4 py-3 text-gray-700">{(svc.dependsOn && svc.dependsOn.length > 0) ? svc.dependsOn.join(', ') : '-'}</td>
-                        <td class="px-4 py-3 text-right text-gray-700">{svc.replicas || 1}</td>
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              </div>
-            {:else}
-              <div class="py-12 text-center text-[12px] text-gray-400">{t.noScene}</div>
-            {/if}
-          </div>
-        </div>
+        <Compose {t} />
 
       {:else if activeTab === 'settings'}
         <div class="max-w-xl space-y-4">
@@ -2347,7 +2209,7 @@
                 <select
                   class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
                   bind:value={activeProfileId}
-                  on:change={(e) => handleProfileChange(e.target.value)}
+                  on:change={() => handleProfileChange(activeProfileId)}
                 >
                   <option value="" disabled>{t.selectProfile}</option>
                   {#each profiles as p}
