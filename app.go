@@ -264,6 +264,9 @@ func parseTerraformMirrorProviders(content string) []string {
 	if strings.Contains(content, "registry.terraform.io/volcengine/") {
 		providers = append(providers, "volc")
 	}
+	if strings.Contains(content, "redc.wgpsec.org/tf-mirror/") {
+		providers = append(providers, "wgpsec")
+	}
 	return providers
 }
 
