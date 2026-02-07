@@ -336,7 +336,7 @@
     </div>
   {:else}
     <!-- Provider Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each providersConfig.providers || [] as provider}
         <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
