@@ -9,7 +9,7 @@
   
   let proxyForm = { httpProxy: '', httpsProxy: '', noProxy: '' };
   let proxySaving = false;
-  let terraformMirrorForm = { enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } };
+  let terraformMirrorForm = { enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false, wgpsec: false } };
   let terraformMirrorSaving = false;
   let terraformMirrorError = '';
   let networkChecks = [];
@@ -26,20 +26,17 @@
       noProxy: config.noProxy || ''
     };
   }
-  
-  $: {
-    terraformMirrorForm = {
-      enabled: !!terraformMirror.enabled,
-      configPath: terraformMirror.configPath || '',
-      setEnv: !!terraformMirror.fromEnv,
-      providers: {
-        aliyun: terraformMirror.providers?.includes('aliyun'),
-        tencent: terraformMirror.providers?.includes('tencent'),
-        volc: terraformMirror.providers?.includes('volc')
-      }
-    };
+
+  $: if (terraformMirror) {
+    terraformMirrorForm.enabled = !!terraformMirror.enabled;
+    terraformMirrorForm.configPath = terraformMirror.configPath || '';
+    terraformMirrorForm.setEnv = !!terraformMirror.fromEnv;
+    terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
+    terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
+    terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
+    terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
   }
-  
+
   async function handleSaveProxy() {
     proxySaving = true;
     try {
@@ -68,16 +65,13 @@
         terraformMirrorForm.setEnv
       );
       terraformMirror = await GetTerraformMirrorConfig();
-      terraformMirrorForm = {
-        enabled: !!terraformMirror.enabled,
-        configPath: terraformMirror.configPath || '',
-        setEnv: !!terraformMirror.fromEnv,
-        providers: {
-          aliyun: terraformMirror.providers?.includes('aliyun'),
-          tencent: terraformMirror.providers?.includes('tencent'),
-          volc: terraformMirror.providers?.includes('volc')
-        }
-      };
+      terraformMirrorForm.enabled = !!terraformMirror.enabled;
+      terraformMirrorForm.configPath = terraformMirror.configPath || '';
+      terraformMirrorForm.setEnv = !!terraformMirror.fromEnv;
+      terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
+      terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
+      terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
+      terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
     } catch (e) {
       terraformMirrorError = e.message || String(e);
     } finally {
@@ -114,7 +108,17 @@
     };
     await handleSaveTerraformMirror();
   }
-  
+
+  async function enableWgpsecMirrorQuick() {
+    terraformMirrorForm = {
+      ...terraformMirrorForm,
+      enabled: true,
+      setEnv: true,
+      providers: { ...terraformMirrorForm.providers, wgpsec: true }
+    };
+    await handleSaveTerraformMirror();
+  }
+
   async function runTerraformNetworkCheck() {
     networkCheckLoading = true;
     networkCheckError = '';
@@ -254,6 +258,10 @@
             <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.volc} />
             <span>{t.mirrorVolc}</span>
           </label>
+          <label class="inline-flex items-center gap-2">
+            <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.wgpsec} />
+            <span>{t.mirrorWgpsec}</span>
+          </label>
         </div>
         <div class="mt-2 text-[10px] sm:text-[11px] text-gray-500">
           {t.mirrorProvidersDesc}
@@ -300,6 +308,12 @@
           on:click={enableVolcMirrorQuick}
         >
           {t.mirrorVolcPreset}
+        </button>
+        <button
+          class="h-8 sm:h-9 px-3 sm:px-4 bg-rose-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-rose-600 transition-colors"
+          on:click={enableWgpsecMirrorQuick}
+        >
+          {t.mirrorWgpsecPreset}
         </button>
         {#if terraformMirrorError}
           <span class="text-[11px] sm:text-[12px] text-red-500">{terraformMirrorError}</span>
