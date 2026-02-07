@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { FetchRegistryTemplates, PullTemplate, ListTemplates } from '../../../wailsjs/go/main/App.js';
+  import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
 
   export let t;
 
@@ -25,30 +26,6 @@
         registryNotice = { type: '', message: '' };
       }, 3000);
     }
-  }
-
-  function normalizeVersion(value) {
-    if (!value) return '';
-    return String(value).trim().replace(/^v/i, '');
-  }
-
-  function compareVersions(a, b) {
-    const va = normalizeVersion(a).split('.').map(part => parseInt(part, 10));
-    const vb = normalizeVersion(b).split('.').map(part => parseInt(part, 10));
-    const maxLen = Math.max(va.length, vb.length);
-    for (let i = 0; i < maxLen; i += 1) {
-      const na = Number.isFinite(va[i]) ? va[i] : 0;
-      const nb = Number.isFinite(vb[i]) ? vb[i] : 0;
-      if (na > nb) return 1;
-      if (na < nb) return -1;
-    }
-    return 0;
-  }
-
-  function hasUpdate(tmpl) {
-    if (!tmpl || !tmpl.installed) return false;
-    if (!tmpl.latest || !tmpl.localVersion) return false;
-    return compareVersions(tmpl.latest, tmpl.localVersion) > 0;
   }
 
   async function loadRegistryTemplates() {

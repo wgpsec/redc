@@ -14,6 +14,7 @@
   import Dashboard from './components/Dashboard/Dashboard.svelte';
   import Settings from './components/Settings/Settings.svelte';
   import Sidebar from './components/Sidebar/Sidebar.svelte';
+  import { normalizeVersion, compareVersions, hasUpdate } from './utils/version.js';
 
   let cases = [];
   let templates = [];
@@ -53,32 +54,6 @@
   function toggleLang() {
     lang = lang === 'zh' ? 'en' : 'zh';
     localStorage.setItem('lang', lang);
-  }
-
-
-
-  function normalizeVersion(value) {
-    if (!value) return '';
-    return String(value).trim().replace(/^v/i, '');
-  }
-
-  function compareVersions(a, b) {
-    const va = normalizeVersion(a).split('.').map(part => parseInt(part, 10));
-    const vb = normalizeVersion(b).split('.').map(part => parseInt(part, 10));
-    const maxLen = Math.max(va.length, vb.length);
-    for (let i = 0; i < maxLen; i += 1) {
-      const na = Number.isFinite(va[i]) ? va[i] : 0;
-      const nb = Number.isFinite(vb[i]) ? vb[i] : 0;
-      if (na > nb) return 1;
-      if (na < nb) return -1;
-    }
-    return 0;
-  }
-
-  function hasUpdate(tmpl) {
-    if (!tmpl || !tmpl.installed) return false;
-    if (!tmpl.latest || !tmpl.localVersion) return false;
-    return compareVersions(tmpl.latest, tmpl.localVersion) > 0;
   }
 
   onMount(async () => {
@@ -126,22 +101,7 @@
     } finally {
       isLoading = false;
     }
-  }
-
-
-
-
-
-  async function syncLocalTemplates() {
-    try {
-      const list = await ListTemplates();
-      templates = list || [];
-    } catch (e) {
-      error = e.message || String(e);
-    }
-  }
-
-  // MCP functions
+  }  // MCP functions
   async function loadMCPStatus() {
     try {
       mcpStatus = await GetMCPStatus();
