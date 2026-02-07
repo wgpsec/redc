@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables } from '../../../wailsjs/go/main/App.js';
   
   export let t;
@@ -44,6 +44,13 @@
   
   onMount(async () => {
     await refresh();
+  });
+  
+  onDestroy(() => {
+    if (createStatusTimer) {
+      clearTimeout(createStatusTimer);
+      createStatusTimer = null;
+    }
   });
   
   function stripAnsi(value) {
