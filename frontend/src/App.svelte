@@ -14,14 +14,12 @@
   import Dashboard from './components/Dashboard/Dashboard.svelte';
   import Settings from './components/Settings/Settings.svelte';
   import Sidebar from './components/Sidebar/Sidebar.svelte';
-  import { normalizeVersion, compareVersions, hasUpdate } from './utils/version.js';
 
   let cases = [];
   let templates = [];
   let logs = [];
   let config = { redcPath: '', projectPath: '', logPath: '', httpProxy: '', httpsProxy: '', noProxy: '', debugEnabled: false };
   let activeTab = 'dashboard';
-  let specialModuleTab = 'vulhub';
   let isLoading = false;
   let error = '';
   let terraformMirror = { enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] };
@@ -33,23 +31,14 @@
   let mcpForm = { mode: 'sse', address: 'localhost:8080' };
   let mcpLoading = false;
 
-  // Resources state
-  let resourceSummary = [];
-  let resourcesLoading = false;
-  let resourcesError = '';
-  let balanceResults = [];
-  let balanceLoading = false;
-  let balanceError = '';
-  let balanceCooldown = 0;
-  let balanceCooldownTimer = null;
-
   // i18n state
   let lang = localStorage.getItem('lang') || 'zh';
   const i18n = { ...i18nData };
   $: t = i18n[lang];
   
-  // Dashboard component reference
+  // Component references
   let dashboardComponent;
+  let cloudResourcesComponent;
 
   function toggleLang() {
     lang = lang === 'zh' ? 'en' : 'zh';
@@ -72,10 +61,6 @@
   onDestroy(() => {
     EventsOff('log');
     EventsOff('refresh');
-    if (balanceCooldownTimer) {
-      clearInterval(balanceCooldownTimer);
-      balanceCooldownTimer = null;
-    }
   });
 
   async function refreshData() {
@@ -101,7 +86,9 @@
     } finally {
       isLoading = false;
     }
-  }  // MCP functions
+  }
+
+  // MCP functions
   async function loadMCPStatus() {
     try {
       mcpStatus = await GetMCPStatus();
@@ -137,39 +124,8 @@
 
   // Resources functions
   async function loadResourceSummary() {
-    resourcesLoading = true;
-    resourcesError = '';
-    try {
-      resourceSummary = await GetResourceSummary() || [];
-    } catch (e) {
-      resourcesError = e.message || String(e);
-      resourceSummary = [];
-    } finally {
-      resourcesLoading = false;
-    }
-  }
-
-  async function queryBalances() {
-    if (balanceCooldown > 0) return;
-    balanceLoading = true;
-    balanceError = '';
-    try {
-      balanceResults = await GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud']) || [];
-      balanceCooldown = 5;
-      if (balanceCooldownTimer) {
-        clearInterval(balanceCooldownTimer);
-      }
-      balanceCooldownTimer = setInterval(() => {
-        balanceCooldown = Math.max(0, balanceCooldown - 1);
-        if (balanceCooldown === 0 && balanceCooldownTimer) {
-          clearInterval(balanceCooldownTimer);
-          balanceCooldownTimer = null;
-        }
-      }, 1000);
-    } catch (e) {
-      balanceError = e.message || String(e);
-    } finally {
-      balanceLoading = false;
+    if (cloudResourcesComponent && cloudResourcesComponent.loadResourceSummary) {
+      await cloudResourcesComponent.loadResourceSummary();
     }
   }
 
@@ -231,7 +187,7 @@
         <Console {logs} {t} />
 
       {:else if activeTab === 'resources'}
-        <CloudResources {t} />
+        <CloudResources bind:this={cloudResourcesComponent} {t} />
 
       {:else if activeTab === 'compose'}
         <Compose {t} />
