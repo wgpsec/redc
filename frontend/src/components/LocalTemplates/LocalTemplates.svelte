@@ -24,6 +24,11 @@
   let deleteTemplateConfirm = { show: false, name: '' };
   let deletingTemplate = {};
   
+  // Batch operation state
+  let selectedTemplates = new Set();
+  let batchOperating = false;
+  let batchDeleteConfirm = { show: false, count: 0 };
+  
   // Clone template modal state
   let cloneTemplateModal = { show: false, source: '', target: '' };
   
@@ -221,8 +226,61 @@
   }
 
   // ============================================================================
+  // Batch Operation Functions
+  // ============================================================================
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      selectedTemplates.clear();
+    } else {
+      filteredLocalTemplates.forEach(t => selectedTemplates.add(t.name));
+    }
+    selectedTemplates = selectedTemplates; // Trigger reactivity
+  }
+
+  function toggleSelectTemplate(name) {
+    if (selectedTemplates.has(name)) {
+      selectedTemplates.delete(name);
+    } else {
+      selectedTemplates.add(name);
+    }
+    selectedTemplates = selectedTemplates; // Trigger reactivity
+  }
+
+  function showBatchDeleteConfirm() {
+    batchDeleteConfirm = { show: true, count: selectedTemplates.size };
+  }
+
+  function cancelBatchDelete() {
+    batchDeleteConfirm = { show: false, count: 0 };
+  }
+
+  async function confirmBatchDelete() {
+    batchDeleteConfirm = { show: false, count: 0 };
+    batchOperating = true;
+    
+    const templateNames = Array.from(selectedTemplates);
+    
+    try {
+      // Execute deletions in parallel
+      await Promise.all(templateNames.map(name => RemoveTemplate(name)));
+      selectedTemplates.clear();
+      selectedTemplates = selectedTemplates;
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      batchOperating = false;
+      await loadLocalTemplates();
+    }
+  }
+
+  // ============================================================================
   // Reactive Statements
   // ============================================================================
+
+  $: allSelected = filteredLocalTemplates.length > 0 && selectedTemplates.size === filteredLocalTemplates.length;
+  $: someSelected = selectedTemplates.size > 0 && selectedTemplates.size < filteredLocalTemplates.length;
+  $: hasSelection = selectedTemplates.size > 0;
 
   /**
    * Filter and sort local templates based on search query
@@ -289,9 +347,44 @@
   {:else}
     <!-- Template Table -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <!-- Batch Operations Bar -->
+      {#if hasSelection}
+        <div class="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-[13px] font-medium text-blue-900">
+              {t.selected} {selectedTemplates.size} {t.items}
+            </span>
+            <button
+              class="text-[12px] text-blue-600 hover:text-blue-800 underline"
+              on:click={() => { selectedTemplates.clear(); selectedTemplates = selectedTemplates; }}
+            >
+              {t.clearSelection}
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              class="px-3 py-1.5 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+              on:click={showBatchDeleteConfirm}
+              disabled={batchOperating}
+            >
+              {t.batchDelete}
+            </button>
+          </div>
+        </div>
+      {/if}
+      
       <table class="w-full table-fixed">
         <thead>
           <tr class="border-b border-gray-100">
+            <th class="text-left pl-4 pr-1 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-6">
+              <input
+                type="checkbox"
+                class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+                checked={allSelected}
+                indeterminate={someSelected}
+                on:change={toggleSelectAll}
+              />
+            </th>
             <th class="text-left px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.name}</th>
             <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[60px]">{t.version}</th>
             <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.author}</th>
@@ -303,6 +396,14 @@
         <tbody>
           {#each filteredLocalTemplates as tmpl}
             <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+              <td class="pl-4 pr-1 py-3.5" on:click|stopPropagation>
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+                  checked={selectedTemplates.has(tmpl.name)}
+                  on:change={() => toggleSelectTemplate(tmpl.name)}
+                />
+              </td>
               <td class="px-4 py-3.5">
                 <span class="text-[13px] font-medium text-gray-900 break-all">{tmpl.name}</span>
               </td>
@@ -353,7 +454,7 @@
             </tr>
           {:else}
             <tr>
-              <td colspan="6" class="py-16">
+              <td colspan="7" class="py-16">
                 <div class="flex flex-col items-center text-gray-400">
                   <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
@@ -386,6 +487,40 @@
     </div>
   {/if}
 </div>
+
+<!-- Batch Delete Confirmation Modal -->
+{#if batchDeleteConfirm.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchDelete}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchDelete}</h3>
+            <p class="text-[13px] text-gray-500">{t.deleteWarning}</p>
+          </div>
+        </div>
+        <p class="text-[13px] text-gray-600">
+          {t.confirmBatchDeleteMessage} <span class="font-medium text-gray-900">{batchDeleteConfirm.count}</span> {t.templates}?
+        </p>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={cancelBatchDelete}
+        >{t.cancel}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          on:click={confirmBatchDelete}
+        >{t.delete}</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Delete Template Confirmation Modal -->
 {#if deleteTemplateConfirm.show}

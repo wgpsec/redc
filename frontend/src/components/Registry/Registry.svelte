@@ -15,6 +15,28 @@
   let registryNoticeTimer = null;
   let templates = [];
 
+  // Batch operation state
+  let selectedTemplates = new Set();
+  let batchOperating = false;
+  let batchPullConfirm = { show: false, count: 0 };
+  let batchUpdateConfirm = { show: false, count: 0 };
+
+  $: allSelected = filteredRegistryTemplates.length > 0 && selectedTemplates.size === filteredRegistryTemplates.length;
+  $: someSelected = selectedTemplates.size > 0 && selectedTemplates.size < filteredRegistryTemplates.length;
+  $: hasSelection = selectedTemplates.size > 0;
+
+  // Get templates that can be pulled (not installed)
+  $: canPullTemplates = Array.from(selectedTemplates).filter(name => {
+    const tmpl = registryTemplates.find(t => t.name === name);
+    return tmpl && !tmpl.installed;
+  });
+
+  // Get templates that can be updated (installed and has update)
+  $: canUpdateTemplates = Array.from(selectedTemplates).filter(name => {
+    const tmpl = registryTemplates.find(t => t.name === name);
+    return tmpl && tmpl.installed && hasUpdate(tmpl);
+  });
+
   function setRegistryNotice(type, message, autoClear = true) {
     registryNotice = { type, message };
     if (registryNoticeTimer) {
@@ -103,6 +125,76 @@
     }
   }
 
+  // ============================================================================
+  // Batch Operation Functions
+  // ============================================================================
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      selectedTemplates.clear();
+    } else {
+      filteredRegistryTemplates.forEach(t => selectedTemplates.add(t.name));
+    }
+    selectedTemplates = selectedTemplates;
+  }
+
+  function toggleSelectTemplate(templateName) {
+    if (selectedTemplates.has(templateName)) {
+      selectedTemplates.delete(templateName);
+    } else {
+      selectedTemplates.add(templateName);
+    }
+    selectedTemplates = selectedTemplates;
+  }
+
+  function showBatchPullConfirm() {
+    batchPullConfirm = { show: true, count: canPullTemplates.length };
+  }
+
+  function cancelBatchPull() {
+    batchPullConfirm = { show: false, count: 0 };
+  }
+
+  async function confirmBatchPull() {
+    batchPullConfirm = { show: false, count: 0 };
+    batchOperating = true;
+
+    try {
+      await Promise.all(canPullTemplates.map(name => handlePullTemplate(name, false)));
+      selectedTemplates.clear();
+      selectedTemplates = selectedTemplates;
+    } catch (e) {
+      setRegistryNotice('error', e.message || String(e));
+    } finally {
+      batchOperating = false;
+      await loadRegistryTemplates();
+    }
+  }
+
+  function showBatchUpdateConfirm() {
+    batchUpdateConfirm = { show: true, count: canUpdateTemplates.length };
+  }
+
+  function cancelBatchUpdate() {
+    batchUpdateConfirm = { show: false, count: 0 };
+  }
+
+  async function confirmBatchUpdate() {
+    batchUpdateConfirm = { show: false, count: 0 };
+    batchOperating = true;
+
+    try {
+      await Promise.all(canUpdateTemplates.map(name => handlePullTemplate(name, true)));
+      selectedTemplates.clear();
+      selectedTemplates = selectedTemplates;
+    } catch (e) {
+      setRegistryNotice('error', e.message || String(e));
+    } finally {
+      batchOperating = false;
+      await loadRegistryTemplates();
+    }
+  }
+
   onMount(() => {
     loadRegistryTemplates();
   });
@@ -135,6 +227,13 @@
           bind:value={registrySearch} 
         />
       </div>
+      <button 
+        class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        on:click={toggleSelectAll}
+        disabled={registryLoading || filteredRegistryTemplates.length === 0}
+      >
+        {allSelected ? t.clearSelection : t.selectAll || '全选'}
+      </button>
       <button 
         class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
         on:click={loadRegistryTemplates}
@@ -178,60 +277,112 @@
       <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
     </div>
   {:else}
+    <!-- Batch Operations Bar -->
+    {#if hasSelection}
+      <div class="bg-white rounded-xl border border-gray-100 p-5 mb-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-[13px] font-medium text-blue-900">
+              {t.selected} {selectedTemplates.size} {t.items}
+            </span>
+            <button
+              class="text-[12px] text-blue-600 hover:text-blue-800 underline"
+              on:click={() => { selectedTemplates.clear(); selectedTemplates = selectedTemplates; }}
+            >
+              {t.clearSelection}
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            {#if canPullTemplates.length > 0}
+              <button
+                class="px-3 py-1.5 text-[12px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
+                on:click={showBatchPullConfirm}
+                disabled={batchOperating}
+              >
+                {t.batchPull} ({canPullTemplates.length})
+              </button>
+            {/if}
+            {#if canUpdateTemplates.length > 0}
+              <button
+                class="px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50"
+                on:click={showBatchUpdateConfirm}
+                disabled={batchOperating}
+              >
+                {t.batchUpdate} ({canUpdateTemplates.length})
+              </button>
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
+
     <!-- Template Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each filteredRegistryTemplates as tmpl}
-        <div class="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-          <div class="flex items-start justify-between mb-3">
-            <div class="flex-1 min-w-0">
-              <h3 class="text-[14px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
-              <p class="text-[12px] text-gray-500 mt-0.5">v{tmpl.latest}</p>
-            </div>
-            {#if tmpl.installed}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-medium rounded-full">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                {t.installed}
-              </span>
-            {/if}
+        <div class="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow relative">
+          <!-- Checkbox -->
+          <div class="absolute top-4 left-4">
+            <input
+              type="checkbox"
+              class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+              checked={selectedTemplates.has(tmpl.name)}
+              on:change={() => toggleSelectTemplate(tmpl.name)}
+              on:click|stopPropagation
+            />
           </div>
           
-          {#if tmpl.description}
-            <p class="text-[12px] text-gray-600 mb-3 line-clamp-2">{tmpl.description}</p>
-          {/if}
-          
-          {#if tmpl.tags && tmpl.tags.length > 0}
-            <div class="flex flex-wrap gap-1 mb-3">
-              {#each tmpl.tags.slice(0, 3) as tag}
-                <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full">{tag}</span>
-              {/each}
-              {#if tmpl.tags.length > 3}
-                <span class="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full">+{tmpl.tags.length - 3}</span>
+          <div class="pl-6">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-[14px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
+                <p class="text-[12px] text-gray-500 mt-0.5">v{tmpl.latest}</p>
+              </div>
+              {#if tmpl.installed}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-medium rounded-full">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {t.installed}
+                </span>
               {/if}
             </div>
-          {/if}
-          
-          <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div class="text-[11px] text-gray-400">
-              {#if tmpl.author}by {tmpl.author}{/if}
-            </div>
-            {#if pullingTemplates[tmpl.name]}
-              <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
-                <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
-                {t.pulling}
-              </span>
-            {:else if tmpl.installed && hasUpdate(tmpl)}
-              <button 
-                class="px-3 py-1.5 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                on:click={() => handlePullTemplate(tmpl.name, true)}
-              >{t.update}</button>
-            {:else if !tmpl.installed}
-              <button 
-                class="px-3 py-1.5 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
-                on:click={() => handlePullTemplate(tmpl.name, false)}
-              >{t.pull}</button>
+            
+            {#if tmpl.description}
+              <p class="text-[12px] text-gray-600 mb-3 line-clamp-2">{tmpl.description}</p>
             {/if}
+            
+            {#if tmpl.tags && tmpl.tags.length > 0}
+              <div class="flex flex-wrap gap-1 mb-3">
+                {#each tmpl.tags.slice(0, 3) as tag}
+                  <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full">{tag}</span>
+                {/each}
+                {#if tmpl.tags.length > 3}
+                  <span class="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full">+{tmpl.tags.length - 3}</span>
+                {/if}
+              </div>
+            {/if}
+            
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+              <div class="text-[11px] text-gray-400">
+                {#if tmpl.author}by {tmpl.author}{/if}
+              </div>
+              {#if pullingTemplates[tmpl.name]}
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
+                  <span class="w-3 h-3 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></span>
+                  {t.pulling}
+                </span>
+              {:else if tmpl.installed && hasUpdate(tmpl)}
+                <button 
+                  class="px-3 py-1.5 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  on:click={() => handlePullTemplate(tmpl.name, true)}
+                >{t.update}</button>
+              {:else if !tmpl.installed}
+                <button 
+                  class="px-3 py-1.5 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+                  on:click={() => handlePullTemplate(tmpl.name, false)}
+                >{t.pull}</button>
+              {/if}
+            </div>
           </div>
         </div>
       {:else}
@@ -251,3 +402,71 @@
     </div>
   {/if}
 </div>
+
+<!-- Batch Pull Confirmation Modal -->
+{#if batchPullConfirm.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchPull}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchPull}</h3>
+            <p class="text-[13px] text-gray-500">{t.pulling}</p>
+          </div>
+        </div>
+        <p class="text-[13px] text-gray-600">
+          {t.confirmBatchPullMessage} <span class="font-medium text-gray-900">{batchPullConfirm.count}</span> {t.templates}?
+        </p>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={cancelBatchPull}
+        >{t.cancel}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+          on:click={confirmBatchPull}
+        >{t.pull}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Batch Update Confirmation Modal -->
+{#if batchUpdateConfirm.show}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchUpdate}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchUpdate}</h3>
+            <p class="text-[13px] text-gray-500">{t.update}</p>
+          </div>
+        </div>
+        <p class="text-[13px] text-gray-600">
+          {t.confirmBatchUpdateMessage} <span class="font-medium text-gray-900">{batchUpdateConfirm.count}</span> {t.templates}?
+        </p>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={cancelBatchUpdate}
+        >{t.cancel}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          on:click={confirmBatchUpdate}
+        >{t.update}</button>
+      </div>
+    </div>
+  </div>
+{/if}

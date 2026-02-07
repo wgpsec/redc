@@ -55,12 +55,23 @@
     EventsOn('refresh', async () => {
       await refreshData();
     });
+    
+    // Listen for tab switch events from child components
+    window.addEventListener('switchTab', (event) => {
+      activeTab = event.detail;
+    });
+    
     await refreshData();
   });
 
   onDestroy(() => {
     EventsOff('log');
     EventsOff('refresh');
+    
+    // Remove tab switch event listener
+    window.removeEventListener('switchTab', (event) => {
+      activeTab = event.detail;
+    });
   });
 
   async function refreshData() {
