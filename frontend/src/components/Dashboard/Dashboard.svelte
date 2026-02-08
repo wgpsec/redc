@@ -574,21 +574,6 @@
           {/each}
         </select>
       </div>
-      <button 
-        class="h-10 px-4 bg-gray-100 text-gray-700 text-[13px] font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={loadAllTemplateCosts}
-        disabled={allTemplateCostsLoading || templates.length === 0}
-        title={t.loadAllTemplateCosts}
-      >
-        {#if allTemplateCostsLoading}
-          <span class="flex items-center gap-2">
-            <div class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-            {t.loadingAllTemplateCosts}
-          </span>
-        {:else}
-          💰
-        {/if}
-      </button>
       <div class="w-48">
         <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.name}</label>
         <input 
@@ -598,6 +583,20 @@
           bind:value={newCaseName} 
         />
       </div>
+      <button 
+        class="h-10 px-5 bg-gray-500 text-white text-[13px] font-medium rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        on:click={handleCreate}
+        disabled={createBusy}
+      >
+        {t.create}
+      </button>
+      <button 
+        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        on:click={handleCreateAndRun}
+        disabled={createBusy}
+      >
+        {t.createAndRun}
+      </button>
       {#if selectedTemplate}
         <button 
           class="h-10 px-5 bg-blue-500 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -610,23 +609,23 @@
               {t.calculating}
             </span>
           {:else}
-            {t.showCostEstimate}
+            {t.costEstimate}
           {/if}
         </button>
       {/if}
       <button 
-        class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={handleCreate}
-        disabled={createBusy}
+        class="h-10 px-5 bg-orange-500 text-white text-[13px] font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        on:click={loadAllTemplateCosts}
+        disabled={allTemplateCostsLoading || templates.length === 0}
       >
-        {t.create}
-      </button>
-      <button 
-        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={handleCreateAndRun}
-        disabled={createBusy}
-      >
-        {t.createAndRun}
+        {#if allTemplateCostsLoading}
+          <span class="flex items-center gap-2">
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            {t.loadingAllTemplateCosts}
+          </span>
+        {:else}
+          批量估算
+        {/if}
       </button>
     </div>
 
