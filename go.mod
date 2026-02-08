@@ -4,11 +4,18 @@ go 1.24.0
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
+	github.com/aws/aws-sdk-go-v2 v1.41.1
+	github.com/aws/aws-sdk-go-v2/config v1.32.7
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.7
+	github.com/aws/aws-sdk-go-v2/service/pricing v1.40.11
 	github.com/hashicorp/hc-install v0.9.2
 	github.com/hashicorp/hcl/v2 v2.24.0
+	github.com/hashicorp/terraform-config-inspect v0.0.0-20260204111900-477360eb0c77
 	github.com/hashicorp/terraform-exec v0.24.0
 	github.com/hashicorp/terraform-json v0.27.1
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.186
+	github.com/leanovate/gopter v0.2.11
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/pkg/sftp v1.13.10
 	github.com/projectdiscovery/gologger v1.1.66
 	github.com/schollz/progressbar/v3 v3.19.0
@@ -16,6 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/billing v1.3.42
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.44
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm v1.3.41
 	github.com/volcengine/volcengine-go-sdk v1.2.10
 	github.com/wailsapp/wails/v2 v2.11.0
 	go.etcd.io/bbolt v1.3.7
@@ -29,9 +37,20 @@ require (
 require (
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/STARRY-S/zip v0.2.1 // indirect
-	github.com/agext/levenshtein v1.2.1 // indirect
+	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
+	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.0 // indirect
@@ -44,6 +63,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/goccy/go-yaml v1.9.8 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -52,6 +72,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect

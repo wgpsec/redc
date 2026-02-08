@@ -1,0 +1,90 @@
+{
+  "alicloud": {
+    "cn-hangzhou": {
+      "ecs.g6.large": {
+        "provider": "alicloud",
+        "region": "cn-hangzhou",
+        "resource_type": "ecs.g6.large",
+        "currency": "CNY",
+        "hourly_price": 0.68,
+        "monthly_price": 489.6
+      },
+      "ecs.g6.xlarge": {
+        "provider": "alicloud",
+        "region": "cn-hangzhou",
+        "resource_type": "ecs.g6.xlarge",
+        "currency": "CNY",
+        "hourly_price": 1.36,
+        "monthly_price": 979.2
+      }
+    },
+    "cn-beijing": {
+      "ecs.g6.large": {
+        "provider": "alicloud",
+        "region": "cn-beijing",
+        "resource_type": "ecs.g6.large",
+        "currency": "CNY",
+        "hourly_price": 0.68,
+        "monthly_price": 489.6
+      }
+    }
+  },
+  "aws": {
+    "us-east-1": {
+      "t2.micro": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "resource_type": "t2.micro",
+        "currency": "USD",
+        "hourly_price": 0.0116,
+        "monthly_price": 8.352
+      },
+      "t2.small": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "resource_type": "t2.small",
+        "currency": "USD",
+        "hourly_price": 0.023,
+        "monthly_price": 16.56
+      },
+      "t2.medium": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "resource_type": "t2.medium",
+        "currency": "USD",
+        "hourly_price": 0.0464,
+        "monthly_price": 33.408
+      }
+    },
+    "us-west-2": {
+      "t2.micro": {
+        "provider": "aws",
+        "region": "us-west-2",
+        "resource_type": "t2.micro",
+        "currency": "USD",
+        "hourly_price": 0.0116,
+        "monthly_price": 8.352
+      }
+    }
+  },
+  "tencentcloud": {
+    "ap-guangzhou": {
+      "S2.MEDIUM4": {
+        "provider": "tencentcloud",
+        "region": "ap-guangzhou",
+        "resource_type": "S2.MEDIUM4",
+        "currency": "CNY",
+        "hourly_price": 0.42,
+        "monthly_price": 302.4
+      },
+      "S2.LARGE8": {
+        "provider": "tencentcloud",
+        "region": "ap-guangzhou",
+        "resource_type": "S2.LARGE8",
+        "currency": "CNY",
+        "hourly_price": 0.84,
+        "monthly_price": 604.8
+      }
+    }
+  }
+}

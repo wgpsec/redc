@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate } from '../../../wailsjs/go/main/App.js';
   
   export let t;
   export let onTabChange = () => {};
@@ -16,6 +16,18 @@
   let templateVariables = [];
   let variableValues = {};
   let error = '';
+  
+  // Cost estimation state
+  let showCostEstimate = false;
+  let costEstimate = null;
+  let costEstimateLoading = false;
+  let costEstimateError = '';
+  let costEstimateDebounceTimer = null;
+  
+  // Template list cost estimation state
+  let templateCosts = {}; // Map of template name to cost estimate
+  let templateCostsLoading = new Set(); // Set of template names currently loading
+  let allTemplateCostsLoading = false; // Loading state for all templates
   
   // Batch operation state
   let selectedCases = new Set();
@@ -61,6 +73,10 @@
     if (createStatusTimer) {
       clearTimeout(createStatusTimer);
       createStatusTimer = null;
+    }
+    if (costEstimateDebounceTimer) {
+      clearTimeout(costEstimateDebounceTimer);
+      costEstimateDebounceTimer = null;
     }
   });
   
@@ -110,6 +126,9 @@
         ListCases(),
         ListTemplates()
       ]);
+      
+      // Note: Template list cost preview is now manual (user must click button)
+      // This prevents automatic loading of all template costs on page load
     } catch (e) {
       error = e.message || String(e);
       cases = [];
@@ -298,6 +317,132 @@
   }
 
   // ============================================================================
+  // Cost Estimation Functions
+  // ============================================================================
+
+  /**
+   * Load base cost estimate for a template using default variable values
+   * This is used for the template list preview
+   * Failures are handled silently (no error messages shown to user)
+   */
+  async function loadTemplateCost(templateName) {
+    if (!templateName || templateCostsLoading.has(templateName)) {
+      return;
+    }
+    
+    // Mark as loading
+    templateCostsLoading.add(templateName);
+    templateCostsLoading = templateCostsLoading;
+    
+    try {
+      // Get template variables to extract defaults
+      const vars = await GetTemplateVariables(templateName);
+      
+      // Build variables object with default values only
+      const defaultVars = {};
+      if (vars && vars.length > 0) {
+        for (const v of vars) {
+          if (v.defaultValue && v.defaultValue !== '') {
+            defaultVars[v.name] = String(v.defaultValue);
+          }
+        }
+      }
+      
+      // Call GetCostEstimate with default variables
+      // Cast to Record<string, string> to satisfy TypeScript
+      const estimate = await GetCostEstimate(templateName, defaultVars);
+      
+      // Store the estimate
+      templateCosts[templateName] = estimate;
+      templateCosts = templateCosts; // Trigger reactivity
+    } catch (e) {
+      // Silent failure - don't show error to user
+      // Just don't add the cost to templateCosts
+      console.debug(`Failed to load cost for template ${templateName}:`, e);
+    } finally {
+      // Remove from loading set
+      templateCostsLoading.delete(templateName);
+      templateCostsLoading = templateCostsLoading;
+    }
+  }
+
+  /**
+   * Load base cost estimates for all templates
+   * Called manually by user clicking the "Load All Template Costs" button
+   */
+  async function loadAllTemplateCosts() {
+    if (!templates || templates.length === 0) {
+      return;
+    }
+    
+    allTemplateCostsLoading = true;
+    
+    try {
+      // Load costs for all templates in parallel
+      // Each loadTemplateCost handles its own errors silently
+      await Promise.all(templates.map(tmpl => loadTemplateCost(tmpl.name)));
+    } finally {
+      allTemplateCostsLoading = false;
+    }
+  }
+
+  async function loadCostEstimate() {
+    if (!selectedTemplate) return;
+    
+    // Set loading state and clear previous errors
+    costEstimateLoading = true;
+    costEstimateError = '';
+    
+    try {
+      // Prepare variables object with non-empty values
+      const vars = {};
+      for (const [key, value] of Object.entries(variableValues)) {
+        if (value !== '') {
+          vars[key] = value;
+        }
+      }
+      
+      // Call GetCostEstimate API
+      costEstimate = await GetCostEstimate(selectedTemplate, vars);
+      
+      // Show modal on success
+      showCostEstimate = true;
+    } catch (e) {
+      // Set user-friendly error message
+      costEstimateError = e.message || String(e);
+    } finally {
+      // Clear loading state
+      costEstimateLoading = false;
+    }
+  }
+
+  /**
+   * Debounced cost estimation function
+   * Waits 500ms after the last variable change before triggering cost estimation
+   * Only triggers if the cost estimate modal is currently shown
+   */
+  function debouncedCostEstimate() {
+    // Clear any existing timer
+    if (costEstimateDebounceTimer) {
+      clearTimeout(costEstimateDebounceTimer);
+    }
+    
+    // Set new timer for 500ms delay
+    costEstimateDebounceTimer = setTimeout(() => {
+      // Only trigger if cost estimate modal is currently shown
+      if (showCostEstimate) {
+        loadCostEstimate();
+      }
+    }, 500);
+  }
+
+  // Watch for variable changes and trigger debounced cost estimation
+  // This reactive statement runs whenever variableValues changes
+  $: if (selectedTemplate && Object.keys(variableValues).length > 0) {
+    debouncedCostEstimate();
+  }
+
+  // ============================================================================
   // Batch Operation Functions
   // ============================================================================
 
@@ -420,10 +565,30 @@
         >
           <option value="">{t.selectTemplate}</option>
           {#each templates || [] as tmpl}
-            <option value={tmpl.name}>{tmpl.name}</option>
+            <option value={tmpl.name}>
+              {tmpl.name}
+              {#if templateCosts[tmpl.name]}
+                · {templateCosts[tmpl.name].currency} {templateCosts[tmpl.name].total_monthly_cost.toFixed(2)}/mo
+              {/if}
+            </option>
           {/each}
         </select>
       </div>
+      <button 
+        class="h-10 px-4 bg-gray-100 text-gray-700 text-[13px] font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        on:click={loadAllTemplateCosts}
+        disabled={allTemplateCostsLoading || templates.length === 0}
+        title={t.loadAllTemplateCosts}
+      >
+        {#if allTemplateCostsLoading}
+          <span class="flex items-center gap-2">
+            <div class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            {t.loadingAllTemplateCosts}
+          </span>
+        {:else}
+          💰
+        {/if}
+      </button>
       <div class="w-48">
         <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.name}</label>
         <input 
@@ -433,6 +598,22 @@
           bind:value={newCaseName} 
         />
       </div>
+      {#if selectedTemplate}
+        <button 
+          class="h-10 px-5 bg-blue-500 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          on:click={loadCostEstimate}
+          disabled={costEstimateLoading}
+        >
+          {#if costEstimateLoading}
+            <span class="flex items-center gap-2">
+              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              {t.calculating}
+            </span>
+          {:else}
+            {t.showCostEstimate}
+          {/if}
+        </button>
+      {/if}
       <button 
         class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         on:click={handleCreate}
@@ -449,6 +630,25 @@
       </button>
     </div>
 
+    <!-- Cost Estimation Error Display -->
+    {#if costEstimateError}
+      <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-lg">
+        <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+        <div class="flex-1">
+          <div class="text-[13px] text-amber-800 font-medium">{t.costEstimateError}</div>
+          <div class="text-[12px] text-amber-700 mt-0.5">{costEstimateError}</div>
+          <div class="text-[11px] text-amber-600 mt-1">{t.costEstimateErrorHint}</div>
+        </div>
+        <button class="text-amber-400 hover:text-amber-600" on:click={() => costEstimateError = ''}>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    {/if}
+
     {#if createStatus !== 'idle'}
       <div class="mt-3 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[12px]">
         {#if createStatus === 'creating' || createStatus === 'initializing'}
@@ -463,6 +663,9 @@
           <span class="text-gray-400 truncate">{createStatusDetail}</span>
         {/if}
       </div>
+    {:else if costEstimateError}
+      <!-- Spacer to maintain layout when cost estimate error is shown but no create status -->
+      <div class="mt-3"></div>
     {/if}
 
     {#if terraformInitHint.show}
@@ -503,6 +706,9 @@
           </div>
         </div>
       </div>
+    {:else if costEstimateError}
+      <!-- Spacer to maintain layout when cost estimate error is shown but no terraform hint -->
+      <div class="mt-3"></div>
     {/if}
     
     <!-- Template Variables -->
@@ -850,6 +1056,83 @@
           class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
           on:click={confirmStop}
         >{t.stop}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Cost Estimate Modal -->
+{#if showCostEstimate && costEstimate}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={() => showCostEstimate = false}>
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" on:click|stopPropagation>
+      <!-- Header -->
+      <div class="px-6 py-5 border-b border-gray-100">
+        <h3 class="text-[17px] font-semibold text-gray-900">{t.costEstimate}</h3>
+        <p class="text-[13px] text-gray-500 mt-1">{costEstimate.disclaimer}</p>
+      </div>
+      
+      <!-- Content -->
+      <div class="px-6 py-5">
+        <!-- Total Cost Summary -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="bg-blue-50 rounded-lg p-4">
+            <div class="text-[12px] text-blue-600 font-medium">{t.estimatedHourlyCost}</div>
+            <div class="text-[24px] font-bold text-blue-900 mt-1">
+              {costEstimate.currency} {costEstimate.total_hourly_cost.toFixed(4)}
+            </div>
+          </div>
+          <div class="bg-emerald-50 rounded-lg p-4">
+            <div class="text-[12px] text-emerald-600 font-medium">{t.estimatedMonthlyCost}</div>
+            <div class="text-[24px] font-bold text-emerald-900 mt-1">
+              {costEstimate.currency} {costEstimate.total_monthly_cost.toFixed(2)}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Cost Breakdown -->
+        <div class="text-[13px] font-medium text-gray-700 mb-3">{t.costBreakdown}</div>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          {#each costEstimate.breakdown as item}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex-1">
+                <div class="text-[13px] font-medium text-gray-900">{item.resource_name}</div>
+                <div class="text-[11px] text-gray-500">{item.resource_type} × {item.count}</div>
+              </div>
+              <div class="text-right">
+                {#if item.available}
+                  <div class="text-[13px] font-medium text-gray-900">
+                    {item.currency} {item.total_monthly.toFixed(2)}/mo
+                  </div>
+                  <div class="text-[11px] text-gray-500">
+                    {item.currency} {item.total_hourly.toFixed(4)}/hr
+                  </div>
+                {:else}
+                  <div class="text-[12px] text-amber-600">{t.pricingUnavailable}</div>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+        
+        <!-- Warnings -->
+        {#if costEstimate.warnings && costEstimate.warnings.length > 0}
+          <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div class="text-[12px] font-medium text-amber-800 mb-1">{t.warnings}</div>
+            <ul class="text-[11px] text-amber-700 space-y-1">
+              {#each costEstimate.warnings as warning}
+                <li>• {warning}</li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      </div>
+      
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          on:click={() => showCostEstimate = false}
+        >{t.close}</button>
       </div>
     </div>
   </div>

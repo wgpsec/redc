@@ -17,6 +17,7 @@ import (
 	goruntime "runtime"
 
 	redc "red-cloud/mod"
+	"red-cloud/mod/cost"
 	"red-cloud/mod/gologger"
 	"red-cloud/mod/mcp"
 	"red-cloud/mod/compose"
@@ -35,6 +36,8 @@ type App struct {
 	logMgr             *gologger.LogManager
 	mcpManager         *mcp.MCPServerManager
 	notificationMgr    *NotificationManager
+	pricingService     *cost.PricingService
+	costCalculator     *cost.CostCalculator
 }
 
 // NewApp creates a new App application struct
@@ -89,6 +92,43 @@ func (a *App) startup(ctx context.Context) {
 		a.initError = fmt.Sprintf("项目加载失败: %v", err)
 		runtime.LogErrorf(ctx, a.initError)
 	}
+
+	// Initialize cost estimation components
+	pricingCacheDBPath := filepath.Join(redc.RedcPath, "pricing_cache.db")
+	a.pricingService = cost.NewPricingService(pricingCacheDBPath)
+	a.costCalculator = cost.NewCostCalculator()
+	
+	// Set credential provider for cost estimation
+	// This function reads credentials from the active config file
+	credProvider := func(provider string) (accessKey, secretKey, region string, err error) {
+		conf, _, err := redc.ReadConfig(redc.ActiveConfigPath)
+		if err != nil {
+			return "", "", "", fmt.Errorf("failed to read config: %w", err)
+		}
+		
+		switch provider {
+		case "alicloud":
+			return conf.Providers.Alicloud.AccessKey, conf.Providers.Alicloud.SecretKey, conf.Providers.Alicloud.Region, nil
+		case "tencentcloud":
+			return conf.Providers.Tencentcloud.SecretId, conf.Providers.Tencentcloud.SecretKey, conf.Providers.Tencentcloud.Region, nil
+		case "aws":
+			return conf.Providers.Aws.AccessKey, conf.Providers.Aws.SecretKey, conf.Providers.Aws.Region, nil
+		case "volcengine":
+			return conf.Providers.Volcengine.AccessKey, conf.Providers.Volcengine.SecretKey, conf.Providers.Volcengine.Region, nil
+		default:
+			return "", "", "", fmt.Errorf("unsupported provider: %s", provider)
+		}
+	}
+	
+	a.pricingService.SetCredentialProvider(credProvider)
+	
+	// Also set global credential provider for data source resolution
+	cost.SetGlobalCredentialProvider(credProvider)
+	
+	// Start background cache cleanup (runs every hour)
+	a.pricingService.StartCacheCleanup(1 * time.Hour)
+	
+	runtime.LogInfof(ctx, "成本估算服务初始化成功 - 缓存路径: %s", pricingCacheDBPath)
 }
 
 // emitLog sends a log message to the frontend and writes to file
@@ -1884,4 +1924,123 @@ func (a *App) StopMCPServer() error {
 
 	a.emitLog("MCP 服务器已停止")
 	return nil
+}
+
+// GetCostEstimate calculates cost estimate for a template
+func (a *App) GetCostEstimate(templateName string, variables map[string]string) (*cost.CostEstimate, error) {
+	a.mu.Lock()
+	pricingService := a.pricingService
+	costCalculator := a.costCalculator
+	logMgr := a.logMgr
+	a.mu.Unlock()
+
+	// Validate that cost estimation components are initialized
+	if pricingService == nil || costCalculator == nil {
+		err := fmt.Errorf("成本估算服务未初始化")
+		if logMgr != nil {
+			if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Cost estimation service not initialized for template: %s\n", templateName)))
+				logger.Close()
+			}
+		}
+		return nil, err
+	}
+
+	// Log the start of cost estimation
+	if logMgr != nil {
+		if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+			logger.Write([]byte(fmt.Sprintf("[INFO] Starting cost estimation for template: %s\n", templateName)))
+			if len(variables) > 0 {
+				logger.Write([]byte(fmt.Sprintf("[INFO] Variables provided: %d\n", len(variables))))
+			}
+			logger.Close()
+		}
+	}
+
+	// 1. Get template path
+	templatePath, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		// Log template not found error with context
+		if logMgr != nil {
+			if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Template not found: %s, error: %v\n", templateName, err)))
+				logger.Close()
+			}
+		}
+		return nil, fmt.Errorf("模板未找到: %w", err)
+	}
+
+	// Log successful template path resolution
+	if logMgr != nil {
+		if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+			logger.Write([]byte(fmt.Sprintf("[INFO] Template path resolved: %s\n", templatePath)))
+			logger.Close()
+		}
+	}
+
+	// 2. Parse template to extract resources
+	resources, err := cost.ParseTemplate(templatePath, variables)
+	if err != nil {
+		// Log parsing error with detailed context
+		if logMgr != nil {
+			if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Template parsing failed for: %s\n", templateName)))
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Template path: %s\n", templatePath)))
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Parse error: %v\n", err)))
+				logger.Close()
+			}
+		}
+		return nil, fmt.Errorf("模板解析失败: %w", err)
+	}
+
+	// Log successful parsing with resource count
+	if logMgr != nil {
+		if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+			logger.Write([]byte(fmt.Sprintf("[INFO] Template parsed successfully: %d resources found\n", len(resources.Resources))))
+			if resources.Provider != "" {
+				logger.Write([]byte(fmt.Sprintf("[INFO] Primary provider: %s\n", resources.Provider)))
+			}
+			if resources.Region != "" {
+				logger.Write([]byte(fmt.Sprintf("[INFO] Primary region: %s\n", resources.Region)))
+			}
+			logger.Close()
+		}
+	}
+
+	// 3. Calculate costs
+	estimate, err := costCalculator.CalculateCost(resources, pricingService)
+	if err != nil {
+		// Log calculation error with context
+		if logMgr != nil {
+			if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Cost calculation failed for template: %s\n", templateName)))
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Resource count: %d\n", len(resources.Resources))))
+				logger.Write([]byte(fmt.Sprintf("[ERROR] Calculation error: %v\n", err)))
+				logger.Close()
+			}
+		}
+		return nil, fmt.Errorf("成本计算失败: %w", err)
+	}
+
+	// Log successful cost estimation with summary
+	if logMgr != nil {
+		if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
+			logger.Write([]byte(fmt.Sprintf("[INFO] Cost estimation completed successfully for template: %s\n", templateName)))
+			logger.Write([]byte(fmt.Sprintf("[INFO] Total hourly cost: %.4f %s\n", estimate.TotalHourlyCost, estimate.Currency)))
+			logger.Write([]byte(fmt.Sprintf("[INFO] Total monthly cost: %.2f %s\n", estimate.TotalMonthlyCost, estimate.Currency)))
+			logger.Write([]byte(fmt.Sprintf("[INFO] Resources in breakdown: %d\n", len(estimate.Breakdown))))
+			if estimate.UnavailableCount > 0 {
+				logger.Write([]byte(fmt.Sprintf("[WARN] Resources with unavailable pricing: %d\n", estimate.UnavailableCount)))
+			}
+			if len(estimate.Warnings) > 0 {
+				logger.Write([]byte(fmt.Sprintf("[WARN] Warnings generated: %d\n", len(estimate.Warnings))))
+				for i, warning := range estimate.Warnings {
+					logger.Write([]byte(fmt.Sprintf("[WARN]   %d. %s\n", i+1, warning)))
+				}
+			}
+			logger.Close()
+		}
+	}
+
+	return estimate, nil
 }

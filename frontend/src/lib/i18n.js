@@ -79,6 +79,12 @@ export const i18n = {
     mirrorProvidersDesc: '阿里云: https://mirrors.aliyun.com/terraform/ · 腾讯云: https://mirrors.tencent.com/terraform/ · 火山云: https://mirrors.volces.com/terraform/ · wgpsec: https://redc.wgpsec.org/tf-mirror/',
     networkCheck: '网络诊断', networkCheckBtn: '检测 Terraform 连接', networkChecking: '检测中...',
     networkEndpoint: '端点', networkStatus: '状态', networkLatency: '延迟', networkError: '错误',
+    // Cost estimation
+    showCostEstimate: '显示成本估算', costEstimate: '成本估算', estimatedHourlyCost: '预估小时成本',
+    estimatedMonthlyCost: '预估月度成本', costBreakdown: '成本明细', pricingUnavailable: '价格不可用',
+    calculating: '计算中...', warnings: '警告', costEstimateError: '成本估算错误',
+    costEstimateErrorHint: '无法估算成本。您仍可以创建场景。',
+    loadAllTemplateCosts: '加载所有模板成本', loadingAllTemplateCosts: '加载中...',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -160,6 +166,12 @@ export const i18n = {
     mirrorProvidersDesc: 'Alibaba Cloud: https://mirrors.aliyun.com/terraform/ · Tencent Cloud: https://mirrors.tencent.com/terraform/ · Volcengine: https://mirrors.volces.com/terraform/ · wgpsec: https://redc.wgpsec.org/tf-mirror/',
     networkCheck: 'Network Diagnostics', networkCheckBtn: 'Test Terraform connectivity', networkChecking: 'Checking...',
     networkEndpoint: 'Endpoint', networkStatus: 'Status', networkLatency: 'Latency', networkError: 'Error',
+    // Cost estimation
+    showCostEstimate: 'Show Cost Estimate', costEstimate: 'Cost Estimate', estimatedHourlyCost: 'Estimated Hourly Cost',
+    estimatedMonthlyCost: 'Estimated Monthly Cost', costBreakdown: 'Cost Breakdown', pricingUnavailable: 'Pricing Unavailable',
+    calculating: 'Calculating...', warnings: 'Warnings', costEstimateError: 'Cost Estimation Error',
+    costEstimateErrorHint: 'Failed to estimate costs. You can still create the scene.',
+    loadAllTemplateCosts: 'Load All Template Costs', loadingAllTemplateCosts: 'Loading...',
   }
 };
 

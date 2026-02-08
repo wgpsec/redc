@@ -1,0 +1,323 @@
+{
+  "version": "1.0",
+  "last_updated": "2024-01-01",
+  "pricing": {
+    "alicloud": {
+      "cn-hangzhou": {
+        "ecs.t5-lc1m1.small": {
+          "provider": "alicloud",
+          "region": "cn-hangzhou",
+          "resource_type": "ecs.t5-lc1m1.small",
+          "currency": "CNY",
+          "hourly_price": 0.068,
+          "monthly_price": 48.96,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Burstable instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "ecs.t5-lc1m2.small": {
+          "provider": "alicloud",
+          "region": "cn-hangzhou",
+          "resource_type": "ecs.t5-lc1m2.small",
+          "currency": "CNY",
+          "hourly_price": 0.096,
+          "monthly_price": 69.12,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "2GB",
+            "description": "Burstable instance, 1 vCPU, 2GB RAM"
+          }
+        },
+        "ecs.g6.large": {
+          "provider": "alicloud",
+          "region": "cn-hangzhou",
+          "resource_type": "ecs.g6.large",
+          "currency": "CNY",
+          "hourly_price": 0.558,
+          "monthly_price": 401.76,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "8GB",
+            "description": "General purpose instance, 2 vCPU, 8GB RAM"
+          }
+        },
+        "ecs.g6.xlarge": {
+          "provider": "alicloud",
+          "region": "cn-hangzhou",
+          "resource_type": "ecs.g6.xlarge",
+          "currency": "CNY",
+          "hourly_price": 1.116,
+          "monthly_price": 803.52,
+          "metadata": {
+            "vcpu": "4",
+            "memory": "16GB",
+            "description": "General purpose instance, 4 vCPU, 16GB RAM"
+          }
+        },
+        "ecs.c6.large": {
+          "provider": "alicloud",
+          "region": "cn-hangzhou",
+          "resource_type": "ecs.c6.large",
+          "currency": "CNY",
+          "hourly_price": 0.486,
+          "monthly_price": 349.92,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "4GB",
+            "description": "Compute optimized instance, 2 vCPU, 4GB RAM"
+          }
+        }
+      },
+      "cn-beijing": {
+        "ecs.t5-lc1m1.small": {
+          "provider": "alicloud",
+          "region": "cn-beijing",
+          "resource_type": "ecs.t5-lc1m1.small",
+          "currency": "CNY",
+          "hourly_price": 0.068,
+          "monthly_price": 48.96,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Burstable instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "ecs.g6.large": {
+          "provider": "alicloud",
+          "region": "cn-beijing",
+          "resource_type": "ecs.g6.large",
+          "currency": "CNY",
+          "hourly_price": 0.558,
+          "monthly_price": 401.76,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "8GB",
+            "description": "General purpose instance, 2 vCPU, 8GB RAM"
+          }
+        }
+      }
+    },
+    "tencentcloud": {
+      "ap-guangzhou": {
+        "S2.SMALL1": {
+          "provider": "tencentcloud",
+          "region": "ap-guangzhou",
+          "resource_type": "S2.SMALL1",
+          "currency": "CNY",
+          "hourly_price": 0.12,
+          "monthly_price": 86.4,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Standard instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "S2.SMALL2": {
+          "provider": "tencentcloud",
+          "region": "ap-guangzhou",
+          "resource_type": "S2.SMALL2",
+          "currency": "CNY",
+          "hourly_price": 0.24,
+          "monthly_price": 172.8,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "2GB",
+            "description": "Standard instance, 1 vCPU, 2GB RAM"
+          }
+        },
+        "S2.MEDIUM2": {
+          "provider": "tencentcloud",
+          "region": "ap-guangzhou",
+          "resource_type": "S2.MEDIUM2",
+          "currency": "CNY",
+          "hourly_price": 0.48,
+          "monthly_price": 345.6,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "2GB",
+            "description": "Standard instance, 2 vCPU, 2GB RAM"
+          }
+        },
+        "S2.MEDIUM4": {
+          "provider": "tencentcloud",
+          "region": "ap-guangzhou",
+          "resource_type": "S2.MEDIUM4",
+          "currency": "CNY",
+          "hourly_price": 0.72,
+          "monthly_price": 518.4,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "4GB",
+            "description": "Standard instance, 2 vCPU, 4GB RAM"
+          }
+        },
+        "S2.LARGE8": {
+          "provider": "tencentcloud",
+          "region": "ap-guangzhou",
+          "resource_type": "S2.LARGE8",
+          "currency": "CNY",
+          "hourly_price": 1.44,
+          "monthly_price": 1036.8,
+          "metadata": {
+            "vcpu": "4",
+            "memory": "8GB",
+            "description": "Standard instance, 4 vCPU, 8GB RAM"
+          }
+        }
+      },
+      "ap-beijing": {
+        "S2.SMALL1": {
+          "provider": "tencentcloud",
+          "region": "ap-beijing",
+          "resource_type": "S2.SMALL1",
+          "currency": "CNY",
+          "hourly_price": 0.12,
+          "monthly_price": 86.4,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Standard instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "S2.MEDIUM4": {
+          "provider": "tencentcloud",
+          "region": "ap-beijing",
+          "resource_type": "S2.MEDIUM4",
+          "currency": "CNY",
+          "hourly_price": 0.72,
+          "monthly_price": 518.4,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "4GB",
+            "description": "Standard instance, 2 vCPU, 4GB RAM"
+          }
+        }
+      }
+    },
+    "aws": {
+      "us-east-1": {
+        "t2.micro": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "t2.micro",
+          "currency": "USD",
+          "hourly_price": 0.0116,
+          "monthly_price": 8.352,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Burstable instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "t2.small": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "t2.small",
+          "currency": "USD",
+          "hourly_price": 0.023,
+          "monthly_price": 16.56,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "2GB",
+            "description": "Burstable instance, 1 vCPU, 2GB RAM"
+          }
+        },
+        "t2.medium": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "t2.medium",
+          "currency": "USD",
+          "hourly_price": 0.0464,
+          "monthly_price": 33.408,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "4GB",
+            "description": "Burstable instance, 2 vCPU, 4GB RAM"
+          }
+        },
+        "t3.large": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "t3.large",
+          "currency": "USD",
+          "hourly_price": 0.0832,
+          "monthly_price": 59.904,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "8GB",
+            "description": "Burstable instance, 2 vCPU, 8GB RAM"
+          }
+        },
+        "m5.large": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "m5.large",
+          "currency": "USD",
+          "hourly_price": 0.096,
+          "monthly_price": 69.12,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "8GB",
+            "description": "General purpose instance, 2 vCPU, 8GB RAM"
+          }
+        },
+        "m5.xlarge": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "m5.xlarge",
+          "currency": "USD",
+          "hourly_price": 0.192,
+          "monthly_price": 138.24,
+          "metadata": {
+            "vcpu": "4",
+            "memory": "16GB",
+            "description": "General purpose instance, 4 vCPU, 16GB RAM"
+          }
+        },
+        "c5.large": {
+          "provider": "aws",
+          "region": "us-east-1",
+          "resource_type": "c5.large",
+          "currency": "USD",
+          "hourly_price": 0.085,
+          "monthly_price": 61.2,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "4GB",
+            "description": "Compute optimized instance, 2 vCPU, 4GB RAM"
+          }
+        }
+      },
+      "us-west-2": {
+        "t2.micro": {
+          "provider": "aws",
+          "region": "us-west-2",
+          "resource_type": "t2.micro",
+          "currency": "USD",
+          "hourly_price": 0.0116,
+          "monthly_price": 8.352,
+          "metadata": {
+            "vcpu": "1",
+            "memory": "1GB",
+            "description": "Burstable instance, 1 vCPU, 1GB RAM"
+          }
+        },
+        "m5.large": {
+          "provider": "aws",
+          "region": "us-west-2",
+          "resource_type": "m5.large",
+          "currency": "USD",
+          "hourly_price": 0.096,
+          "monthly_price": 69.12,
+          "metadata": {
+            "vcpu": "2",
+            "memory": "8GB",
+            "description": "General purpose instance, 2 vCPU, 8GB RAM"
+          }
+        }
+      }
+    }
+  }
+}
