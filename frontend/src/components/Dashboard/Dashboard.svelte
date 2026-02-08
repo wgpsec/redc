@@ -624,7 +624,7 @@
             {t.loadingAllTemplateCosts}
           </span>
         {:else}
-          批量估算
+          {t.batchEstimate}
         {/if}
       </button>
     </div>

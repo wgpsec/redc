@@ -85,6 +85,7 @@ export const i18n = {
     calculating: '计算中...', warnings: '警告', costEstimateError: '成本估算错误',
     costEstimateErrorHint: '无法估算成本。您仍可以创建场景。',
     loadAllTemplateCosts: '加载所有模板成本', loadingAllTemplateCosts: '加载中...',
+    batchEstimate: '批量估算',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -172,6 +173,7 @@ export const i18n = {
     calculating: 'Calculating...', warnings: 'Warnings', costEstimateError: 'Cost Estimation Error',
     costEstimateErrorHint: 'Failed to estimate costs. You can still create the scene.',
     loadAllTemplateCosts: 'Load All Template Costs', loadingAllTemplateCosts: 'Loading...',
+    batchEstimate: 'Batch Estimate',
   }
 };
 
