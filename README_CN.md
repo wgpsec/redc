@@ -96,6 +96,8 @@ wails build -platform windows/amd64
 
 构建产物输出到 [build/bin](build/bin)。
 
+> 目前可在 releases 下载 gui 版本
+
 如需指定平台或架构，可参考 Wails 官方文档：
 https://wails.io/docs/guides/building/
 

@@ -96,6 +96,8 @@ wails build -platform windows/amd64
 
 Artifacts are output to [build/bin](build/bin).
 
+> The GUI version is currently available for download from [releases](https://github.com/wgpsec/redc/releases).
+
 For platform/arch options, see Wails docs:
 https://wails.io/docs/guides/building/
 
