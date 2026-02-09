@@ -587,3 +587,22 @@ provider_installation {
 ## Article Introduction
 
 - https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ
+
+## FAQ
+
+### macOS Installation Issues
+
+When using the compiled app package, you may encounter the following issues:
+- "xxx is damaged and can't be opened. You should move it to the Trash."
+- "Cannot open xxx because Apple cannot check it for malicious software."
+- "Cannot open xxx because it is from an unidentified developer."
+
+macOS has a GateKeeper protection mechanism. Files downloaded from the internet are automatically tagged with the `com.apple.quarantine` attribute, which can be understood as "quarantine isolation." The system applies restrictions to the file based on this attribute.
+
+As macOS versions evolve, the restrictions on `com.apple.quarantine` have become increasingly strict. In newer versions of macOS, you may see aggressive warnings like "image damaged" or "application damaged."
+
+You can resolve this issue by manually removing the quarantine attribute. Execute the following command:
+
+```
+sudo xattr -r -d com.apple.quarantine /Applications/redc-gui.app
+```

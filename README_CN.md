@@ -595,3 +595,21 @@ provider_installation {
 ## 文章介绍
 
 - https://mp.weixin.qq.com/s/JH-IlL_GFgZp3xXeOFzZeQ
+
+## FAQ
+
+### MacOS安装问题
+
+使用编译的 app 包可能会遇到
+- xxx已损坏，无法打开，您应该将它移到废纸篓
+- 打不开xxx，因为 Apple 无法检查其是否包含恶意软件
+- 打不开 xxx，因为它来自身份不明的开发者
+
+苹果系统有一个 GateKeeper 保护机制。从互联网上下载来的文件，会被自动打上 com.apple.quarantine 标志，我们可以理解为 "免疫隔离"。系统根据这个附加属性对这个文件作出限制。
+
+随着版本不同，MacOS 对 com.apple.quarantine 的限制越来越严格，在较新 的 MacOS 中，会直接提示 "映像损坏" 或 "应用损坏" 这类很激进的策略。
+
+我们可以通过手动移除该选项来解决此问题,执行下面的命令:
+```
+sudo xattr -r -d com.apple.quarantine /Applications/redc-gui.app
+```
