@@ -1,36 +1,37 @@
 <script>
+
   import { onMount } from 'svelte';
   import { ListTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
   // Translation object passed from parent component
-  export let t;
 
   // ============================================================================
   // State Management
   // ============================================================================
   
   // Local templates list and loading state
-  let localTemplates = [];
-  let localTemplatesLoading = false;
-  let localTemplatesSearch = '';
+let { t } = $props();
+  let localTemplates = $state([]);
+  let localTemplatesLoading = $state(false);
+  let localTemplatesSearch = $state('');
   
   // Template detail drawer state
-  let localTemplateDetail = null;
-  let localTemplateVars = [];
-  let localTemplateVarsLoading = false;
+  let localTemplateDetail = $state(null);
+  let localTemplateVars = $state([]);
+  let localTemplateVarsLoading = $state(false);
   
   // Delete confirmation modal state
-  let deleteTemplateConfirm = { show: false, name: '' };
-  let deletingTemplate = {};
+  let deleteTemplateConfirm = $state({ show: false, name: '' });
+  let deletingTemplate = $state({});
   
   // Batch operation state
-  let selectedTemplates = new Set();
-  let batchOperating = false;
-  let batchDeleteConfirm = { show: false, count: 0 };
+  let selectedTemplates = $state(new Set());
+  let batchOperating = $state(false);
+  let batchDeleteConfirm = $state({ show: false, count: 0 });
   
   // Clone template modal state
-  let cloneTemplateModal = { show: false, source: '', target: '' };
+  let cloneTemplateModal = $state({ show: false, source: '', target: '' });
   
   // Template editor modal state
   // - show: Whether the editor modal is visible
@@ -39,10 +40,10 @@
   // - active: Currently selected filename in the editor
   // - saving: Whether a save operation is in progress
   // - error: Error message to display (if any)
-  let templateEditor = { show: false, name: '', files: {}, active: '', saving: false, error: '' };
+  let templateEditor = $state({ show: false, name: '', files: {}, active: '', saving: false, error: '' });
   
   // Global error message
-  let error = '';
+  let error = $state('');
 
   // ============================================================================
   // Template List Functions
@@ -278,22 +279,26 @@
   // Reactive Statements
   // ============================================================================
 
-  $: allSelected = filteredLocalTemplates.length > 0 && selectedTemplates.size === filteredLocalTemplates.length;
-  $: someSelected = selectedTemplates.size > 0 && selectedTemplates.size < filteredLocalTemplates.length;
-  $: hasSelection = selectedTemplates.size > 0;
+  let allSelected = $derived(filteredLocalTemplates.length > 0 && selectedTemplates.size === filteredLocalTemplates.length);
+
+  let someSelected = $derived(selectedTemplates.size > 0 && selectedTemplates.size < filteredLocalTemplates.length);
+
+  let hasSelection = $derived(selectedTemplates.size > 0);
+
 
   /**
    * Filter and sort local templates based on search query
    * Searches in: name, description, and module fields
    */
-  $: filteredLocalTemplates = localTemplates
+  let filteredLocalTemplates = $derived(localTemplates
     .filter(t => 
       !localTemplatesSearch || 
       t.name.toLowerCase().includes(localTemplatesSearch.toLowerCase()) ||
       (t.description && t.description.toLowerCase().includes(localTemplatesSearch.toLowerCase())) ||
       (t.module && t.module.toLowerCase().includes(localTemplatesSearch.toLowerCase()))
     )
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name)));
+
 
   // ============================================================================
   // Lifecycle
@@ -313,6 +318,7 @@
   export function refresh() {
     loadLocalTemplates();
   }
+
 </script>
 
 <div class="space-y-5">
@@ -332,7 +338,7 @@
       </div>
       <button 
         class="h-10 px-5 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={loadLocalTemplates}
+        onclick={loadLocalTemplates}
         disabled={localTemplatesLoading}
       >
         {localTemplatesLoading ? t.loading : t.refresh}
@@ -356,7 +362,7 @@
             </span>
             <button
               class="text-[12px] text-blue-600 hover:text-blue-800 underline"
-              on:click={() => { selectedTemplates.clear(); selectedTemplates = selectedTemplates; }}
+              onclick={() => { selectedTemplates.clear(); selectedTemplates = selectedTemplates; }}
             >
               {t.clearSelection}
             </button>
@@ -364,7 +370,7 @@
           <div class="flex items-center gap-2">
             <button
               class="px-3 py-1.5 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
-              on:click={showBatchDeleteConfirm}
+              onclick={showBatchDeleteConfirm}
               disabled={batchOperating}
             >
               {t.batchDelete}
@@ -382,7 +388,7 @@
                 class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
                 checked={allSelected}
                 indeterminate={someSelected}
-                on:change={toggleSelectAll}
+                onchange={toggleSelectAll}
               />
             </th>
             <th class="text-left px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.name}</th>
@@ -396,12 +402,12 @@
         <tbody>
           {#each filteredLocalTemplates as tmpl}
             <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-              <td class="pl-4 pr-1 py-3.5" on:click|stopPropagation>
+              <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
                   checked={selectedTemplates.has(tmpl.name)}
-                  on:change={() => toggleSelectTemplate(tmpl.name)}
+                  onchange={() => toggleSelectTemplate(tmpl.name)}
                 />
               </td>
               <td class="px-4 py-3.5">
@@ -428,24 +434,24 @@
                   <div class="flex items-center gap-2">
                     <button 
                       class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors whitespace-nowrap"
-                      on:click={() => handleCloneTemplate(tmpl)}
+                      onclick={() => handleCloneTemplate(tmpl)}
                     >{t.cloneTemplate}</button>
                     <button 
                       class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors whitespace-nowrap"
-                      on:click={() => openTemplateEditor(tmpl)}
+                      onclick={() => openTemplateEditor(tmpl)}
                     >{t.editTemplate}</button>
                   </div>
                   <div class="flex items-center gap-2">
                     <button 
                       class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
-                      on:click={() => showTemplateDetail(tmpl)}
+                      onclick={() => showTemplateDetail(tmpl)}
                     >{t.viewParams}</button>
                     {#if deletingTemplate[tmpl.name]}
                       <span class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-amber-600 text-center">{t.deleting}</span>
                     {:else}
                       <button 
                         class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors whitespace-nowrap"
-                        on:click={() => showDeleteTemplateConfirm(tmpl.name)}
+                        onclick={() => showDeleteTemplateConfirm(tmpl.name)}
                       >{t.delete}</button>
                     {/if}
                   </div>
@@ -462,7 +468,7 @@
                   <p class="text-[13px]">{t.noLocalTemplates}</p>
                   <button 
                     class="mt-2 text-[12px] text-blue-600 hover:underline"
-                    on:click={() => { window.dispatchEvent(new CustomEvent('switchTab', { detail: 'registry' })); }}
+                    onclick={() => { window.dispatchEvent(new CustomEvent('switchTab', { detail: 'registry' })); }}
                   >{t.goToRegistry}</button>
                 </div>
               </td>
@@ -479,7 +485,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" on:click={() => error = ''}>
+      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -490,8 +496,8 @@
 
 <!-- Batch Delete Confirmation Modal -->
 {#if batchDeleteConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchDelete}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelBatchDelete}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -511,11 +517,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelBatchDelete}
+          onclick={cancelBatchDelete}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          on:click={confirmBatchDelete}
+          onclick={confirmBatchDelete}
         >{t.delete}</button>
       </div>
     </div>
@@ -524,8 +530,8 @@
 
 <!-- Delete Template Confirmation Modal -->
 {#if deleteTemplateConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelDeleteTemplate}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelDeleteTemplate}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -545,11 +551,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelDeleteTemplate}
+          onclick={cancelDeleteTemplate}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          on:click={confirmDeleteTemplate}
+          onclick={confirmDeleteTemplate}
         >{t.delete}</button>
       </div>
     </div>
@@ -558,8 +564,8 @@
 
 <!-- Clone Template Modal -->
 {#if cloneTemplateModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelCloneTemplate}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelCloneTemplate}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -582,11 +588,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelCloneTemplate}
+          onclick={cancelCloneTemplate}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-          on:click={confirmCloneTemplate}
+          onclick={confirmCloneTemplate}
         >{t.cloneTemplate}</button>
       </div>
     </div>
@@ -595,8 +601,8 @@
 
 <!-- Template Detail Drawer -->
 {#if localTemplateDetail}
-  <div class="fixed inset-0 bg-black/50 flex justify-end z-50" on:click={closeTemplateDetail}>
-    <div class="w-full max-w-2xl bg-white h-full overflow-auto shadow-xl" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex justify-end z-50" onclick={closeTemplateDetail}>
+    <div class="w-full max-w-2xl bg-white h-full overflow-auto shadow-xl" onclick={(e) => e.stopPropagation()}>
       <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div>
           <h2 class="text-[16px] font-semibold text-gray-900">{localTemplateDetail.name}</h2>
@@ -604,7 +610,7 @@
         </div>
         <button 
           class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-          on:click={closeTemplateDetail}
+          onclick={closeTemplateDetail}
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -708,8 +714,8 @@
 
 <!-- Template Editor Modal -->
 {#if templateEditor.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={closeTemplateEditor}>
-    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full h-[85vh] overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={closeTemplateEditor}>
+    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full h-[85vh] overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
           <h3 class="text-[15px] font-semibold text-gray-900">{t.editTemplate}</h3>
@@ -718,11 +724,11 @@
         <div class="flex items-center gap-2">
           <button
             class="px-3 py-1.5 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-            on:click={closeTemplateEditor}
+            onclick={closeTemplateEditor}
           >{t.close}</button>
           <button
             class="px-3 py-1.5 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
-            on:click={saveTemplateEditor}
+            onclick={saveTemplateEditor}
             disabled={templateEditor.saving}
           >{templateEditor.saving ? t.saving : t.saveTemplate}</button>
         </div>
@@ -733,7 +739,7 @@
           {#each Object.keys(templateEditor.files) as fname}
             <button
               class="w-full text-left px-4 py-2 text-[12px] transition-colors {templateEditor.active === fname ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
-              on:click={() => templateEditor = { ...templateEditor, active: fname }}
+              onclick={() => templateEditor = { ...templateEditor, active: fname }}
             >{fname}</button>
           {/each}
         </div>
@@ -755,7 +761,7 @@
               <CodeEditor
                 filename={templateEditor.active}
                 value={templateEditor.files[templateEditor.active]}
-                on:change={(e) => {
+                onchange={(e) => {
                   templateEditor.files[templateEditor.active] = e.detail;
                   templateEditor = templateEditor; // Trigger reactivity
                 }}

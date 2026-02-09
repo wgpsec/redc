@@ -1,16 +1,17 @@
 <script>
+
   import { GetResourceSummary, GetBalances } from '../../../wailsjs/go/main/App.js';
 
-  export let t;
+let { t } = $props();
   
-  let resourceSummary = [];
-  let resourcesLoading = false;
-  let resourcesError = '';
-  let balanceResults = [];
-  let balanceLoading = false;
-  let balanceError = '';
-  let balanceCooldown = 0;
-  let balanceCooldownTimer = null;
+  let resourceSummary = $state([]);
+  let resourcesLoading = $state(false);
+  let resourcesError = $state('');
+  let balanceResults = $state([]);
+  let balanceLoading = $state(false);
+  let balanceError = $state('');
+  let balanceCooldown = $state(0);
+  let balanceCooldownTimer = $state(null);
 
   export function loadResourceSummary() {
     resourcesLoading = true;
@@ -58,6 +59,7 @@
         balanceLoading = false;
       });
   }
+
 </script>
 
 <div class="max-w-3xl lg:max-w-5xl xl:max-w-full space-y-5">
@@ -69,7 +71,7 @@
       </div>
       <button
         class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={loadResourceSummary}
+        onclick={loadResourceSummary}
         disabled={resourcesLoading}
       >
         {resourcesLoading ? t.loading : t.refresh}
@@ -116,7 +118,7 @@
       </div>
       <button
         class="h-9 px-4 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        on:click={queryBalances}
+        onclick={queryBalances}
         disabled={balanceLoading || balanceCooldown > 0}
       >
         {balanceLoading ? t.loading : balanceCooldown > 0 ? `${t.balanceCooldown} ${balanceCooldown}s` : t.balanceQuery}

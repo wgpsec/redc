@@ -1,41 +1,39 @@
 <script>
+
   import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled } from '../../../wailsjs/go/main/App.js';
-  
-  export let t;
-  export let config = { redcPath: '', projectPath: '', logPath: '' };
-  export let terraformMirror = { enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] };
-  export let debugEnabled = false;
-  export let notificationEnabled = false;
-  
-  let proxyForm = { httpProxy: '', httpsProxy: '', noProxy: '' };
-  let proxySaving = false;
-  let terraformMirrorForm = { enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false, wgpsec: false } };
-  let terraformMirrorSaving = false;
-  let terraformMirrorError = '';
-  let networkChecks = [];
-  let networkCheckLoading = false;
-  let networkCheckError = '';
-  let debugSaving = false;
-  let notificationSaving = false;
+
+let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false) } = $props();
+  let proxyForm = $state({ httpProxy: '', httpsProxy: '', noProxy: '' });
+  let proxySaving = $state(false);
+  let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false, wgpsec: false } });
+  let terraformMirrorSaving = $state(false);
+  let terraformMirrorError = $state('');
+  let networkChecks = $state([]);
+  let networkCheckLoading = $state(false);
+  let networkCheckError = $state('');
+  let debugSaving = $state(false);
+  let notificationSaving = $state(false);
   
   // Initialize forms when props change
-  $: {
+  $effect(() => {
     proxyForm = {
       httpProxy: config.httpProxy || '',
       httpsProxy: config.httpsProxy || '',
       noProxy: config.noProxy || ''
     };
-  }
+  });
 
-  $: if (terraformMirror) {
-    terraformMirrorForm.enabled = !!terraformMirror.enabled;
-    terraformMirrorForm.configPath = terraformMirror.configPath || '';
-    terraformMirrorForm.setEnv = !!terraformMirror.fromEnv;
-    terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
-    terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
-    terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
-    terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
-  }
+  $effect(() => {
+    if (terraformMirror) {
+      terraformMirrorForm.enabled = !!terraformMirror.enabled;
+      terraformMirrorForm.configPath = terraformMirror.configPath || '';
+      terraformMirrorForm.setEnv = !!terraformMirror.fromEnv;
+      terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
+      terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
+      terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
+      terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
+    }
+  });
 
   async function handleSaveProxy() {
     proxySaving = true;
@@ -159,7 +157,6 @@
   }
 </script>
 
-
 <div class="w-full max-w-xl mx-auto space-y-4">
   <!-- 基本信息 -->
   <div class="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
@@ -211,7 +208,7 @@
       <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
         <button 
           class="h-9 sm:h-10 px-4 sm:px-5 bg-gray-900 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          on:click={handleSaveProxy}
+          onclick={handleSaveProxy}
           disabled={proxySaving}
         >
           {proxySaving ? t.saving : t.saveProxy}
@@ -232,7 +229,7 @@
         class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
         class:bg-emerald-500={terraformMirrorForm.enabled}
         class:bg-gray-300={!terraformMirrorForm.enabled}
-        on:click={() => terraformMirrorForm = { ...terraformMirrorForm, enabled: !terraformMirrorForm.enabled }}
+        onclick={() => terraformMirrorForm = { ...terraformMirrorForm, enabled: !terraformMirrorForm.enabled }}
         aria-label={t.mirrorEnabled}
       >
         <span
@@ -286,32 +283,32 @@
       <div class="pt-1 flex flex-wrap gap-2 items-center">
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 bg-gray-900 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-          on:click={handleSaveTerraformMirror}
+          onclick={handleSaveTerraformMirror}
           disabled={terraformMirrorSaving}
         >
           {terraformMirrorSaving ? t.saving : t.mirrorSave}
         </button>
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 bg-amber-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-amber-600 transition-colors"
-          on:click={enableAliyunMirrorQuick}
+          onclick={enableAliyunMirrorQuick}
         >
           {t.mirrorAliyunPreset}
         </button>
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 bg-sky-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-sky-600 transition-colors"
-          on:click={enableTencentMirrorQuick}
+          onclick={enableTencentMirrorQuick}
         >
           {t.mirrorTencentPreset}
         </button>
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 bg-violet-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-violet-600 transition-colors"
-          on:click={enableVolcMirrorQuick}
+          onclick={enableVolcMirrorQuick}
         >
           {t.mirrorVolcPreset}
         </button>
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 bg-rose-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-rose-600 transition-colors"
-          on:click={enableWgpsecMirrorQuick}
+          onclick={enableWgpsecMirrorQuick}
         >
           {t.mirrorWgpsecPreset}
         </button>
@@ -334,7 +331,7 @@
       <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.networkCheck}</div>
       <button
         class="h-8 sm:h-9 px-3 sm:px-4 bg-gray-900 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={runTerraformNetworkCheck}
+        onclick={runTerraformNetworkCheck}
         disabled={networkCheckLoading}
       >
         {networkCheckLoading ? t.networkChecking : t.networkCheckBtn}
@@ -380,7 +377,7 @@
         class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         class:bg-emerald-500={debugEnabled}
         class:bg-gray-300={!debugEnabled}
-        on:click={handleToggleDebug}
+        onclick={handleToggleDebug}
         disabled={debugSaving}
         aria-label={debugEnabled ? t.disable : t.enable}
       >
@@ -404,7 +401,7 @@
         class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         class:bg-emerald-500={notificationEnabled}
         class:bg-gray-300={!notificationEnabled}
-        on:click={handleToggleNotification}
+        onclick={handleToggleNotification}
         disabled={notificationSaving}
         aria-label={notificationEnabled ? t.disable : t.enable}
       >

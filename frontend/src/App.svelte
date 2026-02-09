@@ -1,4 +1,5 @@
 <script>
+
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime.js';
@@ -15,34 +16,42 @@
   import Settings from './components/Settings/Settings.svelte';
   import Sidebar from './components/Sidebar/Sidebar.svelte';
 
-  let cases = [];
-  let templates = [];
-  let logs = [];
-  let config = { redcPath: '', projectPath: '', logPath: '', httpProxy: '', httpsProxy: '', noProxy: '', debugEnabled: false };
-  let activeTab = 'dashboard';
-  let isLoading = false;
-  let error = '';
-  let terraformMirror = { enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] };
-  let notificationEnabled = false;
-  let debugEnabled = false;
+  let cases = $state([]);
+  let templates = $state([]);
+  let logs = $state([]);
+  let config = $state({ redcPath: '', projectPath: '', logPath: '', httpProxy: '', httpsProxy: '', noProxy: '', debugEnabled: false });
+  let activeTab = $state('dashboard');
+  let isLoading = $state(false);
+  let error = $state('');
+  let terraformMirror = $state({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] });
+  let notificationEnabled = $state(false);
+  let debugEnabled = $state(false);
 
   // MCP state
-  let mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
-  let mcpForm = { mode: 'sse', address: 'localhost:8080' };
-  let mcpLoading = false;
+  let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
+  let mcpForm = $state({ mode: 'sse', address: 'localhost:8080' });
+  let mcpLoading = $state(false);
 
   // i18n state
-  let lang = localStorage.getItem('lang') || 'zh';
+  let lang = $state(localStorage.getItem('lang') || 'zh');
   const i18n = { ...i18nData };
-  $: t = i18n[lang];
+  let t = $derived(i18n[lang]);
+
   
   // Component references
-  let dashboardComponent;
-  let cloudResourcesComponent;
+  let dashboardComponent = $state();
+  let cloudResourcesComponent = $state();
 
   function toggleLang() {
     lang = lang === 'zh' ? 'en' : 'zh';
     localStorage.setItem('lang', lang);
+  }
+
+  /**
+   * @param {CustomEvent} event
+   */
+  function handleSwitchTab(event) {
+    activeTab = event.detail;
   }
 
   onMount(async () => {
@@ -57,9 +66,7 @@
     });
     
     // Listen for tab switch events from child components
-    window.addEventListener('switchTab', (event) => {
-      activeTab = event.detail;
-    });
+    window.addEventListener('switchTab', handleSwitchTab);
     
     await refreshData();
   });
@@ -69,9 +76,7 @@
     EventsOff('refresh');
     
     // Remove tab switch event listener
-    window.removeEventListener('switchTab', (event) => {
-      activeTab = event.detail;
-    });
+    window.removeEventListener('switchTab', handleSwitchTab);
   });
 
   async function refreshData() {
@@ -140,6 +145,7 @@
     }
   }
 
+
 </script>
 
 <div class="h-screen flex bg-[#fafbfc]">
@@ -163,7 +169,7 @@
       </h1>
       <button 
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-        on:click={() => { refreshData(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'resources') loadResourceSummary(); }}
+        onclick={() => { refreshData(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'resources') loadResourceSummary(); }}
       >
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -179,7 +185,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
           <span class="text-[13px] text-red-700 flex-1">{error}</span>
-          <button class="text-red-400 hover:text-red-600" on:click={() => error = ''}>
+          <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -226,6 +232,7 @@
 </div>
 
 <style>
+
   :global(body) {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -238,4 +245,5 @@
     background-size: 1.5em 1.5em;
     padding-right: 2.5rem;
   }
+
 </style>

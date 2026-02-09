@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { editorTheme } from './theme.js';
   import { EditorView, basicSetup } from 'codemirror';
   import { EditorState } from '@codemirror/state';
@@ -9,19 +9,20 @@
   import { terraform } from 'codemirror-lang-terraform';
 
   // Props
-  export let filename = '';
-  export let value = '';
-  export let readonly = false;
-
-  // Event dispatcher
-  const dispatch = createEventDispatcher();
+  let { 
+    filename = '', 
+    value = $bindable(''), 
+    readonly = false,
+    onchange
+  } = $props();
 
   // Internal state
-  let editorContainer;
-  let editorView = null;
-  let useFallbackEditor = false;
-  let isLoading = false;
-  let loadError = null;
+  let editorContainer = $state();
+  let editorView = $state(null);
+  let useFallbackEditor = $state(false);
+  let isLoading = $state(false);
+  let loadError = $state(null);
+  let fallbackValue = $state(value);
 
   /**
    * Check if a file is a Terraform file based on its extension
@@ -166,19 +167,32 @@
    * @param {string} newContent - The updated content from the editor
    */
   function handleContentChange(newContent) {
-    dispatch('change', newContent);
+    value = newContent;
+    onchange?.(newContent);
   }
 
   /**
    * React to prop changes (filename or value)
    */
-  $: if (editorView && filename) {
+  $effect(() => {
+	if (editorView && filename) {
     updateEditorForFilename(filename);
   }
+});
 
-  $: if (editorView && value !== undefined) {
+  $effect(() => {
+	if (editorView && value !== undefined) {
     updateEditorContent(value);
   }
+});
+
+  // Sync fallback value with prop value
+  $effect(() => {
+    if (useFallbackEditor) {
+      fallbackValue = value;
+    }
+  });
+
 </script>
 
 <div class="code-editor-wrapper">
@@ -202,12 +216,12 @@
         </div>
       {/if}
       <textarea
-        bind:value
-        on:input={() => handleContentChange(value)}
+        bind:value={fallbackValue}
+        oninput={() => handleContentChange(fallbackValue)}
         {readonly}
         class="w-full h-full border border-gray-300 rounded-md p-2 bg-gray-50 font-mono text-xs"
         placeholder="Enter your code here..."
-      />
+      ></textarea>
     </div>
   {:else}
     <!-- Editor container with Tailwind CSS classes for consistent styling -->
@@ -215,11 +229,12 @@
       bind:this={editorContainer}
       class="code-editor-container w-full h-full border border-gray-300 rounded-md overflow-hidden bg-gray-50"
       class:readonly
-    />
+    ></div>
   {/if}
 </div>
 
 <style>
+
   .code-editor-wrapper {
     width: 100%;
     height: 100%;
@@ -285,4 +300,5 @@
   .code-editor-container :global(.cm-scroller) {
     overflow: auto;
   }
+
 </style>

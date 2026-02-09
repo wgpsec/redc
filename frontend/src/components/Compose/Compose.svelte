@@ -1,15 +1,16 @@
 <script>
+
   import { ComposePreview, ComposeUp, ComposeDown } from '../../../wailsjs/go/main/App.js';
 
-  export let t; // i18n translations
+  let { t } = $props(); // i18n translations
 
   // State
-  let composeFilePath = 'redc-compose.yaml';
-  let composeProfiles = '';
-  let composeSummary = null;
-  let composeLoading = false;
-  let composeActionLoading = false;
-  let composeError = '';
+  let composeFilePath = $state('redc-compose.yaml');
+  let composeProfiles = $state('');
+  let composeSummary = $state(null);
+  let composeLoading = $state(false);
+  let composeActionLoading = $state(false);
+  let composeError = $state('');
 
   // Functions
   function parseComposeProfiles(value) {
@@ -22,13 +23,7 @@
 
   // Auto-preview when file path or profiles change
   let timer = null;
-  $: if (composeFilePath || composeProfiles) {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      previewCompose();
-    }, 500);
-  }
-
+  
   async function previewCompose() {
     composeLoading = true;
     composeError = '';
@@ -41,6 +36,15 @@
       composeLoading = false;
     }
   }
+
+  $effect(() => {
+    if (composeFilePath || composeProfiles) {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        previewCompose();
+      }, 500);
+    }
+  });
 
   export async function handleComposeUp() {
     composeActionLoading = true;
@@ -65,6 +69,7 @@
       composeActionLoading = false;
     }
   }
+
 </script>
 
 <div class="max-w-3xl lg:max-w-5xl xl:max-w-full space-y-5">
@@ -92,21 +97,21 @@
     <div class="mt-4 flex flex-wrap gap-2">
       <button
         class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={previewCompose}
+        onclick={previewCompose}
         disabled={composeLoading}
       >
         {composeLoading ? t.loading : t.previewCompose}
       </button>
       <button
         class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-        on:click={handleComposeUp}
+        onclick={handleComposeUp}
         disabled={composeActionLoading}
       >
         {composeActionLoading ? t.processing : t.composeUp}
       </button>
       <button
         class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-        on:click={handleComposeDown}
+        onclick={handleComposeDown}
         disabled={composeActionLoading}
       >
         {composeActionLoading ? t.processing : t.composeDown}

@@ -1,26 +1,22 @@
 <script>
-  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
-  
-  export let t;
-  export let activeTab;
-  export let lang;
-  export let onTabChange;
-  export let onToggleLang;
-  export let onLoadMCPStatus;
-  export let onLoadResourceSummary;
 
-  const navItems = [
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
+
+let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadResourceSummary } = $props();
+  
+  // Use a getter function to ensure we always reference the current prop values
+  const navItems = $derived([
     { id: 'dashboard', icon: 'dashboard', labelKey: 'dashboard' },
     { id: 'console', icon: 'console', labelKey: 'console' },
-    { id: 'resources', icon: 'resources', labelKey: 'resources', onClick: onLoadResourceSummary },
+    { id: 'resources', icon: 'resources', labelKey: 'resources', onClick: () => onLoadResourceSummary() },
     { id: 'compose', icon: 'compose', labelKey: 'compose' },
     { id: 'credentials', icon: 'credentials', labelKey: 'credentials' },
     { id: 'registry', icon: 'registry', labelKey: 'registry' },
     { id: 'localTemplates', icon: 'localTemplates', labelKey: 'localTemplates' },
     { id: 'specialModules', icon: 'specialModules', labelKey: 'specialModules' },
-    { id: 'ai', icon: 'ai', labelKey: 'ai', onClick: onLoadMCPStatus },
+    { id: 'ai', icon: 'ai', labelKey: 'ai', onClick: () => onLoadMCPStatus() },
     { id: 'settings', icon: 'settings', labelKey: 'settings' }
-  ];
+  ]);
 
   const icons = {
     dashboard: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
@@ -45,6 +41,7 @@
   function openGitHub() {
     BrowserOpenURL('https://github.com/wgpsec/redc');
   }
+
 </script>
 
 <aside class="w-44 bg-white border-r border-gray-100 flex flex-col">
@@ -65,7 +62,7 @@
         <button 
           class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
             {activeTab === item.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
-          on:click={() => handleNavClick(item)}
+          onclick={() => handleNavClick(item)}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d={icons[item.icon]} />
@@ -83,12 +80,12 @@
       <div class="flex items-center gap-1">
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium"
-          on:click={onToggleLang}
+          onclick={onToggleLang}
           title={lang === 'zh' ? 'Switch to English' : '切换到中文'}
         >{lang === 'zh' ? 'EN' : '中'}</button>
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-          on:click={openGitHub}
+          onclick={openGitHub}
           title="GitHub"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

@@ -1,60 +1,63 @@
 <script>
+
   import { onMount, onDestroy } from 'svelte';
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate } from '../../../wailsjs/go/main/App.js';
-  
-  export let t;
-  export let onTabChange = () => {};
-  
-  let cases = [];
-  let templates = [];
-  let selectedTemplate = '';
-  let newCaseName = '';
-  let expandedCase = null;
-  let caseOutputs = {};
-  let deleteConfirm = { show: false, caseId: null, caseName: '' };
-  let stopConfirm = { show: false, caseId: null, caseName: '' };
-  let templateVariables = [];
-  let variableValues = {};
-  let error = '';
+
+let { t, onTabChange = () => {} } = $props();
+  let cases = $state([]);
+  let templates = $state([]);
+  let selectedTemplate = $state('');
+  let newCaseName = $state('');
+  let expandedCase = $state(null);
+  let caseOutputs = $state({});
+  let deleteConfirm = $state({ show: false, caseId: null, caseName: '' });
+  let stopConfirm = $state({ show: false, caseId: null, caseName: '' });
+  let templateVariables = $state([]);
+  let variableValues = $state({});
+  let error = $state('');
   
   // Cost estimation state
-  let showCostEstimate = false;
-  let costEstimate = null;
-  let costEstimateLoading = false;
-  let costEstimateError = '';
+  let showCostEstimate = $state(false);
+  let costEstimate = $state(null);
+  let costEstimateLoading = $state(false);
+  let costEstimateError = $state('');
   let costEstimateDebounceTimer = null;
   
   // Template list cost estimation state
-  let templateCosts = {}; // Map of template name to cost estimate
-  let templateCostsLoading = new Set(); // Set of template names currently loading
-  let allTemplateCostsLoading = false; // Loading state for all templates
+  let templateCosts = $state({}); // Map of template name to cost estimate
+  let templateCostsLoading = $state(new Set()); // Set of template names currently loading
+  let allTemplateCostsLoading = $state(false); // Loading state for all templates
   
   // Batch operation state
-  let selectedCases = new Set();
-  let batchOperating = false;
-  let batchDeleteConfirm = { show: false, count: 0 };
-  let batchStopConfirm = { show: false, count: 0 };
+  let selectedCases = $state(new Set());
+  let batchOperating = $state(false);
+  let batchDeleteConfirm = $state({ show: false, count: 0 });
+  let batchStopConfirm = $state({ show: false, count: 0 });
   
   // Create status state
-  let createStatus = 'idle';
-  let createStatusMessage = '';
-  let createStatusDetail = '';
+  let createStatus = $state('idle');
+  let createStatusMessage = $state('');
+  let createStatusDetail = $state('');
   let createStatusTimer = null;
   
   // Terraform init hint
-  let terraformInitHint = { show: false, message: '', detail: '' };
+  let terraformInitHint = $state({ show: false, message: '', detail: '' });
   let terraformInitHintDismissed = false;
   let terraformInitHintLastDetail = '';
   
-  let copiedKey = null;
+  let copiedKey = $state(null);
   
-  $: createBusy = createStatus === 'creating' || createStatus === 'initializing';
+  let createBusy = $derived(createStatus === 'creating' || createStatus === 'initializing');
+
   
-  $: allSelected = cases.length > 0 && selectedCases.size === cases.length;
-  $: someSelected = selectedCases.size > 0 && selectedCases.size < cases.length;
-  $: hasSelection = selectedCases.size > 0;
+  let allSelected = $derived(cases.length > 0 && selectedCases.size === cases.length);
+
+  let someSelected = $derived(selectedCases.size > 0 && selectedCases.size < cases.length);
+
+  let hasSelection = $derived(selectedCases.size > 0);
+
   
-  $: stateConfig = {
+  let stateConfig = $derived({
     'running': { label: t.running, color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
     'stopped': { label: t.stopped, color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },
     'error': { label: t.error, color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' },
@@ -63,7 +66,8 @@
     'starting': { label: t.starting, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
     'stopping': { label: t.stopping, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
     'removing': { label: t.removing, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' }
-  };
+  });
+
   
   onMount(async () => {
     await refresh();
@@ -438,9 +442,11 @@
 
   // Watch for variable changes and trigger debounced cost estimation
   // This reactive statement runs whenever variableValues changes
-  $: if (selectedTemplate && Object.keys(variableValues).length > 0) {
+  $effect(() => {
+	if (selectedTemplate && Object.keys(variableValues).length > 0) {
     debouncedCostEstimate();
   }
+});
 
   // ============================================================================
   // Batch Operation Functions
@@ -536,6 +542,7 @@
     }
   }
 
+
 </script>
 
 <div class="space-y-5">
@@ -545,7 +552,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" on:click={() => error = ''}>
+      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -561,7 +568,7 @@
         <select 
           class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
           bind:value={selectedTemplate}
-          on:change={() => loadTemplateVariables(selectedTemplate)}
+          onchange={() => loadTemplateVariables(selectedTemplate)}
         >
           <option value="">{t.selectTemplate}</option>
           {#each templates || [] as tmpl}
@@ -585,14 +592,14 @@
       </div>
       <button 
         class="h-10 px-5 bg-gray-500 text-white text-[13px] font-medium rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={handleCreate}
+        onclick={handleCreate}
         disabled={createBusy}
       >
         {t.create}
       </button>
       <button 
         class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={handleCreateAndRun}
+        onclick={handleCreateAndRun}
         disabled={createBusy}
       >
         {t.createAndRun}
@@ -600,7 +607,7 @@
       {#if selectedTemplate}
         <button 
           class="h-10 px-5 bg-blue-500 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          on:click={loadCostEstimate}
+          onclick={loadCostEstimate}
           disabled={costEstimateLoading}
         >
           {#if costEstimateLoading}
@@ -615,7 +622,7 @@
       {/if}
       <button 
         class="h-10 px-5 bg-orange-500 text-white text-[13px] font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={loadAllTemplateCosts}
+        onclick={loadAllTemplateCosts}
         disabled={allTemplateCostsLoading || templates.length === 0}
       >
         {#if allTemplateCostsLoading}
@@ -640,7 +647,7 @@
           <div class="text-[12px] text-amber-700 mt-0.5">{costEstimateError}</div>
           <div class="text-[11px] text-amber-600 mt-1">{t.costEstimateErrorHint}</div>
         </div>
-        <button class="text-amber-400 hover:text-amber-600" on:click={() => costEstimateError = ''}>
+        <button class="text-amber-400 hover:text-amber-600" onclick={() => costEstimateError = ''}>
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -671,7 +678,7 @@
       <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700 relative">
         <button
           class="absolute right-2 top-2 text-amber-400 hover:text-amber-600"
-          on:click={dismissTerraformInitHint}
+          onclick={dismissTerraformInitHint}
           aria-label="close"
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -699,7 +706,7 @@
             <div class="mt-2 flex flex-wrap gap-2">
               <button
                 class="h-8 px-3 bg-white text-amber-700 text-[12px] font-medium rounded-md border border-amber-200 hover:bg-amber-100 transition-colors"
-                on:click={() => onTabChange('settings')}
+                onclick={() => onTabChange('settings')}
               >{t.mirrorGoSettings}</button>
             </div>
           </div>
@@ -750,7 +757,7 @@
           </span>
           <button
             class="text-[12px] text-blue-600 hover:text-blue-800 underline"
-            on:click={() => { selectedCases.clear(); selectedCases = selectedCases; }}
+            onclick={() => { selectedCases.clear(); selectedCases = selectedCases; }}
           >
             {t.clearSelection}
           </button>
@@ -758,21 +765,21 @@
         <div class="flex items-center gap-2">
           <button
             class="px-3 py-1.5 text-[12px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors disabled:opacity-50"
-            on:click={handleBatchStart}
+            onclick={handleBatchStart}
             disabled={batchOperating}
           >
             {t.batchStart}
           </button>
           <button
             class="px-3 py-1.5 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
-            on:click={showBatchStopConfirm}
+            onclick={showBatchStopConfirm}
             disabled={batchOperating}
           >
             {t.batchStop}
           </button>
           <button
             class="px-3 py-1.5 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
-            on:click={showBatchDeleteConfirm}
+            onclick={showBatchDeleteConfirm}
             disabled={batchOperating}
           >
             {t.batchDelete}
@@ -790,7 +797,7 @@
               class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
               checked={allSelected}
               indeterminate={someSelected}
-              on:change={toggleSelectAll}
+              onchange={toggleSelectAll}
             />
           </th>
           <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.id}</th>
@@ -805,14 +812,14 @@
         {#each cases || [] as c, i}
           <tr 
             class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
-            on:click={() => toggleCaseExpand(c.id, c.state)}
+            onclick={() => toggleCaseExpand(c.id, c.state)}
           >
-            <td class="pl-4 pr-1 py-3.5" on:click|stopPropagation>
+            <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
                 checked={selectedCases.has(c.id)}
-                on:change={() => toggleSelectCase(c.id)}
+                onchange={() => toggleSelectCase(c.id)}
               />
             </td>
             <td class="px-5 py-3.5">
@@ -838,7 +845,7 @@
             <td class="px-5 py-3.5">
               <span class="text-[12px] text-gray-500">{c.createTime}</span>
             </td>
-            <td class="px-5 py-3.5 text-right" on:click|stopPropagation>
+            <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
               <div class="inline-flex items-center gap-1">
                 {#if c.state === 'starting' || c.state === 'stopping' || c.state === 'removing'}
                   <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600">
@@ -847,18 +854,18 @@
                 {:else if c.state !== 'running'}
                   <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors"
-                    on:click={() => handleStart(c.id)}
+                    onclick={() => handleStart(c.id)}
                   >{t.start}</button>
                 {:else}
                   <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
-                    on:click={() => showStopConfirm(c.id, c.name)}
+                    onclick={() => showStopConfirm(c.id, c.name)}
                   >{t.stop}</button>
                 {/if}
                 {#if c.state !== 'starting' && c.state !== 'stopping' && c.state !== 'removing'}
                   <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
-                    on:click={() => showDeleteConfirm(c.id, c.name)}
+                    onclick={() => showDeleteConfirm(c.id, c.name)}
                   >{t.delete}</button>
                 {/if}
               </div>
@@ -878,7 +885,7 @@
                               <div class="text-[11px] text-gray-500 uppercase tracking-wide">{key}</div>
                               <button 
                                 class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded flex items-center gap-1"
-                                on:click|stopPropagation={() => copyToClipboard(value, key)}
+                                onclick={(e) => { e.stopPropagation(); (() => copyToClipboard(value, key))(e); }}
                                 title={t.copy}
                               >
                                 {#if copiedKey === key}
@@ -926,8 +933,8 @@
 
 <!-- Delete Confirmation Modal -->
 {#if deleteConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelDelete}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelDelete}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -947,11 +954,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelDelete}
+          onclick={cancelDelete}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          on:click={confirmDelete}
+          onclick={confirmDelete}
         >{t.delete}</button>
       </div>
     </div>
@@ -960,8 +967,8 @@
 
 <!-- Batch Delete Confirmation Modal -->
 {#if batchDeleteConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchDelete}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelBatchDelete}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -981,11 +988,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelBatchDelete}
+          onclick={cancelBatchDelete}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          on:click={confirmBatchDelete}
+          onclick={confirmBatchDelete}
         >{t.delete}</button>
       </div>
     </div>
@@ -994,8 +1001,8 @@
 
 <!-- Batch Stop Confirmation Modal -->
 {#if batchStopConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelBatchStop}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelBatchStop}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -1015,11 +1022,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelBatchStop}
+          onclick={cancelBatchStop}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-          on:click={confirmBatchStop}
+          onclick={confirmBatchStop}
         >{t.stop}</button>
       </div>
     </div>
@@ -1028,8 +1035,8 @@
 
 <!-- Stop Confirmation Modal -->
 {#if stopConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelStop}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelStop}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -1049,11 +1056,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelStop}
+          onclick={cancelStop}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-          on:click={confirmStop}
+          onclick={confirmStop}
         >{t.stop}</button>
       </div>
     </div>
@@ -1062,8 +1069,8 @@
 
 <!-- Cost Estimate Modal -->
 {#if showCostEstimate && costEstimate}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={() => showCostEstimate = false}>
-    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => showCostEstimate = false}>
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="px-6 py-5 border-b border-gray-100">
         <h3 class="text-[17px] font-semibold text-gray-900">{t.costEstimate}</h3>
@@ -1130,7 +1137,7 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={() => showCostEstimate = false}
+          onclick={() => showCostEstimate = false}
         >{t.close}</button>
       </div>
     </div>

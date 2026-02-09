@@ -1,25 +1,25 @@
 <script>
+
   import { onMount } from 'svelte';
   import { GetProvidersConfig, SaveProvidersConfig, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile } from '../../../wailsjs/go/main/App.js';
 
-  export let t;
-
   // Credentials state
-  let providersConfig = { configPath: '', providers: [] };
-  let credentialsLoading = false;
-  let credentialsSaving = {};
-  let editingProvider = null;
+let { t } = $props();
+  let providersConfig = $state({ configPath: '', providers: [] });
+  let credentialsLoading = $state(false);
+  let credentialsSaving = $state({});
+  let editingProvider = $state(null);
   /** @type {Record<string, string>} */
-  let editFields = {};
-  let customConfigPath = '';
-  let profiles = [];
-  let activeProfileId = '';
-  let profileForm = { name: '', configPath: '', templateDir: '' };
-  let profileLoading = false;
-  let profileSaving = false;
-  let profileError = '';
-  let error = '';
-  let saveConfirm = { show: false, providerName: '' };
+  let editFields = $state({});
+  let customConfigPath = $state('');
+  let profiles = $state([]);
+  let activeProfileId = $state('');
+  let profileForm = $state({ name: '', configPath: '', templateDir: '' });
+  let profileLoading = $state(false);
+  let profileSaving = $state(false);
+  let profileError = $state('');
+  let error = $state('');
+  let saveConfirm = $state({ show: false, providerName: '' });
 
   async function loadProvidersConfig() {
     credentialsLoading = true;
@@ -226,6 +226,7 @@
     loadProfiles();
     loadProvidersConfig();
   }
+
 </script>
 
 <div class="max-w-3xl lg:max-w-5xl xl:max-w-full space-y-5">
@@ -247,7 +248,7 @@
         <select
           class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
           bind:value={activeProfileId}
-          on:change={() => handleProfileChange(activeProfileId)}
+          onchange={() => handleProfileChange(activeProfileId)}
         >
           <option value="" disabled>{t.selectProfile}</option>
           {#each profiles as p}
@@ -270,7 +271,7 @@
           placeholder={t.defaultPath}
           class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
           bind:value={profileForm.configPath}
-          on:input={() => { customConfigPath = profileForm.configPath; }}
+          oninput={() => { customConfigPath = profileForm.configPath; }}
         />
       </div>
       <div class="md:col-span-2">
@@ -291,28 +292,28 @@
     <div class="mt-4 flex flex-wrap gap-2">
       <button
         class="h-9 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={handleCreateProfile}
+        onclick={handleCreateProfile}
         disabled={profileSaving}
       >
         {t.createProfile}
       </button>
       <button
         class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
-        on:click={handleSaveProfile}
+        onclick={handleSaveProfile}
         disabled={profileSaving || !activeProfileId}
       >
         {t.saveProfile}
       </button>
       <button
         class="h-9 px-4 bg-red-50 text-red-600 text-[12px] font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-        on:click={handleDeleteProfile}
+        onclick={handleDeleteProfile}
         disabled={profileSaving || !activeProfileId}
       >
         {t.deleteProfile}
       </button>
       <button
         class="h-9 px-4 bg-gray-100 text-gray-700 text-[12px] font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-        on:click={loadProvidersConfig}
+        onclick={loadProvidersConfig}
         disabled={credentialsLoading}
       >
         {credentialsLoading ? t.loading : t.loadConfig}
@@ -360,11 +361,11 @@
               <div class="flex gap-2">
                 <button 
                   class="px-3 py-1 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                  on:click={cancelEditProvider}
+                  onclick={cancelEditProvider}
                 >{t.cancel}</button>
                 <button 
                   class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                  on:click={() => showSaveConfirm(provider.name)}
+                  onclick={() => showSaveConfirm(provider.name)}
                   disabled={credentialsSaving[provider.name]}
                 >
                   {credentialsSaving[provider.name] ? t.saving : t.save}
@@ -373,7 +374,7 @@
             {:else}
               <button 
                 class="px-3 py-1 text-[12px] font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                on:click={() => startEditProvider(provider)}
+                onclick={() => startEditProvider(provider)}
               >{t.edit}</button>
             {/if}
           </div>
@@ -428,7 +429,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" on:click={() => error = ''}>
+      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -439,8 +440,8 @@
 
 <!-- Save Credentials Confirmation Modal -->
 {#if saveConfirm.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelSave}>
-    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" on:click|stopPropagation>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelSave}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -460,11 +461,11 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
           class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          on:click={cancelSave}
+          onclick={cancelSave}
         >{t.cancel}</button>
         <button 
           class="px-4 py-2 text-[13px] font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-          on:click={confirmSave}
+          onclick={confirmSave}
         >{t.save}</button>
       </div>
     </div>

@@ -1,6 +1,5 @@
 <script>
-  export let logs = [];
-  export let t = {};
+  let { logs = $bindable([]), t = {} } = $props();
   
   function stripAnsi(value) {
     if (!value) return '';
@@ -24,7 +23,7 @@
     </div>
     <button 
       class="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
-      on:click={clearLogs}
+      onclick={clearLogs}
     >{t.clear}</button>
   </div>
   <div class="flex-1 p-4 overflow-auto font-mono text-[12px] leading-5">

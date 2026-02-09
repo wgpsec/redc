@@ -11,14 +11,14 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/svelte": "^5.3.1",
     "autoprefixer": "^10.4.24",
     "fast-check": "^4.5.3",
     "jsdom": "^27.0.1",
     "postcss": "^8.5.6",
-    "svelte": "^4.2.19",
+    "svelte": "^5.0.0",
     "tailwindcss": "^4.1.18",
     "vite": "^5.0.0",
     "vitest": "^3.2.4"

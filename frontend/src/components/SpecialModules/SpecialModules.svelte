@@ -1,7 +1,6 @@
 <script>
-  export let t;
-  
-  let specialModuleTab = 'vulhub';
+  let { t } = $props();
+  let specialModuleTab = $state('vulhub');
 </script>
 
 <div class="w-full max-w-4xl mx-auto">
@@ -9,21 +8,21 @@
     <button
       class="flex-1 min-w-[100px] px-3 sm:px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all
         {specialModuleTab === 'vulhub' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}"
-      on:click={() => specialModuleTab = 'vulhub'}
+      onclick={() => specialModuleTab = 'vulhub'}
     >
       {t.vulhubSupport}
     </button>
     <button
       class="flex-1 min-w-[100px] px-3 sm:px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all
         {specialModuleTab === 'c2' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}"
-      on:click={() => specialModuleTab = 'c2'}
+      onclick={() => specialModuleTab = 'c2'}
     >
       {t.c2Scenes}
     </button>
     <button
       class="flex-1 min-w-[100px] px-3 sm:px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all
         {specialModuleTab === 'ai' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}"
-      on:click={() => specialModuleTab = 'ai'}
+      onclick={() => specialModuleTab = 'ai'}
     >
       {t.aiScenes}
     </button>

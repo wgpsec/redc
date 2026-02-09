@@ -2,13 +2,12 @@
   import { onMount } from 'svelte';
   import { GetMCPStatus, StartMCPServer, StopMCPServer } from '../../../wailsjs/go/main/App.js';
 
-  export let t;
-
   // MCP state
-  let mcpStatus = { running: false, mode: '', address: '', protocolVersion: '' };
-  let mcpForm = { mode: 'sse', address: 'localhost:8080' };
-  let mcpLoading = false;
-  let error = '';
+  let { t } = $props();
+  let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
+  let mcpForm = $state({ mode: 'sse', address: 'localhost:8080' });
+  let mcpLoading = $state(false);
+  let error = $state('');
 
   onMount(async () => {
     await loadMCPStatus();
@@ -46,6 +45,7 @@
       mcpLoading = false;
     }
   }
+
 </script>
 
 <div class="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5">
@@ -56,7 +56,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[12px] sm:text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" on:click={() => error = ''}>
+      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -117,7 +117,7 @@
       </div>
       <button 
         class="w-full h-9 sm:h-10 bg-red-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-        on:click={handleStopMCP}
+        onclick={handleStopMCP}
         disabled={mcpLoading}
       >
         {mcpLoading ? t.stoppingServer : t.stopServer}
@@ -143,7 +143,7 @@
       </div>
       <button 
         class="w-full h-9 sm:h-10 bg-gray-900 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-        on:click={handleStartMCP}
+        onclick={handleStartMCP}
         disabled={mcpLoading}
       >
         {mcpLoading ? t.startingServer : t.startServer}
