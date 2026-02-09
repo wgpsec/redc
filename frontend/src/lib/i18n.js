@@ -28,7 +28,7 @@ export const i18n = {
     pullSuccess: '拉取成功', pullFailed: '拉取失败',
     mcpServer: 'MCP 服务器', mcpDesc: 'Model Context Protocol 服务',
     resources: '云资源', compose: '编排管理',
-    resourceSummary: '资源汇总', resourceType: '资源类型', resourceCount: '数量',
+    resourceType: '资源类型', resourceCount: '数量',
     balancePlaceholder: '暂无余额数据，请点击"查询余额"',
     balanceQuery: '查询余额', balanceCooldown: '冷却中', balanceProvider: '云厂商', balanceAmount: '余额', balanceCurrency: '币种', balanceUpdatedAt: '更新时间',
     composeFile: 'Compose 文件', composeProfiles: 'Profiles（逗号分隔）', previewCompose: '预览编排',
@@ -96,6 +96,14 @@ export const i18n = {
     costEstimateErrorHint: '无法估算成本。您仍可以创建场景。',
     loadAllTemplateCosts: '加载所有模板成本', loadingAllTemplateCosts: '加载中...',
     batchEstimate: '批量估算',
+    // SSH Operations
+    sshOperations: 'SSH 运维', execCommand: '执行命令', command: '命令', execute: '执行',
+    execSuccess: '执行成功', execFailed: '执行失败',
+    uploadFile: '上传文件', downloadFile: '下载文件',
+    localFile: '本地文件', remotePath: '远程路径', remoteFile: '远程文件', localDirectory: '本地目录',
+    selectFile: '选择文件', selectDirectory: '选择目录', selectFilePlaceholder: '点击选择文件...', selectDirectoryPlaceholder: '点击选择目录...',
+    browse: '浏览', upload: '上传', downloading: '下载中...', uploading: '上传中...',
+    uploadSuccess: '上传成功', uploadFailed: '上传失败', downloadSuccess: '下载成功', downloadFailed: '下载失败',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -125,7 +133,7 @@ export const i18n = {
     pullSuccess: 'Pull success', pullFailed: 'Pull failed',
     mcpServer: 'MCP Server', mcpDesc: 'Model Context Protocol Service',
     resources: 'Cloud Resources', compose: 'Compose',
-    resourceSummary: 'Resource Summary', resourceType: 'Resource Type', resourceCount: 'Count',
+    resourceType: 'Resource Type', resourceCount: 'Count',
     balancePlaceholder: 'No balance data yet. Click "Query Balance"',
     balanceQuery: 'Query Balance', balanceCooldown: 'Cooling down', balanceProvider: 'Provider', balanceAmount: 'Balance', balanceCurrency: 'Currency', balanceUpdatedAt: 'Updated At',
     composeFile: 'Compose File', composeProfiles: 'Profiles (comma-separated)', previewCompose: 'Preview Compose',
@@ -191,6 +199,14 @@ export const i18n = {
     costEstimateErrorHint: 'Failed to estimate costs. You can still create the scene.',
     loadAllTemplateCosts: 'Load All Template Costs', loadingAllTemplateCosts: 'Loading...',
     batchEstimate: 'Batch Estimate',
+    // SSH Operations
+    sshOperations: 'SSH Operations', execCommand: 'Execute Command', command: 'Command', execute: 'Execute',
+    execSuccess: 'Success', execFailed: 'Failed',
+    uploadFile: 'Upload File', downloadFile: 'Download File',
+    localFile: 'Local File', remotePath: 'Remote Path', remoteFile: 'Remote File', localDirectory: 'Local Directory',
+    selectFile: 'Select File', selectDirectory: 'Select Directory', selectFilePlaceholder: 'Click to select file...', selectDirectoryPlaceholder: 'Click to select directory...',
+    browse: 'Browse', upload: 'Upload', downloading: 'Downloading...', uploading: 'Uploading...',
+    uploadSuccess: 'Upload success', uploadFailed: 'Upload failed', downloadSuccess: 'Download success', downloadFailed: 'Download failed',
   }
 };
 

@@ -21,10 +21,13 @@ import (
 	"red-cloud/mod/gologger"
 	"red-cloud/mod/mcp"
 	"red-cloud/mod/compose"
+	"red-cloud/utils/sshutil"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/projectdiscovery/gologger/levels"
 	tfjson "github.com/hashicorp/terraform-json"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 // App struct
@@ -2552,4 +2555,242 @@ func extractModuleResources(module *tfjson.StateModule, resources *cost.Template
 	for _, child := range module.ChildModules {
 		extractModuleResources(child, resources)
 	}
+}
+
+// ============================================================================
+// SSH Operations API
+// ============================================================================
+
+// ExecCommandResult 执行命令的结果
+type ExecCommandResult struct {
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	ExitCode int    `json:"exitCode"`
+	Success  bool   `json:"success"`
+	Error    string `json:"error,omitempty"`
+}
+
+// ExecCommand 在指定场景上执行命令并返回结果
+func (a *App) ExecCommand(caseID string, command string) ExecCommandResult {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	result := ExecCommandResult{}
+
+	if project == nil {
+		result.Error = "项目未加载"
+		result.Success = false
+		return result
+	}
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		result.Error = fmt.Sprintf("找不到场景: %v", err)
+		result.Success = false
+		return result
+	}
+
+	sshConfig, err := c.GetSSHConfig()
+	if err != nil {
+		result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+		result.Success = false
+		return result
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Success = false
+		return result
+	}
+	defer client.Close()
+
+	var stdoutBuf, stderrBuf strings.Builder
+	session, err := client.NewSession()
+	if err != nil {
+		result.Error = fmt.Sprintf("创建 SSH 会话失败: %v", err)
+		result.Success = false
+		return result
+	}
+	defer session.Close()
+
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
+
+	err = session.Run(command)
+	result.Stdout = stdoutBuf.String()
+	result.Stderr = stderrBuf.String()
+
+	if err != nil {
+		if exitErr, ok := err.(*ssh.ExitError); ok {
+			result.ExitCode = exitErr.ExitStatus()
+		} else {
+			result.ExitCode = -1
+			result.Error = err.Error()
+		}
+		result.Success = false
+	} else {
+		result.ExitCode = 0
+		result.Success = true
+	}
+
+	return result
+}
+
+// FileTransferResult 文件传输结果
+type FileTransferResult struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
+// UploadFile 上传文件到远程服务器
+func (a *App) UploadFile(caseID string, localPath string, remotePath string) FileTransferResult {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	result := FileTransferResult{}
+
+	if project == nil {
+		result.Error = "项目未加载"
+		return result
+	}
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		result.Error = fmt.Sprintf("找不到场景: %v", err)
+		return result
+	}
+
+	sshConfig, err := c.GetSSHConfig()
+	if err != nil {
+		result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+		return result
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		return result
+	}
+	defer client.Close()
+
+	if err := client.Upload(localPath, remotePath); err != nil {
+		result.Error = fmt.Sprintf("上传失败: %v", err)
+		return result
+	}
+
+	result.Success = true
+	return result
+}
+
+// DownloadFile 从远程服务器下载文件
+func (a *App) DownloadFile(caseID string, remotePath string, localPath string) FileTransferResult {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	result := FileTransferResult{}
+
+	if project == nil {
+		result.Error = "项目未加载"
+		return result
+	}
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		result.Error = fmt.Sprintf("找不到场景: %v", err)
+		return result
+	}
+
+	sshConfig, err := c.GetSSHConfig()
+	if err != nil {
+		result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+		return result
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		return result
+	}
+	defer client.Close()
+
+	if err := client.Download(remotePath, localPath); err != nil {
+		result.Error = fmt.Sprintf("下载失败: %v", err)
+		return result
+	}
+
+	result.Success = true
+	return result
+}
+
+// SelectFile 打开文件选择对话框
+func (a *App) SelectFile(title string) (string, error) {
+	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+	})
+	return file, err
+}
+
+// SelectDirectory 打开目录选择对话框
+func (a *App) SelectDirectory(title string) (string, error) {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+	})
+	return dir, err
+}
+
+// SelectSaveFile 打开保存文件对话框
+func (a *App) SelectSaveFile(title string, defaultFilename string) (string, error) {
+	file, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           title,
+		DefaultFilename: defaultFilename,
+	})
+	return file, err
+}
+
+// ListRemoteFiles 列出远程目录下的文件
+func (a *App) ListRemoteFiles(caseID string, remotePath string) ([]string, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		return nil, fmt.Errorf("项目未加载")
+	}
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		return nil, fmt.Errorf("找不到场景: %v", err)
+	}
+
+	sshConfig, err := c.GetSSHConfig()
+	if err != nil {
+		return nil, fmt.Errorf("获取 SSH 配置失败: %v", err)
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		return nil, fmt.Errorf("SSH 连接失败: %v", err)
+	}
+	defer client.Close()
+
+	sftpClient, err := sftp.NewClient(client.Client)
+	if err != nil {
+		return nil, fmt.Errorf("SFTP 连接失败: %v", err)
+	}
+	defer sftpClient.Close()
+
+	files := []string{}
+	walker := sftpClient.Walk(remotePath)
+	for walker.Step() {
+		if err := walker.Err(); err != nil {
+			continue
+		}
+		files = append(files, walker.Path())
+	}
+
+	return files, nil
 }

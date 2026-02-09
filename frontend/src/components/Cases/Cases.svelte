@@ -2,6 +2,7 @@
 
   import { onMount, onDestroy } from 'svelte';
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate } from '../../../wailsjs/go/main/App.js';
+  import SSHModal from './SSHModal.svelte';
 
 let { t, onTabChange = () => {} } = $props();
   let cases = $state([]);
@@ -15,6 +16,9 @@ let { t, onTabChange = () => {} } = $props();
   let templateVariables = $state([]);
   let variableValues = $state({});
   let error = $state('');
+  
+  // SSH Modal state
+  let sshModal = $state({ show: false, caseId: null, caseName: '' });
   
   // Cost estimation state
   let showCostEstimate = $state(false);
@@ -858,6 +862,15 @@ let { t, onTabChange = () => {} } = $props();
                   >{t.start}</button>
                 {:else}
                   <button 
+                    class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                    onclick={() => sshModal = { show: true, caseId: c.id, caseName: c.name }}
+                    title={t.sshOperations || 'SSH 运维'}
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                  </button>
+                  <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
                     onclick={() => showStopConfirm(c.id, c.name)}
                   >{t.stop}</button>
@@ -1142,4 +1155,14 @@ let { t, onTabChange = () => {} } = $props();
       </div>
     </div>
   </div>
+{/if}
+
+<!-- SSH Operations Modal -->
+{#if sshModal.show}
+  <SSHModal 
+    {t}
+    caseId={sshModal.caseId}
+    caseName={sshModal.caseName}
+    onClose={() => sshModal = { show: false, caseId: null, caseName: '' }}
+  />
 {/if}
