@@ -2,13 +2,24 @@
 
   import { onMount } from 'svelte';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
+  import { Environment } from '../../../wailsjs/runtime/runtime.js';
 
 let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadResourceSummary } = $props();
   
-  // Detect fullscreen mode
+  // Detect platform and fullscreen mode
+  let isMac = $state(false);
   let isFullscreen = $state(false);
   
-  onMount(() => {
+  onMount(async () => {
+    // Detect platform
+    try {
+      const env = await Environment();
+      isMac = env.platform === 'darwin';
+    } catch (e) {
+      // Fallback: detect from user agent
+      isMac = navigator.platform.toLowerCase().includes('mac');
+    }
+    
     const checkFullscreen = () => {
       isFullscreen = window.innerHeight === window.screen.height && window.innerWidth === window.screen.width;
     };
@@ -20,6 +31,9 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
       window.removeEventListener('resize', checkFullscreen);
     };
   });
+  
+  // Compute left padding: only add padding on macOS when not fullscreen
+  const leftPadding = $derived(isMac && !isFullscreen ? 'pl-24' : '');
   
   // Use a getter function to ensure we always reference the current prop values
   const navItems = $derived([
@@ -63,7 +77,7 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
 
 <aside class="w-44 bg-white border-r border-gray-100 flex flex-col">
   <!-- Logo -->
-  <div class="h-14 flex items-center px-4 border-b border-gray-100 {isFullscreen ? '' : 'pl-24'}" style="--wails-draggable:drag">
+  <div class="h-14 flex items-center px-4 border-b border-gray-100 {leftPadding}" style="--wails-draggable:drag">
     <div class="flex items-center gap-0.5">
       <span class="text-[14px] font-semibold text-gray-900">Red</span>
       <div class="w-6 h-6 rounded-md bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center">

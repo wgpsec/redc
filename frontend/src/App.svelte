@@ -2,7 +2,7 @@
 
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
-  import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime.js';
+  import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
   import { ListCases, ListTemplates, GetConfig, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
@@ -26,6 +26,8 @@
   let terraformMirror = $state({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] });
   let notificationEnabled = $state(false);
   let debugEnabled = $state(false);
+  let isMaximised = $state(false);
+  let isWindows = $state(false);
 
   // MCP state
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
@@ -54,7 +56,31 @@
     activeTab = event.detail;
   }
 
+  // Window control functions
+  async function minimiseWindow() {
+    WindowMinimise();
+  }
+
+  async function toggleMaximise() {
+    const maximised = await WindowIsMaximised();
+    if (maximised) {
+      WindowUnmaximise();
+      isMaximised = false;
+    } else {
+      WindowMaximise();
+      isMaximised = true;
+    }
+  }
+
+  function closeWindow() {
+    Quit();
+  }
+
   onMount(async () => {
+    // 检测平台
+    const env = await Environment();
+    isWindows = env.platform === 'windows';
+    
     EventsOn('log', (message) => {
       logs = [...logs, { time: new Date().toLocaleTimeString(), message }];
       if (dashboardComponent && dashboardComponent.updateCreateStatusFromLog) {
@@ -67,6 +93,11 @@
     
     // Listen for tab switch events from child components
     window.addEventListener('switchTab', handleSwitchTab);
+    
+    // Check initial maximised state (only for Windows)
+    if (isWindows) {
+      isMaximised = await WindowIsMaximised();
+    }
     
     await refreshData();
   });
@@ -167,15 +198,61 @@
       <h1 class="text-[15px] font-medium text-gray-900">
         {#if activeTab === 'dashboard'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else}{t.settings}{/if}
       </h1>
-      <button 
-        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-        onclick={() => { refreshData(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'resources') loadResourceSummary(); }}
-        style="--wails-draggable:no-drag"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-        </svg>
-      </button>
+      <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
+        <button 
+          class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
+          onclick={() => { refreshData(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'resources') loadResourceSummary(); }}
+          title="刷新"
+          aria-label="刷新"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+        </button>
+        
+        <!-- Window Controls (Windows only) -->
+        {#if isWindows}
+        <div class="flex items-center ml-2 -mr-2">
+          <button 
+            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
+            onclick={minimiseWindow}
+            title="最小化"
+            aria-label="最小化"
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 12 12">
+              <path stroke="currentColor" stroke-width="1" d="M0 6h12"/>
+            </svg>
+          </button>
+          <button 
+            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
+            onclick={toggleMaximise}
+            title={isMaximised ? "还原" : "最大化"}
+            aria-label={isMaximised ? "还原" : "最大化"}
+          >
+            {#if isMaximised}
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <rect x="2" y="2" width="8" height="8" stroke="currentColor" stroke-width="1" fill="none"/>
+                <path stroke="currentColor" stroke-width="1" d="M2 2V0h8v8h-2"/>
+              </svg>
+            {:else}
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1" fill="none"/>
+              </svg>
+            {/if}
+          </button>
+          <button 
+            class="w-12 h-14 flex items-center justify-center hover:bg-red-500 hover:text-white text-gray-600 transition-colors"
+            onclick={closeWindow}
+            title="关闭"
+            aria-label="关闭"
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 12 12">
+              <path stroke="currentColor" stroke-width="1" d="M1 1l10 10M11 1L1 11"/>
+            </svg>
+          </button>
+        </div>
+        {/if}
+      </div>
     </header>
 
     <!-- Content -->
@@ -186,7 +263,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
           <span class="text-[13px] text-red-700 flex-1">{error}</span>
-          <button class="text-red-400 hover:text-red-600" onclick={() => error = ''}>
+          <button class="text-red-400 hover:text-red-600" onclick={() => error = ''} aria-label="关闭错误提示" title="关闭">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
