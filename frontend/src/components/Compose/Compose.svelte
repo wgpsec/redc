@@ -1,18 +1,30 @@
 <script>
 
-  import { ComposePreview, ComposeUp, ComposeDown } from '../../../wailsjs/go/main/App.js';
+  import { ComposePreview, ComposeUp, ComposeDown, SelectComposeFile } from '../../../wailsjs/go/main/App.js';
 
   let { t } = $props(); // i18n translations
 
   // State
-  let composeFilePath = $state('redc-compose.yaml');
+  let composeFilePath = $state('');
   let composeProfiles = $state('');
   let composeSummary = $state(null);
   let composeLoading = $state(false);
   let composeActionLoading = $state(false);
   let composeError = $state('');
+  let hasManuallyPreviewed = $state(false);
 
   // Functions
+  async function handleBrowseFile() {
+    try {
+      const selectedPath = await SelectComposeFile();
+      if (selectedPath) {
+        composeFilePath = selectedPath;
+      }
+    } catch (e) {
+      console.error('Failed to select file:', e);
+    }
+  }
+
   function parseComposeProfiles(value) {
     if (!value) return [];
     return value
@@ -21,10 +33,17 @@
       .filter(Boolean);
   }
 
-  // Auto-preview when file path or profiles change
+  // Auto-preview when file path or profiles change (only after first manual preview)
   let timer = null;
   
   async function previewCompose() {
+    if (!composeFilePath) {
+      composeError = '';
+      composeSummary = null;
+      return;
+    }
+    
+    hasManuallyPreviewed = true;
     composeLoading = true;
     composeError = '';
     try {
@@ -38,7 +57,7 @@
   }
 
   $effect(() => {
-    if (composeFilePath || composeProfiles) {
+    if (hasManuallyPreviewed && composeFilePath) {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         previewCompose();
@@ -47,6 +66,11 @@
   });
 
   export async function handleComposeUp() {
+    if (!composeFilePath) {
+      composeError = t.composeFile + ' ' + t.paramRequired;
+      return;
+    }
+    
     composeActionLoading = true;
     composeError = '';
     try {
@@ -59,6 +83,11 @@
   }
 
   export async function handleComposeDown() {
+    if (!composeFilePath) {
+      composeError = t.composeFile + ' ' + t.paramRequired;
+      return;
+    }
+    
     composeActionLoading = true;
     composeError = '';
     try {
@@ -77,12 +106,20 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.composeFile}</label>
-        <input
-          type="text"
-          placeholder="redc-compose.yaml"
-          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
-          bind:value={composeFilePath}
-        />
+        <div class="flex gap-2">
+          <input
+            type="text"
+            placeholder="redc-compose.yaml"
+            class="flex-1 h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+            bind:value={composeFilePath}
+          />
+          <button
+            class="h-10 px-4 bg-gray-100 text-gray-700 text-[12px] font-medium rounded-lg hover:bg-gray-200 transition-colors"
+            onclick={handleBrowseFile}
+          >
+            {t.browseFile}
+          </button>
+        </div>
       </div>
       <div>
         <label class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.composeProfiles}</label>

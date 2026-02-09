@@ -2044,3 +2044,24 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 
 	return estimate, nil
 }
+
+// SelectComposeFile opens a file dialog to select a compose file
+func (a *App) SelectComposeFile() (string, error) {
+	filePath, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择 Compose 文件",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "YAML 文件 (*.yaml, *.yml)",
+				Pattern:     "*.yaml;*.yml",
+			},
+			{
+				DisplayName: "所有文件 (*.*)",
+				Pattern:     "*.*",
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return filePath, nil
+}

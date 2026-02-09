@@ -155,6 +155,35 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       notificationSaving = false;
     }
   }
+  
+  async function handleToggleTerraformMirror() {
+    const nextValue = !terraformMirrorForm.enabled;
+    terraformMirrorSaving = true;
+    terraformMirrorError = '';
+    try {
+      const providers = Object.entries(terraformMirrorForm.providers)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key);
+      await SaveTerraformMirrorConfig(
+        nextValue,
+        providers,
+        terraformMirrorForm.configPath,
+        terraformMirrorForm.setEnv
+      );
+      terraformMirror = await GetTerraformMirrorConfig();
+      terraformMirrorForm.enabled = !!terraformMirror.enabled;
+      terraformMirrorForm.configPath = terraformMirror.configPath || '';
+      terraformMirrorForm.setEnv = !!terraformMirror.fromEnv;
+      terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
+      terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
+      terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
+      terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
+    } catch (e) {
+      terraformMirrorError = e.message || String(e);
+    } finally {
+      terraformMirrorSaving = false;
+    }
+  }
 </script>
 
 <div class="w-full max-w-xl mx-auto space-y-4">
@@ -226,10 +255,11 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.mirrorConfigHint}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         class:bg-emerald-500={terraformMirrorForm.enabled}
         class:bg-gray-300={!terraformMirrorForm.enabled}
-        onclick={() => terraformMirrorForm = { ...terraformMirrorForm, enabled: !terraformMirrorForm.enabled }}
+        onclick={handleToggleTerraformMirror}
+        disabled={terraformMirrorSaving}
         aria-label={t.mirrorEnabled}
       >
         <span
