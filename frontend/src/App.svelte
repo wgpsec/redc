@@ -222,7 +222,7 @@
 
 </script>
 
-<div class="h-screen flex bg-[#fafbfc]">
+<div class="h-screen flex bg-[#fafbfc] overflow-hidden">
   <!-- Sidebar -->
   <Sidebar 
     {t} 

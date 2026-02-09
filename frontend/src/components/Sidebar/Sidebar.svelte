@@ -156,7 +156,7 @@ let {
 
 </script>
 
-<aside class="w-44 bg-white border-r border-gray-100 flex flex-col">
+<aside class="w-44 bg-white border-r border-gray-100 flex flex-col overflow-hidden overscroll-none">
   <!-- Logo -->
   <div class="h-14 flex items-center px-4 border-b border-gray-100 {leftPadding}" style="--wails-draggable:drag">
     <div class="flex items-center gap-0.5">
