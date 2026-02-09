@@ -1,8 +1,25 @@
 <script>
 
+  import { onMount } from 'svelte';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
 
 let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadResourceSummary } = $props();
+  
+  // Detect fullscreen mode
+  let isFullscreen = $state(false);
+  
+  onMount(() => {
+    const checkFullscreen = () => {
+      isFullscreen = window.innerHeight === window.screen.height && window.innerWidth === window.screen.width;
+    };
+    
+    checkFullscreen();
+    window.addEventListener('resize', checkFullscreen);
+    
+    return () => {
+      window.removeEventListener('resize', checkFullscreen);
+    };
+  });
   
   // Use a getter function to ensure we always reference the current prop values
   const navItems = $derived([
@@ -46,12 +63,12 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
 
 <aside class="w-44 bg-white border-r border-gray-100 flex flex-col">
   <!-- Logo -->
-  <div class="h-14 flex items-center px-4 border-b border-gray-100">
-    <div class="flex items-center gap-2">
+  <div class="h-14 flex items-center px-4 border-b border-gray-100 {isFullscreen ? '' : 'pl-24'}" style="--wails-draggable:drag">
+    <div class="flex items-center gap-0.5">
+      <span class="text-[14px] font-semibold text-gray-900">Red</span>
       <div class="w-6 h-6 rounded-md bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center">
-        <span class="text-white text-[10px] font-bold">R</span>
+        <span class="text-white text-[13px] font-bold">C</span>
       </div>
-      <span class="text-[14px] font-semibold text-gray-900">RedC</span>
     </div>
   </div>
   
