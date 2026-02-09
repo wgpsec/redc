@@ -233,3 +233,35 @@ func LoadProjectMeta(name string) (*RedcProject, error) {
 		User:        p.User,
 	}, nil
 }
+
+// ListAllProjects 获取数据库中所有项目列表
+func ListAllProjects() ([]*RedcProject, error) {
+	var projects []*RedcProject
+
+	err := dbExec(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BucketProjectMeta))
+		if b == nil {
+			return nil // 桶不存在，返回空列表
+		}
+
+		// 遍历桶内所有项目
+		return b.ForEach(func(k, v []byte) error {
+			var p pb.Project
+			if err := proto.Unmarshal(v, &p); err == nil {
+				// 过滤掉特殊的结果目录（不应该作为项目显示）
+				if p.ProjectName == "redc-taskresult" || p.ProjectName == "task-result" {
+					return nil
+				}
+				projects = append(projects, &RedcProject{
+					ProjectName: p.ProjectName,
+					ProjectPath: p.ProjectPath,
+					CreateTime:  p.CreateTime,
+					User:        p.User,
+				})
+			}
+			return nil
+		})
+	})
+
+	return projects, err
+}

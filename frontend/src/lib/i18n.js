@@ -1,6 +1,7 @@
 export const i18n = {
   zh: {
     dashboard: '仪表盘', console: '控制台', settings: '设置', credentials: '凭据管理', registry: '模板仓库', ai: 'AI 集成', localTemplates: '本地模板', specialModules: '专项模块',
+    project: '项目', selectProject: '选择项目...', newProject: '新建项目', projectName: '项目名称', createProject: '创建项目', switchProject: '切换项目', currentProject: '当前项目',
     sceneManage: '场景管理', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板',
     vulhubSupport: 'Vulhub 支持', c2Scenes: 'C2 场景', aiScenes: 'AI 场景',
     template: '模板', selectTemplate: '选择模板...', name: '名称', optional: '可选',

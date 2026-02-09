@@ -3,15 +3,35 @@
   import { onMount } from 'svelte';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { Environment } from '../../../wailsjs/runtime/runtime.js';
+  import { ListProjects, GetCurrentProject, SwitchProject, CreateProject } from '../../../wailsjs/go/main/App.js';
 
-let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadResourceSummary } = $props();
+let { 
+    t, 
+    activeTab, 
+    lang, 
+    onTabChange, 
+    onToggleLang, 
+    onLoadMCPStatus, 
+    onLoadResourceSummary
+  } = $props();
+  
+  // Project switching state - managed internally
+  let projects = $state([]);
+  let currentProject = $state('');
+  let projectLoading = $state(false);
   
   // Detect platform and fullscreen mode
   let isMac = $state(false);
   let isFullscreen = $state(false);
+
+  // Project switching state (projects and currentProject are already declared in props)
+  let showProjectDropdown = $state(false);
+  let showNewProjectModal = $state(false);
+  let newProjectName = $state('');
+  let isLoadingProjects = $state(false);
   
   onMount(() => {
-    // Detect platform
+    // Detect platform and load projects
     (async () => {
       try {
         const env = await Environment();
@@ -20,6 +40,9 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
         // Fallback: detect from user agent
         isMac = navigator.platform.toLowerCase().includes('mac');
       }
+
+      // Load projects
+      await loadProjects();
     })();
     
     const checkFullscreen = () => {
@@ -36,6 +59,60 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
   
   // Compute left padding: only add padding on macOS when not fullscreen
   const leftPadding = $derived(isMac && !isFullscreen ? 'pl-24' : '');
+
+  // Load projects list
+  async function loadProjects() {
+    isLoadingProjects = true;
+    try {
+      const [projectsList, current] = await Promise.all([
+        ListProjects(),
+        GetCurrentProject()
+      ]);
+      projects = projectsList || [];
+      currentProject = current || '';
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+    } finally {
+      isLoadingProjects = false;
+    }
+  }
+
+  // Switch to a different project
+  async function handleSwitchProject(projectName) {
+    if (projectName === currentProject) {
+      showProjectDropdown = false;
+      return;
+    }
+    try {
+      await SwitchProject(projectName);
+      currentProject = projectName;
+      showProjectDropdown = false;
+      // Trigger a page refresh to reload data
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to switch project:', err);
+      alert('切换项目失败: ' + err.message);
+    }
+  }
+
+  // Create a new project
+  async function handleCreateProject() {
+    if (!newProjectName.trim()) {
+      alert('请输入项目名称');
+      return;
+    }
+    try {
+      await CreateProject(newProjectName.trim());
+      showNewProjectModal = false;
+      newProjectName = '';
+      await loadProjects();
+      // Switch to the new project
+      await handleSwitchProject(newProjectName.trim());
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      alert('创建项目失败: ' + err.message);
+    }
+  }
   
   // Use a getter function to ensure we always reference the current prop values
   const navItems = $derived([
@@ -105,6 +182,93 @@ let { t, activeTab, lang, onTabChange, onToggleLang, onLoadMCPStatus, onLoadReso
       {/each}
     </div>
   </nav>
+
+  <!-- Project Switcher -->
+  <div class="p-2 border-t border-gray-100">
+    <div class="relative">
+      <button
+        class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
+          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+        onclick={() => showProjectDropdown = !showProjectDropdown}
+        title={lang === 'zh' ? '切换项目' : 'Switch Project'}
+      >
+        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+        </svg>
+        <span class="flex-1 text-left truncate">{currentProject || (lang === 'zh' ? '选择项目...' : 'Select Project...')}</span>
+        <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      {#if showProjectDropdown}
+        <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+          {#if isLoadingProjects}
+            <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '加载中...' : 'Loading...'}</div>
+          {:else if projects.length === 0}
+            <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '暂无项目' : 'No projects'}</div>
+          {:else}
+            {#each projects as project}
+              <button
+                class="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-gray-50 {project.name === currentProject ? 'bg-gray-50 text-rose-600 font-medium' : 'text-gray-700'}"
+                onclick={() => handleSwitchProject(project.name)}
+              >
+                {#if project.name === currentProject}
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                {:else}
+                  <span class="w-3"></span>
+                {/if}
+                <span class="truncate">{project.name}</span>
+              </button>
+            {/each}
+          {/if}
+          <div class="border-t border-gray-100 my-1"></div>
+          <button
+            class="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-rose-600 hover:bg-rose-50 transition-colors"
+            onclick={() => { showProjectDropdown = false; showNewProjectModal = true; }}
+          >
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            {lang === 'zh' ? '新建项目' : 'New Project'}
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- New Project Modal -->
+  {#if showNewProjectModal}
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-4 w-64 shadow-xl">
+        <h3 class="text-[13px] font-medium text-gray-900 mb-3">{lang === 'zh' ? '新建项目' : 'New Project'}</h3>
+        <input
+          type="text"
+          bind:value={newProjectName}
+          placeholder={lang === 'zh' ? '输入项目名称...' : 'Enter project name...'}
+          class="w-full px-3 py-2 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+          onkeydown={(e) => e.key === 'Enter' && handleCreateProject()}
+        />
+        <div class="flex justify-end gap-2 mt-3">
+          <button
+            class="px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            onclick={() => { showNewProjectModal = false; newProjectName = ''; }}
+          >
+            {lang === 'zh' ? '取消' : 'Cancel'}
+          </button>
+          <button
+            class="px-3 py-1.5 text-[11px] bg-rose-600 text-white hover:bg-rose-700 rounded transition-colors disabled:opacity-50"
+            onclick={handleCreateProject}
+            disabled={!newProjectName.trim()}
+          >
+            {lang === 'zh' ? '创建' : 'Create'}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Footer -->
   <div class="p-2 border-t border-gray-100">

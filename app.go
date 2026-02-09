@@ -830,6 +830,80 @@ func (a *App) DeleteProfile(profileID string) error {
 	return redc.DeleteProfile(profileID)
 }
 
+// ProjectInfo represents project information for frontend display
+type ProjectInfo struct {
+	Name       string `json:"name"`
+	Path       string `json:"path"`
+	CreateTime string `json:"createTime"`
+	User       string `json:"user"`
+}
+
+// ListProjects returns all projects
+func (a *App) ListProjects() ([]ProjectInfo, error) {
+	projects, err := redc.ListAllProjects()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ProjectInfo, 0, len(projects))
+	for _, p := range projects {
+		result = append(result, ProjectInfo{
+			Name:       p.ProjectName,
+			Path:       p.ProjectPath,
+			CreateTime: p.CreateTime,
+			User:       p.User,
+		})
+	}
+	return result, nil
+}
+
+// GetCurrentProject returns the current project name
+func (a *App) GetCurrentProject() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.project == nil {
+		return ""
+	}
+	return a.project.ProjectName
+}
+
+// SwitchProject switches to a different project
+func (a *App) SwitchProject(projectName string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Parse and load the new project
+	p, err := redc.ProjectParse(projectName, redc.U)
+	if err != nil {
+		return fmt.Errorf("切换项目失败: %v", err)
+	}
+
+	// Update project reference
+	a.project = p
+
+	// Update log manager to use new project path
+	a.logMgr = gologger.NewLogManager(p.ProjectPath)
+
+	// Update global project variable
+	redc.Project = projectName
+
+	// Emit log and refresh
+	a.emitLog(fmt.Sprintf("已切换到项目: %s", projectName))
+	a.emitRefresh()
+
+	return nil
+}
+
+// CreateProject creates a new project
+func (a *App) CreateProject(name string) error {
+	_, err := redc.NewProjectConfig(name, redc.U)
+	if err != nil {
+		return fmt.Errorf("创建项目失败: %v", err)
+	}
+	a.emitLog(fmt.Sprintf("已创建新项目: %s", name))
+	return nil
+}
+
 // ListCases returns all cases for the current project
 func (a *App) ListCases() ([]CaseInfo, error) {
 	a.mu.Lock()

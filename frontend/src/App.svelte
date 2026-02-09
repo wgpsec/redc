@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -34,6 +34,11 @@
   let mcpForm = $state({ mode: 'sse', address: 'localhost:8080' });
   let mcpLoading = $state(false);
 
+  // Project state
+  let projects = $state([]);
+  let currentProject = $state({ name: '', path: '' });
+  let projectLoading = $state(false);
+
   // i18n state
   let lang = $state(localStorage.getItem('lang') || 'zh');
   const i18n = { ...i18nData };
@@ -47,6 +52,42 @@
   function toggleLang() {
     lang = lang === 'zh' ? 'en' : 'zh';
     localStorage.setItem('lang', lang);
+  }
+
+  // Project management functions
+  async function loadProjects() {
+    try {
+      projectLoading = true;
+      const projectList = await ListProjects();
+      projects = projectList || [];
+      // Set current project from the list or default
+      if (projects.length > 0) {
+        const current = projects.find(p => p.name === redc.Project) || projects[0];
+        currentProject = current;
+      }
+    } catch (e) {
+      console.error('加载项目列表失败:', e);
+      projects = [];
+    } finally {
+      projectLoading = false;
+    }
+  }
+
+  async function handleSwitchProject(projectName) {
+    if (projectName === currentProject.name) return;
+    
+    try {
+      projectLoading = true;
+      await SwitchProject(projectName);
+      currentProject = projects.find(p => p.name === projectName) || { name: projectName, path: '' };
+      // Refresh data after project switch
+      await refreshData();
+    } catch (e) {
+      console.error('切换项目失败:', e);
+      error = `切换项目失败: ${e.message}`;
+    } finally {
+      projectLoading = false;
+    }
   }
 
   /**
@@ -100,6 +141,7 @@
     }
     
     await refreshData();
+    await loadProjects();
   });
 
   onDestroy(() => {
