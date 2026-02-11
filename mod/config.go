@@ -81,6 +81,9 @@ func LoadConfig(path string) error {
 
 	// 设置默认缓存路径
 	os.Setenv("TF_PLUGIN_CACHE_DIR", filepath.Join(home, ".terraform.d", "plugin-cache"))
+	// 设置 Terraform 插件缓存可能需要的环境变量
+	os.Setenv("TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE", "1")
+	
 	if RedcPath == "" {
 		RedcPath = filepath.Join(home, "redc")
 	}
