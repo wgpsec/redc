@@ -16,6 +16,7 @@
   import Cases from './components/Cases/Cases.svelte';
   import Settings from './components/Settings/Settings.svelte';
   import Sidebar from './components/Sidebar/Sidebar.svelte';
+  import About from './components/About/About.svelte';
 
   let cases = $state([]);
   let templates = $state([]);
@@ -123,6 +124,13 @@
     const env = await Environment();
     isWindows = env.platform === 'windows';
     
+    // 禁用右键菜单
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+    document.addEventListener('contextmenu', handleContextMenu);
+    
     EventsOn('log', (message) => {
       logs = [...logs, { time: new Date().toLocaleTimeString(), message }];
       if (dashboardComponent && dashboardComponent.updateCreateStatusFromLog) {
@@ -143,6 +151,11 @@
     
     await refreshData();
     await loadProjects();
+    
+    // 清理函数
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
   });
 
   onDestroy(() => {
@@ -239,7 +252,7 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6" style="--wails-draggable:drag">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else}{t.settings}{/if}
+        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
         <button 
@@ -350,6 +363,9 @@
 
       {:else if activeTab === 'localTemplates'}
         <LocalTemplates {t} />
+
+      {:else if activeTab === 'about'}
+        <About {t} />
       {/if}
     </main>
   </div>

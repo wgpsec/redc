@@ -275,7 +275,13 @@ let {
   <!-- Footer -->
   <div class="p-2 border-t border-gray-100">
     <div class="flex items-center justify-between px-2 py-2">
-      <span class="text-[10px] text-gray-400">v2.3.0 by WgpSec</span>
+      <button
+        class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap"
+        onclick={() => onTabChange('about')}
+        title={lang === 'zh' ? '关于 RedC' : 'About RedC'}
+      >
+        v2.3.0 by WgpSec
+      </button>
       <div class="flex items-center gap-1">
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium"

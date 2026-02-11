@@ -127,6 +127,20 @@ export const i18n = {
     potentialSavings: '预计可节省', month: '月', currentCost: '当前成本', savingsLabel: '可节省',
     applySuggestion: '应用建议', priorityHigh: '高', priorityMedium: '中', priorityLow: '低',
     noDescription: '暂无描述',
+    // About page
+    about: '关于', developedBy: '开发者', aboutIntro: '项目简介',
+    aboutDesc1: 'RedC 是一个专为红队设计的云基础设施管理平台，旨在简化和自动化红队在云环境中的基础设施部署和管理工作。',
+    aboutDesc2: '通过 RedC，您可以快速部署各种红队场景，包括 C2 服务器、钓鱼平台、漏洞环境等，支持多云平台（阿里云、腾讯云、华为云、火山云等）。',
+    aboutDesc3: 'RedC 基于 Terraform 构建，提供了友好的图形界面，让您无需深入了解 Terraform 语法即可轻松管理云基础设施。',
+    coreFeatures: '核心特性', multiCloud: '多云支持', multiCloudDesc: '支持阿里云、腾讯云、华为云、火山云等主流云平台',
+    quickDeploy: '快速部署', quickDeployDesc: '一键部署各种红队场景，节省时间和精力',
+    templateManage: '模板管理', templateManageDesc: '丰富的模板库，支持自定义和分享模板',
+    scheduledTasksFeatureDesc: '支持定时启动和停止场景，自动化管理',
+    costEstimateFeatureDesc: '实时估算云资源成本，控制预算',
+    aiIntegrationFeatureDesc: '支持 MCP 协议，与 AI 助手无缝集成',
+    links: '相关链接', documentation: '文档', team: '团队',
+    license: '开源协议', licenseDesc: 'RedC 采用 MIT 协议开源，您可以自由使用、修改和分发。',
+    allRightsReserved: '版权所有',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -253,6 +267,20 @@ export const i18n = {
     potentialSavings: 'Potential Savings', month: 'month', currentCost: 'Current Cost', savingsLabel: 'Save',
     applySuggestion: 'Apply', priorityHigh: 'High', priorityMedium: 'Medium', priorityLow: 'Low',
     noDescription: 'No description',
+    // About page
+    about: 'About', developedBy: 'Developed by', aboutIntro: 'Introduction',
+    aboutDesc1: 'RedC is a cloud infrastructure management platform designed for red teams, aiming to simplify and automate infrastructure deployment and management in cloud environments.',
+    aboutDesc2: 'With RedC, you can quickly deploy various red team scenarios, including C2 servers, phishing platforms, vulnerability environments, etc., supporting multiple cloud platforms (Alibaba Cloud, Tencent Cloud, Huawei Cloud, Volcengine, etc.).',
+    aboutDesc3: 'RedC is built on Terraform and provides a friendly graphical interface, allowing you to easily manage cloud infrastructure without deep knowledge of Terraform syntax.',
+    coreFeatures: 'Core Features', multiCloud: 'Multi-Cloud Support', multiCloudDesc: 'Support for mainstream cloud platforms including Alibaba Cloud, Tencent Cloud, Huawei Cloud, Volcengine, etc.',
+    quickDeploy: 'Quick Deployment', quickDeployDesc: 'One-click deployment of various red team scenarios, saving time and effort',
+    templateManage: 'Template Management', templateManageDesc: 'Rich template library with support for custom and shared templates',
+    scheduledTasksFeatureDesc: 'Support for scheduled start and stop of scenarios, automated management',
+    costEstimateFeatureDesc: 'Real-time cloud resource cost estimation, budget control',
+    aiIntegrationFeatureDesc: 'Support for MCP protocol, seamless integration with AI assistants',
+    links: 'Links', documentation: 'Documentation', team: 'Team',
+    license: 'License', licenseDesc: 'RedC is open source under the MIT license. You are free to use, modify, and distribute it.',
+    allRightsReserved: 'All rights reserved',
   }
 };
 
