@@ -36,7 +36,7 @@
         </svg>
       </div>
       <h3 class="text-[16px] sm:text-[18px] font-semibold text-gray-900 mb-2">{t.vulhubSupport}</h3>
-      <p class="text-[13px] sm:text-[14px] text-gray-500 mb-4 sm:mb-6">Vulhub 漏洞环境支持模块</p>
+      <p class="text-[13px] sm:text-[14px] text-gray-500 mb-4 sm:mb-6">Vulhub 漏洞环境模块</p>
       <div class="bg-gray-50 rounded-lg p-4 sm:p-6 text-left">
         <p class="text-[12px] sm:text-[13px] text-gray-600">此模块功能开发中...</p>
       </div>

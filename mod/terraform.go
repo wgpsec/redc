@@ -85,11 +85,9 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 		opt(te)
 	}
 
-	// Set stdout and stderr for visibility in debug mode or with custom writers
-	if Debug || te.stdout != os.Stdout || te.stderr != os.Stderr {
-		tf.SetStdout(te.stdout)
-		tf.SetStderr(te.stderr)
-	}
+	// Always set stdout and stderr for better visibility and debugging
+	tf.SetStdout(te.stdout)
+	tf.SetStderr(te.stderr)
 
 	// Pass all environment variables including proxy settings to terraform subprocess
 	// Check if proxy is configured
@@ -102,8 +100,11 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 		}
 	}
 	
-	// Only set custom env if proxy is configured, otherwise let tfexec use os.Environ()
-	if hasProxy {
+	// On macOS, always set environment variables to include DYLD_FALLBACK_LIBRARY_PATH
+	// This fixes the "Failed to read any lines from plugin's stdout" error with Terraform providers
+	needsCustomEnv := hasProxy || runtime.GOOS == "darwin"
+	
+	if needsCustomEnv {
 		envVars := make(map[string]string)
 		// Copy all current environment variables
 		for _, env := range os.Environ() {
@@ -111,6 +112,23 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 				envVars[env[:idx]] = env[idx+1:]
 			}
 		}
+		
+		// On macOS, ensure library paths are set for provider plugins
+		if runtime.GOOS == "darwin" {
+			if _, exists := envVars["DYLD_FALLBACK_LIBRARY_PATH"]; !exists {
+				// Set default fallback library paths for macOS
+				envVars["DYLD_FALLBACK_LIBRARY_PATH"] = "/usr/local/lib:/usr/lib"
+			}
+			// Also set DYLD_LIBRARY_PATH to help with plugin loading
+			if _, exists := envVars["DYLD_LIBRARY_PATH"]; !exists {
+				envVars["DYLD_LIBRARY_PATH"] = "/usr/local/lib:/usr/lib"
+			}
+			// Enable Terraform plugin debug logging on macOS to diagnose issues
+			if _, exists := envVars["TF_LOG_PROVIDER"]; !exists && Debug {
+				envVars["TF_LOG_PROVIDER"] = "DEBUG"
+			}
+		}
+		
 		tf.SetEnv(envVars)
 	}
 
