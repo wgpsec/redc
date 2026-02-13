@@ -5,7 +5,7 @@
 let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', noProxy: '' });
   let proxySaving = $state(false);
-  let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false, wgpsec: false } });
+  let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } });
   let terraformMirrorSaving = $state(false);
   let terraformMirrorError = $state('');
   let networkChecks = $state([]);
@@ -31,7 +31,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       terraformMirrorForm.providers.aliyun = terraformMirror.providers?.includes('aliyun');
       terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
       terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
-      terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
     }
   });
 
@@ -103,16 +102,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       enabled: true,
       setEnv: true,
       providers: { ...terraformMirrorForm.providers, volc: true }
-    };
-    await handleSaveTerraformMirror();
-  }
-
-  async function enableWgpsecMirrorQuick() {
-    terraformMirrorForm = {
-      ...terraformMirrorForm,
-      enabled: true,
-      setEnv: true,
-      providers: { ...terraformMirrorForm.providers, wgpsec: true }
     };
     await handleSaveTerraformMirror();
   }
@@ -291,10 +280,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
             <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.volc} />
             <span>{t.mirrorVolc}</span>
           </label>
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" class="rounded" bind:checked={terraformMirrorForm.providers.wgpsec} />
-            <span>{t.mirrorWgpsec}</span>
-          </label>
         </div>
         <div class="mt-2 text-[10px] sm:text-[11px] text-gray-500">
           {t.mirrorProvidersDesc}
@@ -341,12 +326,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           onclick={enableVolcMirrorQuick}
         >
           {t.mirrorVolcPreset}
-        </button>
-        <button
-          class="h-8 sm:h-9 px-3 sm:px-4 bg-rose-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-rose-600 transition-colors"
-          onclick={enableWgpsecMirrorQuick}
-        >
-          {t.mirrorWgpsecPreset}
         </button>
         {#if terraformMirrorError}
           <span class="text-[11px] sm:text-[12px] text-red-500">{terraformMirrorError}</span>

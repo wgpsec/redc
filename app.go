@@ -339,9 +339,6 @@ func parseTerraformMirrorProviders(content string) []string {
 	if strings.Contains(content, "registry.terraform.io/volcengine/") {
 		providers = append(providers, "volc")
 	}
-	if strings.Contains(content, "redc.wgpsec.org/tf-mirror/") {
-		providers = append(providers, "wgpsec")
-	}
 	return providers
 }
 
@@ -392,22 +389,6 @@ func terraformMirrorConfigContent(enabled bool, providers []string) string {
 		builder.WriteString("    ]\n")
 		builder.WriteString("  }\n")
 		excludes = append(excludes, "registry.terraform.io/volcengine/*")
-	}
-	if providerSet["wgpsec"] {
-		builder.WriteString("  network_mirror {\n")
-		builder.WriteString("    url = \"https://redc.wgpsec.org/tf-mirror/\"\n")
-		builder.WriteString("    include = [\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/archive\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/external\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/http\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/local\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/null\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/random\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/time\",\n")
-		builder.WriteString("      \"registry.terraform.io/hashicorp/tls\"\n")
-		builder.WriteString("    ]\n")
-		builder.WriteString("  }\n")
-		excludes = append(excludes, "registry.terraform.io/hashicorp/archive", "registry.terraform.io/hashicorp/external", "registry.terraform.io/hashicorp/http", "registry.terraform.io/hashicorp/local", "registry.terraform.io/hashicorp/null", "registry.terraform.io/hashicorp/random", "registry.terraform.io/hashicorp/time", "registry.terraform.io/hashicorp/tls")
 	}
 
 	if len(excludes) > 0 {
@@ -492,7 +473,6 @@ func (a *App) TestTerraformEndpoints() ([]EndpointCheck, error) {
 		{Name: "Alibaba Cloud Mirror", URL: "https://mirrors.aliyun.com/terraform/"},
 		{Name: "Tencent Cloud Mirror", URL: "https://mirrors.tencent.com/terraform/"},
 		{Name: "Volcengine Mirror", URL: "https://mirrors.volces.com/terraform/"},
-		{Name: "WGPSEC Mirror", URL: "https://redc.wgpsec.org/tf-mirror/"},
 	}
 	client := &http.Client{Timeout: 6 * time.Second}
 	results := make([]EndpointCheck, 0, len(endpoints))
