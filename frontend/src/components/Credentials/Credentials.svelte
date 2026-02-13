@@ -620,7 +620,7 @@ let { t } = $props();
           </div>
           <div>
             <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmSave || '确认保存'}</h3>
-            <p class="text-[13px] text-gray-500">{t.saveWarning || '凭据将被加密保存到配置文件'}</p>
+            <p class="text-[13px] text-gray-500">{t.saveWarning || '凭据将被保存到配置文件'}</p>
           </div>
         </div>
         <p class="text-[13px] text-gray-600">

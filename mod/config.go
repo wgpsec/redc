@@ -48,6 +48,9 @@ type Config struct {
 			SecretKey string `yaml:"HUAWEICLOUD_SECRET_KEY" env:"HUAWEICLOUD_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"huaweicloud"`
+		Vultr struct {
+			ApiKey string `yaml:"VULTR_API_KEY" env:"VULTR_API_KEY"`
+		} `yaml:"vultr"`
 		Google struct {
 			Credentials string `yaml:"GOOGLE_CREDENTIALS" env:"GOOGLE_CREDENTIALS"`
 			Project     string `yaml:"project"`

@@ -644,6 +644,15 @@ func (a *App) GetProvidersConfig(customPath string) (ProvidersConfigInfo, error)
 			},
 		},
 		{
+			Name: "Vultr",
+			Fields: map[string]string{
+				"apiKey": maskValue(conf.Providers.Vultr.ApiKey),
+			},
+			HasSecrets: map[string]bool{
+				"apiKey": conf.Providers.Vultr.ApiKey != "",
+			},
+		},
+		{
 			Name: "Google Cloud",
 			Fields: map[string]string{
 				"credentials": maskValue(conf.Providers.Google.Credentials),
@@ -759,6 +768,10 @@ func (a *App) SaveProvidersConfig(providerName string, fields map[string]string,
 		}
 		if v, ok := fields["region"]; ok {
 			conf.Providers.Huaweicloud.Region = v
+		}
+	case "Vultr":
+		if v, ok := fields["apiKey"]; ok && v != "" {
+			conf.Providers.Vultr.ApiKey = v
 		}
 	case "Google Cloud":
 		if v, ok := fields["credentials"]; ok && v != "" {
