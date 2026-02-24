@@ -490,6 +490,14 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 			"error_message": errorMsg,
 		}
 		
+		// 自动清理已创建的资源（避免 EIP 等资源持续扣费）
+		gologger.Warning().Msgf("部署失败，自动清理已创建的资源...")
+		if destroyErr := TfDestroy(deploymentPath, nil); destroyErr != nil {
+			gologger.Error().Msgf("自动清理资源失败: %v，用户可能需要手动清理", destroyErr)
+		} else {
+			gologger.Info().Msgf("已自动清理部署失败时创建的资源")
+		}
+		
 		// 更新状态为错误
 		deployment.State = StateError
 		deployment.UpdatedAt = time.Now()
