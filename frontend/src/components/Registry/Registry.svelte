@@ -371,6 +371,11 @@ let { t } = $props();
             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
               <div class="text-[11px] text-gray-400">
                 {#if tmpl.author}by {tmpl.author}{/if}
+                {#if tmpl.installed && hasUpdate(tmpl)}
+                  <span class="ml-2 text-amber-600">
+                    v{tmpl.localVersion} → v{tmpl.latest}
+                  </span>
+                {/if}
               </div>
               {#if pullingTemplates[tmpl.name]}
                 <span class="inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-medium text-amber-600">
