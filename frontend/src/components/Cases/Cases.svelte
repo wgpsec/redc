@@ -861,7 +861,7 @@ let { t, onTabChange = () => {} } = $props();
               </span>
             </td>
             <td class="px-5 py-3.5">
-              <span class="text-[12px] text-gray-500">{c.createTime}</span>
+              <span class="text-[12px] text-gray-500">{c.stateTime}</span>
             </td>
             <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
               <div class="inline-flex items-center gap-1">

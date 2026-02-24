@@ -235,7 +235,7 @@
               <div class="flex items-center justify-between">
                 <div class="flex-1">
                   <div class="text-[13px] font-medium text-gray-900">{c.name}</div>
-                  <div class="text-[11px] text-gray-500 mt-0.5">{c.type} · {c.createTime}</div>
+                  <div class="text-[11px] text-gray-500 mt-0.5">{c.type} · {c.stateTime}</div>
                 </div>
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full {getStateColor(c.state)}">
                   <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
