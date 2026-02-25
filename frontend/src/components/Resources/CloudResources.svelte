@@ -35,7 +35,7 @@ let { t } = $props();
     if (balanceCooldown > 0) return Promise.resolve();
     balanceLoading = true;
     balanceError = '';
-    return GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud', 'ucloud'])
+    return GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud', 'ucloud', 'vultr'])
       .then(data => {
         balanceResults = data || [];
         balanceCooldown = 5;

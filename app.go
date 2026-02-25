@@ -1319,7 +1319,7 @@ type ComposeSummary struct {
 // GetBalances returns account balances for selected providers (manual trigger)
 func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 	if len(providers) == 0 {
-		providers = []string{"aliyun", "tencentcloud", "volcengine", "huaweicloud"}
+		providers = []string{"aliyun", "tencentcloud", "volcengine", "huaweicloud", "ucloud", "vultr"}
 	}
 
 	conf, _, err := redc.ReadConfig(redc.ActiveConfigPath)
@@ -1370,6 +1370,14 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "ucloud":
 			amount, currency, err := redc.QueryUCloudBalance(conf.Providers.UCloud.PublicKey, conf.Providers.UCloud.PrivateKey, conf.Providers.UCloud.Region)
+			if err != nil {
+				result.Error = err.Error()
+			} else {
+				result.Amount = amount
+				result.Currency = currency
+			}
+		case "vultr":
+			amount, currency, err := redc.QueryVultrBalance(conf.Providers.Vultr.ApiKey)
 			if err != nil {
 				result.Error = err.Error()
 			} else {
