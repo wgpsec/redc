@@ -104,7 +104,7 @@
     {:else}
       {#each filteredTemplates() as template}
         <button
-          class="w-full text-left p-4 rounded-lg border transition-all {selectedTemplate?.name === template.name ? 'border-gray-900 bg-gray-50' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'}"
+          class="w-full text-left p-4 rounded-lg border transition-all {selectedTemplate?.name === template.name ? 'border-gray-900 bg-gray-50' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}"
           onclick={() => handleSelect(template)}
         >
           <div class="flex items-start justify-between">

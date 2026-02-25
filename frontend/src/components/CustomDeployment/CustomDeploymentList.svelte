@@ -1089,7 +1089,7 @@
         </p>
         <div class="flex justify-end gap-2">
           <button 
-            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
             onclick={cancelBatchDelete}
           >{t.cancel}</button>
           <button 
@@ -1124,7 +1124,7 @@
         </p>
         <div class="flex justify-end gap-2">
           <button 
-            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
             onclick={cancelBatchStop}
           >{t.cancel}</button>
           <button 
@@ -1159,7 +1159,7 @@
         </p>
         <div class="flex justify-end gap-2">
           <button 
-            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
             onclick={cancelDelete}
           >取消</button>
           <button 

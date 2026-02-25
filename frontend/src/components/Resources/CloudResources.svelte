@@ -82,7 +82,7 @@ let { t } = $props();
       <div class="text-[12px] text-red-500">{resourcesError}</div>
     {:else if resourcesLoading}
       <div class="flex items-center justify-center h-24">
-        <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+        <div class="w-6 h-6 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
       </div>
     {:else}
       <div class="border border-gray-100 rounded-lg overflow-hidden">

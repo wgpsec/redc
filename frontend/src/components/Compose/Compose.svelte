@@ -227,7 +227,7 @@
     <div class="text-[14px] font-semibold text-gray-900 mb-4">{t.composePreview}</div>
     {#if composeLoading}
       <div class="flex items-center justify-center h-24">
-        <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+        <div class="w-6 h-6 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
       </div>
     {:else if composeSummary && composeSummary.services && composeSummary.services.length > 0}
       <div class="border border-gray-100 rounded-lg overflow-hidden">

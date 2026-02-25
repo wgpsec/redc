@@ -179,7 +179,7 @@
               <p class="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
                 {t.userdata || 'Userdata'}
               </p>
-              <div class="bg-white rounded border border-gray-200 p-2 max-h-24 overflow-y-auto">
+              <div class="bg-white rounded border border-gray-100 p-2 max-h-24 overflow-y-auto">
                 <pre class="text-[10px] text-gray-700 font-mono whitespace-pre-wrap">{config.userdata}</pre>
               </div>
             </div>
@@ -188,7 +188,7 @@
 
         <!-- Template Variables -->
         {#if config.variables && Object.keys(config.variables).length > 0}
-          <div class="mt-4 pt-4 border-t border-gray-200">
+          <div class="mt-4 pt-4 border-t border-gray-100">
             <p class="text-[10px] text-gray-500 uppercase tracking-wide mb-2">
               {t.templateParams || '模板参数'}
             </p>

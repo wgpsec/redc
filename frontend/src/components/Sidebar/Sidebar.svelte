@@ -192,7 +192,7 @@ let {
     <div class="relative">
       <button
         class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
-          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100"
         onclick={() => showProjectDropdown = !showProjectDropdown}
         title={lang === 'zh' ? '切换项目' : 'Switch Project'}
       >
@@ -206,7 +206,7 @@ let {
       </button>
 
       {#if showProjectDropdown}
-        <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+        <div class="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
           {#if isLoadingProjects}
             <div class="px-3 py-2 text-[11px] text-gray-500">{lang === 'zh' ? '加载中...' : 'Loading...'}</div>
           {:else if projects.length === 0}
@@ -252,7 +252,7 @@ let {
           type="text"
           bind:value={newProjectName}
           placeholder={lang === 'zh' ? '输入项目名称...' : 'Enter project name...'}
-          class="w-full px-3 py-2 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+          class="w-full px-3 py-2 text-[12px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
           onkeydown={(e) => e.key === 'Enter' && handleCreateProject()}
         />
         <div class="flex justify-end gap-2 mt-3">

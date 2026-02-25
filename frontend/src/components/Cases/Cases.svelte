@@ -672,7 +672,7 @@ let { t, onTabChange = () => {} } = $props();
     {#if createStatus !== 'idle'}
       <div class="mt-3 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-[12px]">
         {#if createStatus === 'creating' || createStatus === 'initializing'}
-          <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+          <div class="w-3.5 h-3.5 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
           <span class="text-gray-700">{createStatusMessage}</span>
         {:else if createStatus === 'success'}
           <span class="text-emerald-600">{createStatusMessage}</span>
@@ -1001,7 +1001,7 @@ let { t, onTabChange = () => {} } = $props();
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelDelete}
         >{t.cancel}</button>
         <button 
@@ -1036,7 +1036,7 @@ let { t, onTabChange = () => {} } = $props();
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelBatchDelete}
         >{t.cancel}</button>
         <button 
@@ -1071,7 +1071,7 @@ let { t, onTabChange = () => {} } = $props();
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelBatchStop}
         >{t.cancel}</button>
         <button 
@@ -1106,7 +1106,7 @@ let { t, onTabChange = () => {} } = $props();
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelStop}
         >{t.cancel}</button>
         <button 
@@ -1188,7 +1188,7 @@ let { t, onTabChange = () => {} } = $props();
       <!-- Footer -->
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={() => showCostEstimate = false}
         >{t.close}</button>
       </div>

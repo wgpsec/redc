@@ -194,7 +194,7 @@
               type="number"
               min="0"
               max="72"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
               bind:value={relativeTime.hours}
             />
           </div>
@@ -205,7 +205,7 @@
               type="number"
               min="0"
               max="59"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
               bind:value={relativeTime.minutes}
             />
           </div>
@@ -223,7 +223,7 @@
             <input
               id="scheduleDate"
               type="date"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
               bind:value={absoluteDate}
             />
           </div>
@@ -232,7 +232,7 @@
             <input
               id="scheduleTime"
               type="time"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
               bind:value={absoluteTime}
             />
           </div>
@@ -266,7 +266,7 @@
     <!-- Footer -->
     <div class="px-5 py-4 bg-gray-50 flex justify-end gap-2">
       <button
-        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
         onclick={onClose}
       >
         {t.cancel || '取消'}

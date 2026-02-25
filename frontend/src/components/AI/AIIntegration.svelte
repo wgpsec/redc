@@ -383,7 +383,7 @@
         <input 
           type="text" 
           placeholder={t.recommendPlaceholder || '例如：我需要一个阿里云的测试环境...'}
-          class="flex-1 h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-shadow"
+          class="flex-1 h-9 sm:h-10 px-3 text-[12px] sm:text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
           bind:value={recommendQuery}
           onkeydown={(e) => e.key === 'Enter' && handleRecommend()}
         />
@@ -407,7 +407,7 @@
       </div>
 
       {#if showRecommendResults && aiRecommendText}
-        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div class="flex items-start gap-2 mb-2">
             <svg class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
@@ -466,7 +466,7 @@
       </button>
 
       {#if showCostSuggestions && aiCostText}
-        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div class="flex items-start gap-2 mb-2">
             <svg class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

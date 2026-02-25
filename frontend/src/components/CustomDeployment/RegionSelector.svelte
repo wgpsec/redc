@@ -102,7 +102,7 @@
       <input
         type="text"
         placeholder={t.searchRegion || '搜索地域...'}
-        class="w-full h-9 px-3 mb-2 text-[12px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        class="w-full h-9 px-3 mb-2 text-[12px] bg-gray-50 border border-gray-100 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
         bind:value={searchQuery}
       />
     {/if}

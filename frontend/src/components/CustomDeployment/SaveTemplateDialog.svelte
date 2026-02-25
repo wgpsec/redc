@@ -105,7 +105,7 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick={handleCancel}>
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <h3 class="text-[15px] font-semibold text-gray-900">
           {t.saveConfigTemplate || '保存配置模板'}
         </h3>
@@ -152,7 +152,7 @@
             <input
               id="template-name"
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               class:border-red-300={nameError}
               class:focus:ring-red-500={nameError}
               placeholder={t.templateNamePlaceholder || '输入模板名称'}
@@ -178,7 +178,7 @@
           </div>
 
           <!-- Config Summary -->
-          <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg">
             <p class="text-[12px] font-medium text-gray-700 mb-2">
               {t.configSummary || '配置摘要'}
             </p>

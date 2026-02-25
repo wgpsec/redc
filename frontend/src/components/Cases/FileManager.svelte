@@ -244,7 +244,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <div class="px-3 py-1.5 text-[12px] font-mono text-gray-700 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="px-3 py-1.5 text-[12px] font-mono text-gray-700 bg-gray-50 rounded-lg border border-gray-100">
           {currentPath}
         </div>
       </div>
@@ -411,7 +411,7 @@
       <!-- svelte-ignore a11y_autofocus -->
       <input
         type="text"
-        class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
         placeholder={t.folderName || '文件夹名称'}
         bind:value={newFolderName}
         onkeydown={(e) => { if (e.key === 'Enter') handleCreateFolder(); }}
@@ -445,7 +445,7 @@
       <!-- svelte-ignore a11y_autofocus -->
       <input
         type="text"
-        class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+        class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
         placeholder={t.newName || '新名称'}
         bind:value={renameNewName}
         onkeydown={(e) => { if (e.key === 'Enter') handleRename(); }}

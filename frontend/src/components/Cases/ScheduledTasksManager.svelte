@@ -169,7 +169,7 @@
     <div class="border-t border-gray-100">
       {#if loading}
         <div class="px-5 py-8 flex items-center justify-center">
-          <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+          <div class="w-6 h-6 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
         </div>
       {:else if tasks.length === 0}
         <div class="px-5 py-8 text-center">
@@ -243,7 +243,7 @@
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={closeCancelConfirm}
         >{t.cancel || '取消'}</button>
         <button 

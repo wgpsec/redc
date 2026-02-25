@@ -459,7 +459,7 @@
   {/if}
 
   <!-- Tabs -->
-  <div class="flex gap-2 border-b border-gray-200 mb-4">
+  <div class="flex gap-2 border-b border-gray-100 mb-4">
     <button
       class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
       onclick={() => templateTab = 'all'}
@@ -494,7 +494,7 @@
 
   {#if localTemplatesLoading}
     <div class="flex items-center justify-center h-64">
-      <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+      <div class="w-6 h-6 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
     </div>
   {:else}
     <!-- Template Table -->
@@ -663,7 +663,7 @@
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelBatchDelete}
         >{t.cancel}</button>
         <button 
@@ -698,7 +698,7 @@
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelDeleteTemplate}
         >{t.cancel}</button>
         <button 
@@ -737,7 +737,7 @@
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
           onclick={cancelCloneTemplate}
         >{t.cancel}</button>
         <button 
@@ -800,7 +800,7 @@
           <div class="text-[14px] font-semibold text-gray-900 mb-3">{t.templateParams}</div>
           {#if localTemplateVarsLoading}
             <div class="flex items-center justify-center py-8">
-              <div class="w-5 h-5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+              <div class="w-5 h-5 border-2 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
               <span class="ml-2 text-[13px] text-gray-500">{t.loadingParams}</span>
             </div>
           {:else if localTemplateVars.length === 0}

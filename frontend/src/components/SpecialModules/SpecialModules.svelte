@@ -64,7 +64,7 @@
 
 <div class="w-full">
   <!-- Tabs -->
-  <div class="flex gap-2 border-b border-gray-200 mb-6">
+  <div class="flex gap-2 border-b border-gray-100 mb-6">
     <button
       class="px-4 py-2 text-[13px] font-medium transition-colors {specialModuleTab === 'vulhub' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
       onclick={() => specialModuleTab = 'vulhub'}
@@ -92,7 +92,7 @@
     <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 md:p-8">
       {#if templatesLoading}
         <div class="flex items-center justify-center h-32">
-          <div class="w-6 h-6 border-2 border-gray-200 border-t-orange-500 rounded-full animate-spin"></div>
+          <div class="w-6 h-6 border-2 border-gray-100 border-t-orange-500 rounded-full animate-spin"></div>
         </div>
       {:else if templates.length > 0 && getVulhubScenarios(templates).length > 0}
         <div class="mb-4">

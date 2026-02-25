@@ -123,13 +123,13 @@
 
   <!-- Templates dropdown -->
   {#if showTemplates}
-    <div class="mb-2 p-3 bg-gray-50 border border-gray-200 rounded-lg max-h-80 overflow-y-auto">
+    <div class="mb-2 p-3 bg-gray-50 border border-gray-100 rounded-lg max-h-80 overflow-y-auto">
       <p class="text-[11px] font-medium text-gray-700 mb-2">
         {t.selectTemplate || '选择模板'}:
       </p>
       <div class="space-y-2">
         {#each Object.entries(groupedTemplates()) as [category, categoryTemplates]}
-          <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="border border-gray-100 rounded-lg overflow-hidden">
             <button
               class="w-full flex items-center justify-between px-3 py-2 bg-gray-100 hover:bg-gray-200 transition-colors"
               onclick={() => expandedCategories[category] = !expandedCategories[category]}
@@ -146,7 +146,7 @@
               <div class="space-y-1 p-2 bg-white">
                 {#each categoryTemplates as template}
                   <button
-                    class="w-full text-left px-3 py-2 text-[12px] bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded transition-colors"
+                    class="w-full text-left px-3 py-2 text-[12px] bg-white hover:bg-blue-50 border border-gray-100 hover:border-blue-300 rounded transition-colors"
                     onclick={() => applyTemplate(template)}
                   >
                     <span class="font-medium text-gray-900">{template.nameZh}</span>

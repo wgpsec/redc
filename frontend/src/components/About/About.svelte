@@ -248,7 +248,7 @@
     {:else}
       <div class="space-y-4">
         {#each changelog as item}
-          <div class="border-l-2 border-gray-200 pl-4">
+          <div class="border-l-2 border-gray-100 pl-4">
             <div class="flex items-center gap-2 mb-2">
               <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">{item.version}</span>
               <span class="text-xs text-gray-500">{item.date}</span>

@@ -274,7 +274,7 @@
               <input
                 id="sshCommand"
                 type="text"
-                class="flex-1 px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                class="flex-1 px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="whoami"
                 bind:value={command}
                 onkeydown={(e) => { if (e.key === 'Enter') handleExec(); }}
@@ -337,7 +337,7 @@
               <input
                 id="localFile"
                 type="text"
-                class="flex-1 px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-gray-50"
+                class="flex-1 px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-gray-50"
                 placeholder={t.selectFilePlaceholder || '点击选择文件...'}
                 bind:value={uploadLocalPath}
                 readonly
@@ -356,7 +356,7 @@
             <input
               id="remotePath"
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder="/root/"
               bind:value={uploadRemotePath}
             />
@@ -405,7 +405,7 @@
             <input
               id="remoteFile"
               type="text"
-              class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               placeholder="/root/config.txt"
               bind:value={downloadRemotePath}
             />
@@ -417,7 +417,7 @@
               <input
                 id="localDir"
                 type="text"
-                class="flex-1 px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-gray-50"
+                class="flex-1 px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-gray-50"
                 placeholder={t.selectDirectoryPlaceholder || '点击选择目录...'}
                 bind:value={downloadLocalPath}
                 readonly
@@ -480,7 +480,7 @@
           {:else}
             <div class="space-y-2 max-h-64 overflow-y-auto">
               {#each Object.entries(groupedUserdataTemplates()) as [category, categoryTemplates]}
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <div class="border border-gray-100 rounded-lg overflow-hidden">
                   <button
                     class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
                     onclick={() => expandedCategories[category] = !expandedCategories[category]}
@@ -497,7 +497,7 @@
                     <div class="space-y-1 p-2 bg-white">
                       {#each categoryTemplates as template}
                         <button
-                          class="w-full text-left px-3 py-2 text-[12px] bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded transition-colors {selectedTemplate === template ? 'border-blue-500 bg-blue-50' : ''}"
+                          class="w-full text-left px-3 py-2 text-[12px] bg-white hover:bg-blue-50 border border-gray-100 hover:border-blue-300 rounded transition-colors {selectedTemplate === template ? 'border-blue-500 bg-blue-50' : ''}"
                           onclick={() => selectedTemplate = template}
                         >
                           <span class="font-medium text-gray-900">{template.nameZh || template.name}</span>

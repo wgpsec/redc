@@ -183,7 +183,7 @@
       <input
         type="text"
         placeholder={t.searchInstanceType || '搜索实例规格...'}
-        class="w-full h-9 px-3 mb-2 text-[12px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        class="w-full h-9 px-3 mb-2 text-[12px] bg-gray-50 border border-gray-100 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
         bind:value={searchQuery}
       />
     {/if}
@@ -265,7 +265,7 @@
         </div>
       {:else}
         <!-- Show basic info when instance type data is not loaded yet -->
-        <div class="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div class="mt-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
           <h4 class="text-[12px] font-medium text-gray-700 mb-1">
             {t.selectedInstanceType || '已选实例规格'}
           </h4>
