@@ -620,7 +620,7 @@ let { t, onTabChange = () => {} } = $props();
       </button>
       {#if selectedTemplate}
         <button 
-          class="h-10 px-5 bg-blue-500 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           onclick={loadCostEstimate}
           disabled={costEstimateLoading}
         >
@@ -635,7 +635,7 @@ let { t, onTabChange = () => {} } = $props();
         </button>
       {/if}
       <button 
-        class="h-10 px-5 bg-red-500 text-white text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="h-10 px-5 text-red-500 border border-red-500 bg-white hover:bg-red-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         onclick={loadAllTemplateCosts}
         disabled={allTemplateCostsLoading || templates.length === 0}
       >

@@ -198,9 +198,11 @@
         <div class="text-[12px] text-gray-500 mb-2">{stat.label}</div>
         <div class="flex items-end justify-between">
           <div class="text-[20px] font-bold text-gray-900">{stat.value}</div>
-          <div class="text-[11px] font-medium {stat.trend === 'up' ? 'text-emerald-600' : stat.trend === 'down' ? 'text-red-600' : 'text-gray-500'}">
-            {stat.change}
-          </div>
+          {#if stat.trend !== 'neutral'}
+            <div class="text-[11px] font-medium {stat.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}">
+              {stat.change}
+            </div>
+          {/if}
         </div>
       </div>
     {/each}
