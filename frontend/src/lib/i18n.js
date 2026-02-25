@@ -146,7 +146,7 @@ export const i18n = {
     costEstimateFeatureDesc: '实时估算云资源成本，控制预算',
     aiIntegrationFeatureDesc: '支持 MCP 协议，与 AI 助手无缝集成',
     links: '相关链接', documentation: '文档', team: '团队',
-    license: '开源协议', licenseDesc: 'RedC 采用 MIT 协议开源，您可以自由使用、修改和分发。',
+    license: '开源协议', licenseDesc: 'RedC 采用 MIT 协议开源，您可以自由使用、修改和分发。', changelog: '更新日志',
     allRightsReserved: '版权所有',
     // Custom Deployment
     customDeployment: '自定义部署', experimentalFeature: '实验性功能', createDeployment: '创建部署',
@@ -328,7 +328,7 @@ export const i18n = {
     costEstimateFeatureDesc: 'Real-time cloud resource cost estimation, budget control',
     aiIntegrationFeatureDesc: 'Support for MCP protocol, seamless integration with AI assistants',
     links: 'Links', documentation: 'Documentation', team: 'Team',
-    license: 'License', licenseDesc: 'RedC is open source under the MIT license. You are free to use, modify, and distribute it.',
+    license: 'License', licenseDesc: 'RedC is open source under the MIT license. You are free to use, modify, and distribute it.', changelog: 'Changelog',
     allRightsReserved: 'All rights reserved',
     // Custom Deployment
     customDeployment: 'Custom Deployment', experimentalFeature: 'Experimental Feature', createDeployment: 'Create Deployment',

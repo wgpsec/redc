@@ -282,7 +282,7 @@ let {
         onclick={() => onTabChange('about')}
         title={lang === 'zh' ? '关于 RedC' : 'About RedC'}
       >
-        v2.3.0 by WgpSec
+        v3.0.0 by WgpSec
       </button>
       <div class="flex items-center gap-1">
         <button

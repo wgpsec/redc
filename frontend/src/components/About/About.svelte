@@ -1,7 +1,23 @@
 <script>
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
-
+  import { onMount } from 'svelte';
+  
   let { t } = $props();
+  
+  let changelog = $state([]);
+  let loading = $state(true);
+  
+  onMount(async () => {
+    try {
+      const res = await fetch('/changelog.json');
+      const data = await res.json();
+      changelog = data.changelog || [];
+    } catch (e) {
+      console.error('Failed to load changelog:', e);
+    } finally {
+      loading = false;
+    }
+  });
 
   function openLink(url) {
     BrowserOpenURL(url);
@@ -22,7 +38,7 @@
     </div>
     
     <div class="flex items-center gap-3 text-sm text-gray-600 mb-3">
-      <span class="px-3 py-1 bg-gray-100 rounded-full font-medium">v2.3.0</span>
+      <span class="px-3 py-1 bg-gray-100 rounded-full font-medium">v3.0.0</span>
     </div>
     
     <div class="text-sm text-gray-600">
@@ -219,5 +235,35 @@
       </svg>
       <span>{t.licenseDesc || 'RedC 采用 MIT 协议开源，您可以自由使用、修改和分发。'}</span>
     </div>
+  </div>
+
+  <!-- Changelog -->
+  <div class="bg-white rounded-xl border border-gray-100 p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">{t.changelog || '更新日志'}</h2>
+    
+    {#if loading}
+      <div class="text-sm text-gray-500">{t.loading || '加载中...'}</div>
+    {:else if changelog.length === 0}
+      <div class="text-sm text-gray-500">{t.noChangelog || '暂无更新日志'}</div>
+    {:else}
+      <div class="space-y-4">
+        {#each changelog as item}
+          <div class="border-l-2 border-gray-200 pl-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">{item.version}</span>
+              <span class="text-xs text-gray-500">{item.date}</span>
+            </div>
+            <ul class="space-y-1">
+              {#each item.changes as change}
+                <li class="text-sm text-gray-600 flex items-start gap-2">
+                  <span class="text-gray-400 mt-1">•</span>
+                  <span>{change}</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>
