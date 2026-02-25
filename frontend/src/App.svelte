@@ -266,17 +266,6 @@
         {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
-        <button 
-          class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-          onclick={() => { refreshData(); if (activeTab === 'ai') loadMCPStatus(); if (activeTab === 'resources') loadResourceSummary(); }}
-          title="刷新"
-          aria-label="刷新"
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-        </button>
-        
         <!-- Window Controls (Windows only) -->
         {#if isWindows}
         <div class="flex items-center ml-2 -mr-2">
