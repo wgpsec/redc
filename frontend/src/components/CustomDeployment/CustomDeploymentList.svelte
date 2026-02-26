@@ -33,6 +33,7 @@
   let batchDeleteConfirm = $state({ show: false, count: 0 });
   let batchStopConfirm = $state({ show: false, count: 0 });
   let copiedKey = $state<string | null>(null);
+  let copiedAllKey = $state<string | null>(null);
   let pollInterval: number | null = null;
   
   // SSH Modal state
@@ -176,6 +177,20 @@
     });
   }
 
+  function copyAllOutputs(outputs: Record<string, any>) {
+    const text = Object.entries(outputs)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      copiedAllKey = expandedDeploymentId;
+      setTimeout(() => {
+        copiedAllKey = null;
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy all outputs:', err);
+    });
+  }
+
   async function handleStart(deploymentId: string) {
     // 立即更新本地状态为"启动中"
     deployments = deployments.map(d => 
@@ -193,8 +208,18 @@
     }
   }
 
-  async function handleStop(deploymentId: string) {
-    // 立即更新本地状态为"停止中"
+  async function handleStop(deploymentId: string, deploymentName: string) {
+    stopConfirm = { show: true, deploymentId, deploymentName };
+  }
+
+  function cancelStop() {
+    stopConfirm = { show: false, deploymentId: '', deploymentName: '' };
+  }
+
+  async function confirmStop() {
+    const { deploymentId } = stopConfirm;
+    stopConfirm = { show: false, deploymentId: '', deploymentName: '' };
+    
     deployments = deployments.map(d => 
       d.id === deploymentId ? { ...d, state: 'stopping' } : d
     );
@@ -205,12 +230,12 @@
       onRefresh();
     } catch (err: any) {
       alert(`停止失败: ${err.message || err}`);
-      // 失败后重新加载以恢复正确状态
       await loadDeployments();
     }
   }
 
   let deleteConfirm = $state({ show: false, deploymentId: '', deploymentName: '' });
+  let stopConfirm = $state({ show: false, deploymentId: '', deploymentName: '' });
 
   async function handleDelete(deploymentId: string, deploymentName: string) {
     deleteConfirm = { show: true, deploymentId, deploymentName };
@@ -639,7 +664,7 @@
                     </button>
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
-                      onclick={() => handleStop(deployment.id)}
+                      onclick={() => handleStop(deployment.id, deployment.name)}
                     >停止</button>
                   {/if}
                   {#if deployment.state !== 'starting' && deployment.state !== 'stopping' && deployment.state !== 'removing'}
@@ -698,6 +723,25 @@
                       </div>
                     {:else if deployment.state === 'running'}
                       {#if deploymentOutputs[deployment.id] && Object.keys(deploymentOutputs[deployment.id]).length > 0}
+                        <div class="flex items-center justify-between mb-3">
+                          <span class="text-[12px] font-medium text-gray-700">输出信息</span>
+                          <button
+                            class="px-2 py-1 text-[11px] font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+                            onclick={() => copyAllOutputs(deploymentOutputs[deployment.id])}
+                          >
+                            {#if copiedAllKey === deployment.id}
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              已复制
+                            {:else}
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              复制全部
+                            {/if}
+                          </button>
+                        </div>
                         <div class="grid grid-cols-2 gap-3">
                           {#each Object.entries(deploymentOutputs[deployment.id]) as [key, value]}
                             <div class="bg-white rounded-lg p-3 border border-gray-100 group relative">
@@ -1096,6 +1140,41 @@
             class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
             onclick={confirmBatchDelete}
           >{t.delete}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Stop Confirmation Modal -->
+{#if stopConfirm.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelStop}>
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">确认停止</h3>
+            <p class="text-[13px] text-gray-500">资源将会被销毁</p>
+          </div>
+        </div>
+        <p class="text-[14px] text-gray-600 mb-4">
+          确定要停止部署 "{stopConfirm.deploymentName}" 吗？
+        </p>
+        <div class="flex justify-end gap-2">
+          <button 
+            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+            onclick={cancelStop}
+          >取消</button>
+          <button 
+            class="px-4 py-2 text-[13px] font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors"
+            onclick={confirmStop}
+          >停止</button>
         </div>
       </div>
     </div>
