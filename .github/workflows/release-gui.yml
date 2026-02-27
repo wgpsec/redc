@@ -127,21 +127,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: redc-gui-macos
-          path: dist
+          path: dist/macos
 
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
           name: redc-gui-windows
-          path: dist
-
-      - name: List Files
-        run: ls -la dist
+          path: dist/windows
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/macos/*
+            dist/windows/*
           generate_release_notes: true
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GH_TOKEN }}
