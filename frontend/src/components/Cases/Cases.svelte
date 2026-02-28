@@ -743,7 +743,7 @@ let { t, onTabChange = () => {} } = $props();
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''} aria-label="关闭错误">
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -761,7 +761,7 @@ let { t, onTabChange = () => {} } = $props();
         <div class="flex-1">
           <p class="text-[13px] text-blue-700">{t.noTemplatesHint}</p>
           <button 
-            class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors"
+            class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
             onclick={() => onTabChange && onTabChange('registry')}
           >
             {t.noTemplatesHintButton}
@@ -858,7 +858,7 @@ let { t, onTabChange = () => {} } = $props();
           <div class="text-[12px] text-amber-700 mt-0.5">{costEstimateError}</div>
           <div class="text-[11px] text-amber-600 mt-1">{t.costEstimateErrorHint}</div>
         </div>
-        <button class="text-amber-400 hover:text-amber-600" onclick={() => costEstimateError = ''} aria-label="关闭提示">
+        <button class="text-amber-400 hover:text-amber-600 cursor-pointer" onclick={() => costEstimateError = ''} aria-label="关闭提示">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -918,7 +918,7 @@ let { t, onTabChange = () => {} } = $props();
             </div>
             <!-- 关闭按钮 -->
             <button 
-              class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0"
+              class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0 cursor-pointer"
               onclick={dismissPersistentError}
               title="关闭"
             >
@@ -940,7 +940,7 @@ let { t, onTabChange = () => {} } = $props();
     {#if terraformInitHint.show}
       <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700 relative">
         <button
-          class="absolute right-2 top-2 text-amber-400 hover:text-amber-600"
+          class="absolute right-2 top-2 text-amber-400 hover:text-amber-600 cursor-pointer"
           onclick={dismissTerraformInitHint}
           aria-label="close"
         >

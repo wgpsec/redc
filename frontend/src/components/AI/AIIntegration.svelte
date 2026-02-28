@@ -335,7 +335,7 @@
       <div class="mt-3">
         <button 
           onclick={() => onTabChange('credentials')}
-          class="text-[11px] sm:text-[12px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+          class="text-[11px] sm:text-[12px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 cursor-pointer"
         >
           {t.goToCredentials || '前往凭据管理'} →
         </button>
@@ -352,7 +352,7 @@
       </div>
       <div class="mt-3">
         <button 
-          class="inline-flex items-center gap-2 px-4 h-9 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors"
+          class="inline-flex items-center gap-2 px-4 h-9 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
           onclick={() => onTabChange('credentials')}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
