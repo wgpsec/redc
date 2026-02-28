@@ -47,7 +47,7 @@
       {:else if updateStatus && updateStatus.result}
         {#if updateStatus.result.hasUpdate}
           <button 
-            class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+            class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors cursor-pointer"
             onclick={() => BrowserOpenURL(updateStatus.result.downloadURL)}
           >
             {updateStatus.result.latestVersion} 可更新
@@ -57,7 +57,7 @@
         {/if}
       {:else}
         <button 
-          class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors"
+          class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors cursor-pointer"
           onclick={() => onCheckUpdate && onCheckUpdate()}
         >
           检查更新
@@ -69,7 +69,7 @@
       <div class="mb-1">{t.developedBy || '开发者'}:</div>
       <div class="flex flex-wrap gap-3">
         <button
-          class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+          class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           onclick={() => openLink('https://github.com/No-Github')}
         >
           <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@
           <span class="font-medium">r0fus0d</span>
         </button>
         <button
-          class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+          class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           onclick={() => openLink('https://github.com/keac')}
         >
           <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@
     <h2 class="text-lg font-semibold text-gray-900 mb-4">{t.links || '相关链接'}</h2>
     <div class="space-y-3">
       <button
-        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
         onclick={() => openLink('https://github.com/wgpsec/redc')}
       >
         <div class="flex items-center gap-3">
@@ -209,7 +209,7 @@
       </button>
 
       <button
-        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
         onclick={() => openLink('https://redc.wgpsec.org')}
       >
         <div class="flex items-center gap-3">
@@ -229,7 +229,7 @@
       </button>
 
       <button
-        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+        class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
         onclick={() => openLink('https://www.wgpsec.org')}
       >
         <div class="flex items-center gap-3">

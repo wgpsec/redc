@@ -253,7 +253,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       </div>
       <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
         <button 
-          class="h-9 sm:h-10 px-4 sm:px-5 bg-emerald-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="h-9 sm:h-10 px-4 sm:px-5 bg-emerald-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           onclick={handleSaveProxy}
           disabled={proxySaving}
         >
@@ -272,7 +272,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.mirrorConfigHint}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={terraformMirrorForm.enabled}
         class:bg-gray-300={!terraformMirrorForm.enabled}
         onclick={handleToggleTerraformMirror}
@@ -332,26 +332,26 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       </div>
       <div class="pt-1 flex flex-wrap gap-2 items-center">
         <button
-          class="h-8 sm:h-9 px-3 sm:px-4 bg-emerald-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
+          class="h-8 sm:h-9 px-3 sm:px-4 bg-emerald-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 cursor-pointer"
           onclick={handleSaveTerraformMirror}
           disabled={terraformMirrorSaving}
         >
           {terraformMirrorSaving ? t.saving : t.mirrorSave}
         </button>
         <button
-          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors"
+          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
           onclick={enableAliyunMirrorQuick}
         >
           {t.mirrorAliyunPreset}
         </button>
         <button
-          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors"
+          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
           onclick={enableTencentMirrorQuick}
         >
           {t.mirrorTencentPreset}
         </button>
         <button
-          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors"
+          class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"
           onclick={enableVolcMirrorQuick}
         >
           {t.mirrorVolcPreset}
@@ -374,7 +374,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
       <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.networkCheck}</div>
       <button
-        class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
         onclick={runTerraformNetworkCheck}
         disabled={networkCheckLoading}
       >
@@ -418,7 +418,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.debugLogsDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={debugEnabled}
         class:bg-gray-300={!debugEnabled}
         onclick={handleToggleDebug}
@@ -442,7 +442,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.systemNotificationDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={notificationEnabled}
         class:bg-gray-300={!notificationEnabled}
         onclick={handleToggleNotification}
@@ -466,7 +466,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <div class="text-[11px] sm:text-[12px] text-gray-500 mt-1">{t.disableRightClickDesc}</div>
       </div>
       <button
-        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         class:bg-emerald-500={rightClickDisabled}
         class:bg-gray-300={!rightClickDisabled}
         onclick={handleToggleRightClick}

@@ -292,7 +292,7 @@
         {#if isWindows}
         <div class="flex items-center ml-2 -mr-2">
           <button 
-            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
+            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
             onclick={minimiseWindow}
             title="最小化"
             aria-label="最小化"
@@ -302,7 +302,7 @@
             </svg>
           </button>
           <button 
-            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors"
+            class="w-12 h-14 flex items-center justify-center hover:bg-gray-100 text-gray-600 transition-colors cursor-pointer"
             onclick={toggleMaximise}
             title={isMaximised ? "还原" : "最大化"}
             aria-label={isMaximised ? "还原" : "最大化"}
@@ -319,7 +319,7 @@
             {/if}
           </button>
           <button 
-            class="w-12 h-14 flex items-center justify-center hover:bg-red-500 hover:text-white text-gray-600 transition-colors"
+            class="w-12 h-14 flex items-center justify-center hover:bg-red-500 hover:text-white text-gray-600 transition-colors cursor-pointer"
             onclick={closeWindow}
             title="关闭"
             aria-label="关闭"
@@ -341,7 +341,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
           <span class="text-[13px] text-red-700 flex-1">{error}</span>
-          <button class="text-red-400 hover:text-red-600" onclick={() => error = ''} aria-label="关闭错误提示" title="关闭">
+          <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误提示" title="关闭">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>

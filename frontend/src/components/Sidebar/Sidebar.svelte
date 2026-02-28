@@ -194,7 +194,7 @@ let {
     <div class="relative">
       <button
         class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
-          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100"
+          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100 cursor-pointer"
         onclick={() => showProjectDropdown = !showProjectDropdown}
         title={lang === 'zh' ? '切换项目' : 'Switch Project'}
       >
@@ -216,7 +216,7 @@ let {
           {:else}
             {#each projects as project}
               <button
-                class="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-gray-50 {project.name === currentProject ? 'bg-gray-50 text-rose-600 font-medium' : 'text-gray-700'}"
+                class="w-full flex items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-gray-50 cursor-pointer {project.name === currentProject ? 'bg-gray-50 text-rose-600 font-medium' : 'text-gray-700'}"
                 onclick={() => handleSwitchProject(project.name)}
               >
                 {#if project.name === currentProject}
@@ -232,7 +232,7 @@ let {
           {/if}
           <div class="border-t border-gray-100 my-1"></div>
           <button
-            class="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-rose-600 hover:bg-rose-50 transition-colors"
+            class="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
             onclick={() => { showProjectDropdown = false; showNewProjectModal = true; }}
           >
             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -259,13 +259,13 @@ let {
         />
         <div class="flex justify-end gap-2 mt-3">
           <button
-            class="px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            class="px-3 py-1.5 text-[11px] text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             onclick={() => { showNewProjectModal = false; newProjectName = ''; }}
           >
             {lang === 'zh' ? '取消' : 'Cancel'}
           </button>
           <button
-            class="px-3 py-1.5 text-[11px] bg-rose-600 text-white hover:bg-rose-700 rounded transition-colors disabled:opacity-50"
+            class="px-3 py-1.5 text-[11px] bg-rose-600 text-white hover:bg-rose-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
             onclick={handleCreateProject}
             disabled={!newProjectName.trim()}
           >
@@ -280,7 +280,7 @@ let {
   <div class="p-2 border-t border-gray-100">
     <div class="flex items-center justify-between px-2 py-2">
       <button
-        class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap"
+        class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap cursor-pointer"
         onclick={() => { if (onCheckUpdate) onCheckUpdate(); onTabChange('about'); }}
         title={lang === 'zh' ? '关于 RedC，点击检查更新' : 'About RedC, click to check for updates'}
       >
@@ -288,12 +288,12 @@ let {
       </button>
       <div class="flex items-center gap-1">
         <button
-          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium"
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium cursor-pointer"
           onclick={onToggleLang}
           title={lang === 'zh' ? 'Switch to English' : '切换到中文'}
         >{lang === 'zh' ? 'EN' : '中'}</button>
         <button
-          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
           onclick={openGitHub}
           title="GitHub"
         >

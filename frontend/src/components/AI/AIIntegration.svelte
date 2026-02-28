@@ -284,7 +284,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[12px] sm:text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600" onclick={() => error = ''} aria-label="关闭错误">
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -388,7 +388,7 @@
           onkeydown={(e) => e.key === 'Enter' && handleRecommend()}
         />
         <button 
-          class="px-4 h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+          class="px-4 h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           onclick={handleRecommend}
           disabled={recommendLoading || !recommendQuery.trim()}
         >
@@ -447,7 +447,7 @@
 
     <div class="space-y-3">
       <button 
-        class="w-full h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        class="w-full h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
         onclick={handleAnalyzeCost}
         disabled={costLoading}
       >
@@ -542,7 +542,7 @@
         </div>
       </div>
       <button 
-        class="w-full h-9 sm:h-10 bg-red-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+        class="w-full h-9 sm:h-10 bg-red-500 text-white text-[12px] sm:text-[13px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
         onclick={handleStopMCP}
         disabled={mcpLoading}
       >
@@ -569,7 +569,7 @@
         </div>
       </div>
       <button 
-        class="w-full h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="w-full h-9 sm:h-10 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] sm:text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
         onclick={handleStartMCP}
         disabled={mcpLoading}
       >

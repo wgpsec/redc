@@ -802,14 +802,14 @@ let { t, onTabChange = () => {} } = $props();
         />
       </div>
       <button 
-        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         onclick={handleCreate}
         disabled={createBusy}
       >
         {t.create}
       </button>
       <button 
-        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         onclick={handleCreateAndRun}
         disabled={createBusy}
       >
@@ -817,7 +817,7 @@ let { t, onTabChange = () => {} } = $props();
       </button>
       {#if selectedTemplate}
         <button 
-          class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           onclick={loadCostEstimate}
           disabled={costEstimateLoading}
         >
@@ -832,7 +832,7 @@ let { t, onTabChange = () => {} } = $props();
         </button>
       {/if}
       <button 
-        class="h-10 px-5 text-red-500 border border-red-500 bg-white hover:bg-red-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="h-10 px-5 text-red-500 border border-red-500 bg-white hover:bg-red-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         onclick={loadAllTemplateCosts}
         disabled={allTemplateCostsLoading || templates.length === 0}
       >
@@ -906,7 +906,7 @@ let { t, onTabChange = () => {} } = $props();
                 </div>
               {:else}
                 <button 
-                  class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+                  class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5 cursor-pointer"
                   onclick={handleAIAnalysis}
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
