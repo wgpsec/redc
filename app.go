@@ -784,6 +784,36 @@ func (a *App) GetDisableRightClick() bool {
 	return settings.DisableRightClick
 }
 
+// SetLanguage sets the GUI language
+func (a *App) SetLanguage(lang string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Save to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.Language = lang
+	return redc.SaveGUISettings(settings)
+}
+
+// GetLanguage returns the current GUI language
+func (a *App) GetLanguage() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Load from GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return "zh"
+	}
+	if settings.Language == "" {
+		return "zh"
+	}
+	return settings.Language
+}
+
 // maskValue returns masked value for display (shows last 4 chars if length > 8)
 func maskValue(value string) string {
 	if value == "" {

@@ -34,6 +34,7 @@ type GUISettings struct {
 	HttpsProxy          string `json:"httpsProxy"`
 	Socks5Proxy         string `json:"socks5Proxy"`
 	NoProxy             string `json:"noProxy"`
+	Language            string `json:"language"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加

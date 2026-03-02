@@ -94,6 +94,8 @@ export function GetDisableRightClick():Promise<boolean>;
 
 export function GetInstanceTypes(arg1:string,arg2:string):Promise<Array<mod.InstanceType>>;
 
+export function GetLanguage():Promise<string>;
+
 export function GetMCPStatus():Promise<main.MCPStatus>;
 
 export function GetNotificationEnabled():Promise<boolean>;
@@ -189,6 +191,8 @@ export function SetActiveProfile(arg1:string):Promise<mod.ProfileInfo>;
 export function SetDebugLogging(arg1:boolean):Promise<void>;
 
 export function SetDisableRightClick(arg1:boolean):Promise<void>;
+
+export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetNotificationEnabled(arg1:boolean):Promise<void>;
 

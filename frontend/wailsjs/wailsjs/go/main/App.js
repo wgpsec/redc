@@ -178,6 +178,10 @@ export function GetInstanceTypes(arg1, arg2) {
   return window['go']['main']['App']['GetInstanceTypes'](arg1, arg2);
 }
 
+export function GetLanguage() {
+  return window['go']['main']['App']['GetLanguage']();
+}
+
 export function GetMCPStatus() {
   return window['go']['main']['App']['GetMCPStatus']();
 }
@@ -368,6 +372,10 @@ export function SetDebugLogging(arg1) {
 
 export function SetDisableRightClick(arg1) {
   return window['go']['main']['App']['SetDisableRightClick'](arg1);
+}
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
 }
 
 export function SetNotificationEnabled(arg1) {

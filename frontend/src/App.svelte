@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates, GetLanguage, SetLanguage } from '../wailsjs/wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -52,7 +52,7 @@
   let projectLoading = $state(false);
 
   // i18n state
-  let lang = $state(localStorage.getItem('lang') || 'zh');
+  let lang = $state('zh');
   const i18n = { ...i18nData };
   let t = $derived(i18n[lang]);
 
@@ -64,6 +64,7 @@
   function toggleLang() {
     lang = lang === 'zh' ? 'en' : 'zh';
     localStorage.setItem('lang', lang);
+    SetLanguage(lang).catch(console.error);
   }
 
   // Project management functions
@@ -180,13 +181,14 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled, appVersion] = await Promise.all([
+      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled, lang, appVersion] = await Promise.all([
         ListCases(),
         ListTemplates(),
         GetConfig(),
         GetTerraformMirrorConfig(),
         GetNotificationEnabled(),
         GetDisableRightClick(),
+        GetLanguage(),
         GetVersion()
       ]);
       rightClickDisabledSync = rightClickDisabled;
