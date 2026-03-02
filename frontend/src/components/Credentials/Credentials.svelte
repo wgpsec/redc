@@ -269,17 +269,17 @@ let { t } = $props();
       privateKey: 'Private Key',
       projectId: 'Project ID',
       region: 'Region',
-      credentials: '凭据 JSON 路径',
-      project: '项目 ID',
+      credentials: t.credentialsJson || '凭据 JSON 路径',
+      project: t.project || '项目 ID',
       clientId: 'Client ID',
       clientSecret: 'Client Secret',
       subscriptionId: 'Subscription ID',
       tenantId: 'Tenant ID',
-      user: '用户 OCID',
+      user: t.user || '用户 OCID',
       tenancy: 'Tenancy OCID',
-      fingerprint: '指纹',
-      keyFile: '私钥文件路径',
-      email: '邮箱',
+      fingerprint: t.fingerprint || '指纹',
+      keyFile: t.keyFile || '私钥文件路径',
+      email: t.email || '邮箱',
       apiKey: 'API Key',
     };
     return labels[key] || key;
@@ -533,7 +533,7 @@ let { t } = $props();
               type="button"
               class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               onclick={() => showApiKey = !showApiKey}
-              aria-label={showApiKey ? '隐藏API密钥' : '显示API密钥'}
+              aria-label={showApiKey ? (t.hideApiKey || '隐藏API密钥') : (t.showApiKey || '显示API密钥')}
             >
               {#if showApiKey}
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

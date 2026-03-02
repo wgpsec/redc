@@ -96,9 +96,9 @@
     const minutes = Math.floor(Number(diff) % (1000 * 60 * 60) / (1000 * 60));
 
     if (hours > 0) {
-      return `${hours} ${t.hours || '小时'} ${minutes} ${t.minutes || '分钟'}`;
+      return `${hours} ${t.hour || '小时'} ${minutes} ${t.minute || '分钟'}`;
     }
-    return `${minutes} ${t.minutes || '分钟'}`;
+    return `${minutes} ${t.minute || '分钟'}`;
   }
 
   function handleKeydown(e) {
@@ -188,7 +188,7 @@
       {#if scheduleType === 'relative'}
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label for="relativeHours" class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.hours || '小时'}</label>
+            <label for="relativeHours" class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.hour || '小时'}</label>
             <input
               id="relativeHours"
               type="number"
@@ -199,7 +199,7 @@
             />
           </div>
           <div>
-            <label for="relativeMinutes" class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.minutes || '分钟'}</label>
+            <label for="relativeMinutes" class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.minute || '分钟'}</label>
             <input
               id="relativeMinutes"
               type="number"
@@ -211,7 +211,7 @@
           </div>
         </div>
         <p class="text-[11px] text-gray-500">
-          {t.willExecuteIn || '将在'} {relativeTime.hours} {t.hours || '小时'} {relativeTime.minutes} {t.minutes || '分钟后执行'}
+          {t.willExecuteIn || '将在'} {relativeTime.hours} {t.hour || '小时'} {relativeTime.minutes} {t.minutesLater || '分钟后执行'}
         </p>
       {/if}
 

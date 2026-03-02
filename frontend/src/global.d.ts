@@ -22,6 +22,12 @@ declare module 'svelte' {
 
 // Global Svelte 5 Runes - these are compiler-transformed
 declare global {
+  // Window interface extension for custom properties
+  interface Window {
+    __persistentError?: any;
+    __persistentOutput?: any;
+  }
+
   // $state rune
   function $state<T>(initial: T): T;
   function $state<T>(): T | undefined;

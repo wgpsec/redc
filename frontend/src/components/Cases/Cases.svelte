@@ -246,7 +246,7 @@ let { t, onTabChange = () => {} } = $props();
   async function handleAIAnalysis() {
     const errorMessage = getPersistentError()?.detail || createStatusDetail;
     if (!errorMessage) {
-      alert('没有错误信息可以分析');
+      alert(t.noErrorToAnalyze || '没有错误信息可以分析');
       return;
     }
     
@@ -264,7 +264,7 @@ let { t, onTabChange = () => {} } = $props();
     try {
       const profile = await GetActiveProfile();
       if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
-        alert('请先在设置中配置 AI 服务');
+        alert(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
         return;
       }
     } catch (err) {
@@ -319,20 +319,20 @@ let { t, onTabChange = () => {} } = $props();
   
   export function updateCreateStatusFromLog(message) {
     const cleanMessage = stripAnsi(message);
-    if (cleanMessage.includes('正在创建场景:') || cleanMessage.includes('正在创建并运行场景:')) {
+    if (cleanMessage.includes(t.sceneCreating || '正在创建场景:') || cleanMessage.includes(t.sceneCreatingAndRunning || '正在创建并运行场景:')) {
       setCreateStatus('creating', t.creating, message);
       return;
     }
-    if (cleanMessage.includes('场景初始化中:')) {
+    if (cleanMessage.includes(t.sceneInitializing || '场景初始化中:')) {
       setCreateStatus('initializing', t.initializing, message);
       return;
     }
-    if (cleanMessage.includes('场景创建成功')) {
+    if (cleanMessage.includes(t.sceneCreateSuccess || '场景创建成功')) {
       setCreateStatus('success', t.createSuccess, message);
       setTimeout(() => refresh(), 500);
       return;
     }
-    if (cleanMessage.includes('场景创建失败') || cleanMessage.includes('创建场景时发生错误')) {
+    if (cleanMessage.includes(t.sceneCreateFailed || '场景创建失败') || cleanMessage.includes(t.createSceneError || '创建场景时发生错误')) {
       setCreateStatus('error', t.createFailed, message);
       detectTerraformInitIssue(cleanMessage);
       return;
@@ -1175,7 +1175,7 @@ let { t, onTabChange = () => {} } = $props();
                   {#if c.state === 'running'}
                     {#if caseOutputs[c.id]}
                       <div class="flex items-center justify-between mb-3">
-                        <span class="text-[12px] font-medium text-gray-700">输出信息</span>
+                        <span class="text-[12px] font-medium text-gray-700">{t.outputInfo || '输出信息'}</span>
                         <button
                           class="px-2 py-1 text-[11px] font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
                           onclick={() => copyAllOutputs(caseOutputs[c.id])}
@@ -1189,7 +1189,7 @@ let { t, onTabChange = () => {} } = $props();
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            复制全部
+                            {t.copyAll || '复制全部'}
                           {/if}
                         </button>
                       </div>

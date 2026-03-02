@@ -202,7 +202,7 @@
     
     // Check if AI is configured
     if (!isAIConfigured()) {
-      error = 'AI 服务未配置，请先配置 AI API Key';
+      error = t.aiNotConfiguredHint || '请先在凭据管理页面配置 AI API Key';
       return;
     }
 
@@ -236,7 +236,7 @@
   async function handleAnalyzeCost() {
     // Check if AI is configured
     if (!isAIConfigured()) {
-      error = 'AI 服务未配置，请先配置 AI API Key';
+      error = t.aiNotConfiguredHint || '请先在凭据管理页面配置 AI API Key';
       return;
     }
 
@@ -272,6 +272,16 @@
       case 'low': return t.priorityLow || '低';
       default: return priority;
     }
+  }
+
+  function getProviderDisplayName(provider) {
+    const preset = providerPresets[provider];
+    if (!preset) return provider;
+    // Check if current language is English
+    if (t && (t.openaiCompatible || '').includes('OpenAI')) {
+      return preset.nameEn || preset.name;
+    }
+    return preset.name;
   }
 
 </script>
@@ -324,7 +334,7 @@
         <div class="grid grid-cols-2 gap-3 text-[11px] sm:text-[12px]">
           <div>
             <span class="text-gray-500">{t.aiProvider || '服务商'}</span>
-            <p class="font-medium text-gray-900 mt-0.5">{providerPresets[aiConfig.provider]?.name || aiConfig.provider}</p>
+            <p class="font-medium text-gray-900 mt-0.5">{getProviderDisplayName(aiConfig.provider)}</p>
           </div>
           <div>
             <span class="text-gray-500">{t.aiModel || '模型'}</span>
@@ -413,7 +423,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
             <div class="flex-1">
-              <h3 class="text-[12px] font-medium text-gray-900 mb-2">AI 推荐结果</h3>
+              <h3 class="text-[12px] font-medium text-gray-900 mb-2">{t.aiRecommendResult || 'AI 推荐结果'}</h3>
               <div class="text-[12px] text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {aiRecommendText}
                 {#if aiRecommending}
@@ -472,7 +482,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div class="flex-1">
-              <h3 class="text-[12px] font-medium text-gray-900 mb-2">成本优化分析</h3>
+              <h3 class="text-[12px] font-medium text-gray-900 mb-2">{t.costAnalysis || '成本优化分析'}</h3>
               <div class="text-[12px] text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {aiCostText}
                 {#if aiCostAnalyzing}

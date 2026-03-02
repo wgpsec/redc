@@ -267,7 +267,7 @@
 
   async function handleAIAnalysis(deploymentId: string, errorMessage: string, provider: string, templateName: string) {
     if (!errorMessage) {
-      alert('没有错误信息可以分析');
+      alert(t.noErrorToAnalyze || '没有错误信息可以分析');
       return;
     }
     
@@ -275,7 +275,7 @@
     try {
       const profile = await GetActiveProfile();
       if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
-        alert('请先在设置中配置 AI 服务');
+        alert(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
         return;
       }
     } catch (err: any) {

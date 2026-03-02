@@ -129,14 +129,14 @@
       uploadResult = result;
       
       if (result.success) {
-        terminal?.writeln(`\r\n\x1b[32m脚本已上传到: /tmp/${fileName}\x1b[0m`);
-        terminal?.writeln(`\x1b[33m执行命令: bash /tmp/${fileName}\x1b[0m\r\n`);
+        terminal?.writeln(`\r\n\x1b[32m${t.scriptUploadedTo || '脚本已上传到'}: /tmp/${fileName}\x1b[0m`);
+        terminal?.writeln(`\x1b[33m${t.execScriptCmd || '执行命令'}: bash /tmp/${fileName}\x1b[0m\r\n`);
       } else {
-        terminal?.writeln(`\r\n\x1b[31m上传失败: ${result.error}\x1b[0m\r\n`);
+        terminal?.writeln(`\r\n\x1b[31m${t.uploadFailed || '上传失败'}: ${result.error}\x1b[0m\r\n`);
       }
     } catch (err) {
       uploadResult = { success: false, error: err.message };
-      terminal?.writeln(`\r\n\x1b[31m上传失败: ${err.message}\x1b[0m\r\n`);
+      terminal?.writeln(`\r\n\x1b[31m${t.uploadFailed || '上传失败'}: ${err.message}\x1b[0m\r\n`);
     } finally {
       uploading = false;
     }
@@ -147,7 +147,7 @@
 
     connecting = true;
     error = '';
-    terminal?.writeln('\x1b[1;34m正在连接 SSH...\x1b[0m');
+    terminal?.writeln('\x1b[1;34m' + (t.sshConnecting || '正在连接 SSH...') + '\x1b[0m');
 
     try {
       // 启动 SSH 终端会话
@@ -166,12 +166,12 @@
 
       // 监听终端关闭
       EventsOn(`terminal-closed-${sessionId}`, () => {
-        terminal?.writeln('\r\n\x1b[1;33m连接已关闭\x1b[0m');
+        terminal?.writeln('\r\n\x1b[1;33m' + (t.sshConnectionClosed || '连接已关闭') + '\x1b[0m');
         connected = false;
       });
 
       connected = true;
-      terminal?.writeln('\x1b[1;32m已连接\x1b[0m\r\n');
+      terminal?.writeln('\x1b[1;32m' + (t.sshConnected || '已连接') + '\x1b[0m\r\n');
     } catch (err) {
       error = err.message || String(err);
       terminal?.writeln(`\r\n\x1b[1;31m连接失败: ${error}\x1b[0m`);
@@ -246,7 +246,7 @@
         {#if connected}
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 text-emerald-400 text-[11px] font-medium rounded-full">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            {t.connected || '已连接'}
+            {t.sshConnected || '已连接'}
           </span>
         {:else if connecting}
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-400 text-[11px] font-medium rounded-full">
