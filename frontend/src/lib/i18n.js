@@ -62,7 +62,8 @@ export const i18n = {
     welcomeFeature1: '一键部署云资源', welcomeFeature1Desc: '支持多种云厂商，快速创建和管理云资源场景',
     welcomeFeature2: '成本优化分析', welcomeFeature2Desc: 'AI 智能分析资源使用，提供成本优化建议',
     welcomeFeature3: '本地模板管理', welcomeFeature3Desc: '支持自定义模板，满足个性化需求',
-    welcomeDontShow: '下次不显示', welcomeGotIt: '知道了',
+    welcomeWindowsIssue: 'Windows 控制台窗口说明', welcomeWindowsIssueTitle: 'Windows 用户请注意', welcomeWindowsIssueDesc: '在 Windows 系统中，当父进程没有控制台时，通过 exec.Command 创建的子进程会生成新的控制台窗口。该问题已在 terraform-exec 库中提交 issue 等待修复。',
+    welcomeDontShow: '下次不显示', welcomeGotIt: '知道了', welcomeNext: '下一步', welcomePrev: '上一步',
     // Batch operations
     selected: '已选择', items: '项', clearSelection: '清除选择', selectAll: '全选',
     batchStart: '批量启动', batchStop: '批量停止', batchDelete: '批量删除',
@@ -283,7 +284,8 @@ export const i18n = {
     welcomeFeature1: 'One-click Cloud Deployment', welcomeFeature1Desc: 'Support for multiple cloud providers, quickly create and manage cloud resource scenarios',
     welcomeFeature2: 'Cost Optimization Analysis', welcomeFeature2Desc: 'AI-powered analysis of resource usage, provide cost optimization suggestions',
     welcomeFeature3: 'Local Template Management', welcomeFeature3Desc: 'Support for custom templates to meet personalized needs',
-    welcomeDontShow: "Don't show again", welcomeGotIt: 'Got it',
+    welcomeWindowsIssue: 'Windows Console Window Notice', welcomeWindowsIssueTitle: 'Attention Windows Users', welcomeWindowsIssueDesc: 'In Windows, when the parent process has no console, child processes created via exec.Command will generate a new console window. This issue has been submitted to the terraform-exec library as an issue awaiting fix.',
+    welcomeDontShow: "Don't show again", welcomeGotIt: 'Got it', welcomeNext: 'Next', welcomePrev: 'Previous',
     // Batch operations
     selected: 'Selected', items: 'items', clearSelection: 'Clear selection', selectAll: 'Select All',
     deselectAll: 'Deselect All', selectedCount: '{count} selected',
