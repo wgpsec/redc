@@ -461,6 +461,7 @@ var enMessages = map[string]string{
 	"app_cred_aws_missing":        "AWS credentials not configured",
 	"app_cred_gcp_missing":        "GCP credentials not configured",
 	"app_provider_unsupported":    "Unsupported cloud provider",
+	"app_balance_query_error":     "%s query error, please check console for details",
 
 	// 场景相关
 	"app_get_case_failed":  "Failed to get case: %v",

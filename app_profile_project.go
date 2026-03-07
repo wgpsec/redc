@@ -497,19 +497,19 @@ func addModuleResources(counts map[string]int, module *tfjson.StateModule) {
 func getProviderDisplayName(provider string) string {
 	switch provider {
 	case "aliyun":
-		return "阿里云"
+		return i18n.T("provider_aliyun")
 	case "tencentcloud":
-		return "腾讯云"
+		return i18n.T("provider_tencent")
 	case "volcengine":
-		return "火山引擎"
+		return i18n.T("provider_volcengine")
 	case "huaweicloud":
-		return "华为云"
+		return i18n.T("provider_huawei")
 	case "ucloud":
 		return "UCloud"
 	case "vultr":
 		return "Vultr"
 	case "aws":
-		return "AWS"
+		return i18n.T("provider_aws")
 	default:
 		return provider
 	}
@@ -540,7 +540,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] recovered from panic for provider %s: %v", p, r)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				}
 			}()
 
@@ -554,7 +554,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -569,7 +569,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -584,7 +584,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -599,7 +599,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -614,7 +614,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -629,7 +629,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency
@@ -644,7 +644,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
 					log.Printf(logMsg)
 					runtime.EventsEmit(a.ctx, "log", logMsg)
-					result.Error = fmt.Sprintf("%s查询报错，请至控制台查看详情", getProviderDisplayName(p))
+					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
 					result.Amount = amount
 					result.Currency = currency

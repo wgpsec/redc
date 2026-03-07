@@ -461,6 +461,7 @@ var zhMessages = map[string]string{
 	"app_cred_aws_missing":        "未配置 AWS 凭据",
 	"app_cred_gcp_missing":        "未配置 GCP 凭据",
 	"app_provider_unsupported":    "不支持的云厂商",
+	"app_balance_query_error":     "%s查询报错，请至控制台查看详情",
 
 	// 场景相关
 	"app_get_case_failed":  "获取场景失败: %v",
