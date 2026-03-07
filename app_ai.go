@@ -123,14 +123,9 @@ func (a *App) AIRecommendTemplates(query string) error {
 
 	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
 
-	systemPrompt := `你是一个云资源场景推荐助手。用户会描述他们的需求，你需要根据可用的模板列表推荐最合适的场景。
-
-可用的模板列表：
-` + strings.Join(templateList, "\n") + `
-
-请根据用户需求，推荐最合适的模板，并说明推荐理由。如果没有完全匹配的模板，可以推荐相近的模板并说明如何调整使用。
-
-` + langPrompt + `，用简洁、友好的语言回复，直接给出推荐结果和理由。`
+	systemPrompt := fmt.Sprintf(ai.TemplateRecommendationSystemPrompt,
+		strings.Join(templateList, "\n"),
+		langPrompt)
 
 	messages := []ai.Message{
 		{Role: "system", Content: systemPrompt},
@@ -150,6 +145,53 @@ func (a *App) AIRecommendTemplates(query string) error {
 	}
 
 	runtime.EventsEmit(a.ctx, "ai-recommend-complete", true)
+	return nil
+}
+
+// AIGenerateTemplate uses AI to generate a scenario template based on user requirements
+func (a *App) AIGenerateTemplate(query string) error {
+	if strings.TrimSpace(query) == "" {
+		return fmt.Errorf("%s", i18n.T("app_template_gen_query_empty"))
+	}
+
+	profile, err := redc.GetActiveProfile()
+	if err != nil || profile.AIConfig == nil {
+		return fmt.Errorf("%s", i18n.T("app_ai_not_configured"))
+	}
+
+	uiLang := a.GetLanguage()
+	langPrompt := "请用中文回复"
+	if uiLang == "en" {
+		langPrompt = "Please reply in English"
+	}
+
+	aiConfig := profile.AIConfig
+	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
+		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
+	}
+
+	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
+
+	systemPrompt := ai.TemplateGenerationSystemPrompt + "\n\n" + langPrompt
+
+	messages := []ai.Message{
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: query},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	err = client.ChatStream(ctx, messages, func(chunk string) error {
+		runtime.EventsEmit(a.ctx, "ai-template-gen-chunk", chunk)
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf(i18n.Tf("app_template_gen_failed", err))
+	}
+
+	runtime.EventsEmit(a.ctx, "ai-template-gen-complete", true)
 	return nil
 }
 
@@ -350,42 +392,11 @@ func (a *App) AICostOptimization() error {
 		langPrompt = "Please reply in English"
 	}
 
+	casesInfo := strings.Join(caseInfoList, "\n\n")
 	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
 
-	systemPrompt := `你是一个云成本优化专家。用户会提供当前运行中的云资源场景及其成本信息，你需要分析并提供成本优化建议。
-
-**重要说明**：
-- 某些场景可能因为状态文件问题无法获取完整信息
-- 对于信息不完整的场景，请基于已知信息提供方向性建议
-- 对于有完整成本信息的场景，请提供详细的优化建议
-
-**分析维度**：
-1. **实例规格优化**：是否可以降低配置或使用更经济的实例类型
-2. **使用模式优化**：是否可以使用竞价实例、预留实例、定时开关机等策略
-3. **资源利用率**：识别可能的资源浪费（如过度配置、闲置资源）
-4. **存储优化**：存储类型是否合理，是否有优化空间
-5. **网络优化**：带宽配置是否合理
-
-**输出格式**：
-对每个场景，请提供：
-- 当前状态分析
-- 具体的优化建议（可操作的）
-- 预计可节省的成本（如果有成本数据）
-- 优化的优先级（高/中/低）
-
-**特殊情况处理**：
-- 如果场景状态文件读取失败，建议检查部署状态
-- 如果无法获取成本信息，提供通用的优化方向
-- 如果资源信息不完整，基于模板类型给出建议
-
-` + langPrompt + `，用清晰、专业的语言回复，给出实用的建议。`
-
-	casesInfo := strings.Join(caseInfoList, "\n\n")
-	userPrompt := fmt.Sprintf(`请分析以下 %d 个运行中的云资源场景，并提供成本优化建议：
-
-%s
-
-请为每个场景提供详细的优化建议。`, runningCount, casesInfo)
+	systemPrompt := fmt.Sprintf(ai.CostOptimizationSystemPrompt, langPrompt)
+	userPrompt := fmt.Sprintf(ai.CostOptimizationUserPrompt, runningCount, casesInfo)
 
 	messages := []ai.Message{
 		{Role: "system", Content: systemPrompt},
@@ -431,21 +442,7 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 
 	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
 
-	systemPrompt := `你是一个云资源部署专家助手。用户会提供一个部署失败的错误信息，你需要分析错误原因并提供解决方案。
-
-请分析以下部署错误：
-
-- 云服务商: ` + provider + `
-- 模板名称: ` + templateName + `
-- 错误信息:
-` + errorMessage + `
-
-请按以下格式回复：
-1. 错误原因分析
-2. 解决方案建议
-3. 如果需要，提供具体的配置修改建议
-
-` + langPrompt + `，用简洁、专业的语言回复，直接给出分析结果和解决方案。`
+	systemPrompt := fmt.Sprintf(ai.DeploymentErrorAnalysisSystemPrompt, provider, templateName, errorMessage, langPrompt)
 
 	messages := []ai.Message{{Role: "system", Content: systemPrompt}}
 
@@ -499,22 +496,7 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 
 	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
 
-	systemPrompt := `你是一个云资源部署专家助手。用户会提供一个部署失败的错误信息，你需要分析错误原因并提供解决方案。
-
-请分析以下部署错误：
-
-- 云服务商: ` + provider + `
-- 模板名称: ` + templateName + `
-- 场景名称: ` + caseName + `
-- 错误信息:
-` + errorMessage + `
-
-请按以下格式回复：
-1. 错误原因分析
-2. 解决方案建议
-3. 如果需要，提供修正后的配置示例
-
-注意：` + langPrompt + `。`
+	systemPrompt := fmt.Sprintf(ai.CaseErrorAnalysisSystemPrompt, provider, templateName, caseName, errorMessage, langPrompt)
 
 	messages := []ai.Message{{Role: "system", Content: systemPrompt}}
 

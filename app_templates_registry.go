@@ -378,10 +378,15 @@ func (a *App) ListComposeTemplates() ([]redc.ComposeTemplate, error) {
 	return result, nil
 }
 
-func (a *App) SaveTemplateFiles(templateName string, files map[string]string) error {
-	path, err := redc.GetTemplatePath(templateName)
+func (a *App) SaveTemplateFiles(templateName string, files map[string]string) (string, error) {
+	// 检查是否是 AI 模板（通过检查 templateName 是否包含 ai- 前缀）
+	isAI := strings.HasPrefix(templateName, "ai-") || strings.HasPrefix(templateName, "AI-")
+	path, err := redc.ResolveTemplatePath(templateName, isAI)
 	if err != nil {
-		return err
+		return "", err
+	}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", fmt.Errorf("failed to create template directory: %w", err)
 	}
 	for name, content := range files {
 		// Save case.json, terraform.tfvars, *.tf, userdata files, and compose files
@@ -392,12 +397,13 @@ func (a *App) SaveTemplateFiles(templateName string, files map[string]string) er
 			strings.HasSuffix(name, ".md") ||
 			name == "userdata" || name == "script.sh" || name == "README" {
 			if err := os.WriteFile(filepath.Join(path, name), []byte(content), 0644); err != nil {
-				return err
+				return "", err
 			}
 		}
 	}
+	absPath, _ := filepath.Abs(path)
 	a.emitLog(i18n.Tf("app_template_save_success", templateName))
-	return nil
+	return absPath, nil
 }
 
 func (a *App) ExportTemplates(templateNames []string) (string, error) {

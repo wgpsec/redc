@@ -6,6 +6,10 @@ export function AICostOptimization() {
   return window['go']['main']['App']['AICostOptimization']();
 }
 
+export function AIGenerateTemplate(arg1) {
+  return window['go']['main']['App']['AIGenerateTemplate'](arg1);
+}
+
 export function AIRecommendTemplates(arg1) {
   return window['go']['main']['App']['AIRecommendTemplates'](arg1);
 }

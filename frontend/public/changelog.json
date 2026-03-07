@@ -1,6 +1,15 @@
 {
   "changelog": [
     {
+      "version": "3.0.8",
+      "date": "2026-03-08",
+      "changes": [
+        "新增：AI 模板生成功能，支持基于 LLM 自动生成完整的场景模板（Terraform + case.json）",
+        "优化：win 下默认 redc.log 路径问题",
+        "优化：余额查询报错未处理问题"
+      ]
+    },
+    {
       "version": "3.0.7",
       "date": "2026-03-05",
       "changes": [

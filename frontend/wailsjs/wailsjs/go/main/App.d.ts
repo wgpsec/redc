@@ -8,6 +8,8 @@ import {time} from '../models';
 
 export function AICostOptimization():Promise<void>;
 
+export function AIGenerateTemplate(arg1:string):Promise<void>;
+
 export function AIRecommendTemplates(arg1:string):Promise<void>;
 
 export function AnalyzeCaseError(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
@@ -176,7 +178,7 @@ export function SaveProvidersConfig(arg1:string,arg2:Record<string, string>,arg3
 
 export function SaveProxyConfig(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
-export function SaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promise<void>;
+export function SaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promise<string>;
 
 export function SaveTerraformMirrorConfig(arg1:boolean,arg2:Array<string>,arg3:string,arg4:boolean):Promise<void>;
 

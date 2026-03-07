@@ -22,8 +22,11 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-// TemplateDir 全局配置：默认模版存放路径
+// TemplateDir 全局配置：默认模版存放路径（在初始化时设置）
 var TemplateDir = "redc-templates"
+
+// AITemplateDir AI 生成模板存放路径（在初始化时设置为 TemplateDir/ai-templates）
+var AITemplateDir = "ai-templates"
 
 const TmplCaseFile = "case.json"
 const TmplUserdataFile = "userdata"
@@ -650,6 +653,31 @@ func resolveSafePath(imageName string) (string, error) {
 	localImageName := filepath.FromSlash(imageName)
 	targetPath := filepath.Join(TemplateDir, localImageName)
 	absBase, err := filepath.Abs(TemplateDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve base path failed: %w", err)
+	}
+	absTarget, err := filepath.Abs(targetPath)
+	if err != nil {
+		return "", fmt.Errorf("resolve target path failed: %w", err)
+	}
+	if !strings.HasPrefix(absTarget, absBase+string(os.PathSeparator)) && absTarget != absBase {
+		return "", fmt.Errorf("security violation: invalid path traversal detected in '%s'", imageName)
+	}
+	return targetPath, nil
+}
+
+// ResolveTemplatePath 根据镜像名称解析并返回本地路径（不检查是否存在）
+func ResolveTemplatePath(imageName string, isAI bool) (string, error) {
+	baseDir := TemplateDir
+	if isAI {
+		baseDir = AITemplateDir
+	}
+	if imageName == "" {
+		return "", fmt.Errorf("image name cannot be empty")
+	}
+	localImageName := filepath.FromSlash(imageName)
+	targetPath := filepath.Join(baseDir, localImageName)
+	absBase, err := filepath.Abs(baseDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve base path failed: %w", err)
 	}

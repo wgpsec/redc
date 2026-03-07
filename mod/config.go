@@ -132,6 +132,7 @@ func LoadConfig(path string) error {
 	}
 
 	TemplateDir = filepath.Join(RedcPath, "templates")
+	AITemplateDir = filepath.Join(TemplateDir, "ai-templates")
 	ProjectPath = filepath.Join(RedcPath, "task-result")
 
 	var data []byte
