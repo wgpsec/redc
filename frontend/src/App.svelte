@@ -370,16 +370,16 @@
         </div>
       {/if}
 
+      <!-- SSHManager rendered outside {#if isLoading} and {#key} to persist across tab switches and data refreshes -->
+      <div class="-m-6 h-[calc(100%+3rem)]" style:display={activeTab === 'sshManager' && !isLoading ? 'block' : 'none'}>
+        <SSHManager {t} onTabChange={(tab) => activeTab = tab} />
+      </div>
+
       {#if isLoading}
         <div class="flex items-center justify-center h-64">
           <div class="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
         </div>
       {:else}
-        <!-- SSHManager rendered outside {#key} to persist across tab switches -->
-        <div class="-m-6 h-[calc(100%+3rem)]" style:display={activeTab === 'sshManager' ? 'block' : 'none'}>
-          <SSHManager {t} onTabChange={(tab) => activeTab = tab} />
-        </div>
-
         {#if activeTab !== 'sshManager'}
         {#key activeTab}
           <div 
