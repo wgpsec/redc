@@ -224,27 +224,6 @@
     {/if}
   </div>
 
-  <!-- AI Chat redirect hint -->
-  <div class="bg-blue-50 rounded-xl border border-blue-100 p-4 sm:p-5">
-    <div class="flex items-start gap-3">
-      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <h3 class="text-[13px] sm:text-[14px] font-semibold text-blue-900 mb-1">{t.aiChat || 'AI 对话'}</h3>
-        <p class="text-[11px] sm:text-[12px] text-blue-700 mb-3">{t.aiChatRedirectHint || 'AI 模板生成、场景推荐、成本优化等功能已迁移至 AI 对话页面，支持多轮对话和流式输出。'}</p>
-        <button
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-          onclick={() => onTabChange('aiChat')}
-        >
-          {t.goToAIChat || '前往 AI 对话'} →
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- MCP Status Card -->
   <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4">
@@ -341,7 +320,7 @@
     </p>
     <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
       <div class="text-[10px] sm:text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-2">{t.availableTools}</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] sm:text-[12px]">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] sm:text-[12px]">
         <div class="flex items-center gap-2 text-gray-700">
           <span class="w-1 h-1 rounded-full bg-gray-400"></span>
           list_templates
