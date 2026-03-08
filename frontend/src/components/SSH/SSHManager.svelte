@@ -285,6 +285,17 @@
     }
   }
 
+  let showCloseAllConfirm = $state(false);
+
+  function closeAllSessions() {
+    for (const session of sessions) {
+      cleanupSession(session);
+    }
+    sessions = [];
+    activeSessionIndex = -1;
+    showCloseAllConfirm = false;
+  }
+
   async function openNewSessionDialog() {
     showNewSessionDialog = true;
     showManualInput = false;
@@ -450,7 +461,7 @@
     <!-- Left: Terminal area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Tab bar -->
-      <div class="flex-shrink-0 flex items-center bg-gray-50 border-b border-gray-200 px-2 h-10 gap-1 overflow-x-auto">
+      <div class="flex-shrink-0 flex flex-wrap items-center bg-gray-50 border-b border-gray-200 px-2 min-h-[40px] py-1 gap-1">
         {#each sessions as session, i (session.id)}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
@@ -495,6 +506,19 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </button>
+
+        <!-- Close all sessions button -->
+        {#if sessions.length > 1}
+          <button
+            class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0 cursor-pointer"
+            onclick={() => showCloseAllConfirm = true}
+            title={t.sshCloseAll || '关闭所有连接'}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        {/if}
 
         <div class="flex-1"></div>
 
@@ -931,6 +955,31 @@
 <!-- File Manager Modal -->
 {#if showFileManagerModal && activeSession}
   <FileManager {t} caseId={activeSession.caseId} caseName={activeSession.caseName} onClose={() => showFileManagerModal = false} />
+{/if}
+
+<!-- Close All Confirmation -->
+{#if showCloseAllConfirm}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+    onclick={(e) => { if (e.target === e.currentTarget) showCloseAllConfirm = false; }}
+    onkeydown={(e) => { if (e.key === 'Escape') showCloseAllConfirm = false; }}
+  >
+    <div class="bg-white rounded-xl border border-gray-100 w-full max-w-xs p-5 shadow-2xl">
+      <h3 class="text-[15px] font-semibold text-gray-900 mb-2">{t.sshCloseAll || '关闭所有连接'}</h3>
+      <p class="text-[13px] text-gray-500 mb-5">{t.sshCloseAllConfirm || `确定关闭所有 ${sessions.length} 个 SSH 连接吗？`}</p>
+      <div class="flex justify-end gap-2">
+        <button
+          class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          onclick={() => showCloseAllConfirm = false}
+        >{t.cancel || '取消'}</button>
+        <button
+          class="h-9 px-4 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+          onclick={closeAllSessions}
+        >{t.confirm || '确定'}</button>
+      </div>
+    </div>
+  </div>
 {/if}
 
 <style>
