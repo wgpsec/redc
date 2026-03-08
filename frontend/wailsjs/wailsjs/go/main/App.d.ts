@@ -118,6 +118,8 @@ export function GetResourceSummary():Promise<Array<main.ResourceSummary>>;
 
 export function GetSSHInfoForCase(arg1:string):Promise<Record<string, any>>;
 
+export function GetSSHInfosForCase(arg1:string):Promise<Array<Record<string, any>>>;
+
 export function GetScheduledTask(arg1:string):Promise<mod.ScheduledTask>;
 
 export function GetShowWelcomeDialog():Promise<boolean>;
@@ -219,6 +221,8 @@ export function StartMCPServer(arg1:string,arg2:string):Promise<void>;
 export function StartPortForward(arg1:string,arg2:number,arg3:string,arg4:number):Promise<main.PortForwardInfo>;
 
 export function StartSSHTerminal(arg1:string,arg2:number,arg3:number):Promise<string>;
+
+export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg4:number):Promise<string>;
 
 export function StopCase(arg1:string):Promise<void>;
 

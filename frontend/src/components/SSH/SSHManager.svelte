@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { StartSSHTerminal, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { StartSSHTerminal, StartSSHTerminalInstance, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, GetSSHInfosForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import FileManager from '../Cases/FileManager.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
@@ -16,6 +16,8 @@
   let availableCases = $state([]);
   let casesLoading = $state(false);
   let showManualInput = $state(false);
+  let multiInstances = $state([]);
+  let multiInstanceCase = $state(null);
 
   // --- Right panel state: 'none' | 'portForward' | 'userdata' | 'fileManager' ---
   let rightPanel = $state('none');
@@ -115,20 +117,26 @@
     }
   });
 
-  async function createSession(caseId, caseName) {
+  async function createSession(caseId, caseName, instanceIndex = 0, hostInfo = null) {
     if (!xtermModules) return;
 
     let host = '', user = '';
-    try {
-      const info = await GetSSHInfoForCase(caseId);
-      host = info.host || '';
-      user = info.user || '';
-    } catch (_) {}
+    if (hostInfo) {
+      host = hostInfo.host || '';
+      user = hostInfo.user || '';
+    } else {
+      try {
+        const info = await GetSSHInfoForCase(caseId);
+        host = info.host || '';
+        user = info.user || '';
+      } catch (_) {}
+    }
 
     const session = {
       id: crypto.randomUUID(),
       caseId,
       caseName: caseName || caseId,
+      instanceIndex,
       sessionId: null,
       terminal: null,
       fitAddon: null,
@@ -226,7 +234,7 @@
     const cols = session.terminal?.cols || 80;
 
     try {
-      const sid = await StartSSHTerminal(session.caseId, rows, cols);
+      const sid = await StartSSHTerminalInstance(session.caseId, session.instanceIndex || 0, rows, cols);
       session.sessionId = sid;
 
       EventsOn(`terminal-output-${sid}`, (data) => {
@@ -282,6 +290,8 @@
     showManualInput = false;
     newSessionCaseId = '';
     newSessionCaseName = '';
+    multiInstances = [];
+    multiInstanceCase = null;
     casesLoading = true;
     try {
       const cases = await ListCases();
@@ -292,8 +302,35 @@
     casesLoading = false;
   }
 
-  function selectCase(c) {
+  async function selectCase(c) {
+    // 检查是否有多个实例
+    try {
+      const infos = await GetSSHInfosForCase(c.id);
+      if (infos && infos.length > 1) {
+        multiInstanceCase = c;
+        multiInstances = infos;
+        return;
+      }
+    } catch (_) {}
     createSession(c.id, c.name || c.id);
+    showNewSessionDialog = false;
+  }
+
+  function selectInstance(c, info, index) {
+    const label = `${c.name || c.id.substring(0, 12)} #${index + 1} (${info.host})`;
+    createSession(c.id, label, index, info);
+    multiInstances = [];
+    multiInstanceCase = null;
+    showNewSessionDialog = false;
+  }
+
+  function connectAllInstances(c, infos) {
+    for (let i = 0; i < infos.length; i++) {
+      const label = `${c.name || c.id.substring(0, 12)} #${i + 1} (${infos[i].host})`;
+      createSession(c.id, label, i, infos[i]);
+    }
+    multiInstances = [];
+    multiInstanceCase = null;
     showNewSessionDialog = false;
   }
 
@@ -756,7 +793,46 @@
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-md p-5 shadow-2xl">
       <h3 class="text-[15px] font-semibold text-gray-900 mb-4">{t.sshNewSession || '新建会话'}</h3>
 
-      {#if !showManualInput}
+      {#if multiInstances.length > 0 && multiInstanceCase}
+        <!-- Multi-instance picker -->
+        <div class="mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <button
+              class="text-[12px] text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
+              onclick={() => { multiInstances = []; multiInstanceCase = null; }}
+            >
+              ← {t.sshBackToCases || '返回场景列表'}
+            </button>
+          </div>
+          <label class="block text-[12px] font-medium text-gray-700 mb-2">
+            {multiInstanceCase.name || multiInstanceCase.id.substring(0, 16)} — {t.sshSelectInstance || '选择实例'} ({multiInstances.length})
+          </label>
+          <div class="space-y-1 max-h-60 overflow-y-auto">
+            {#each multiInstances as info, i}
+              <button
+                class="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors cursor-pointer group"
+                onclick={() => selectInstance(multiInstanceCase, info, i)}
+              >
+                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium flex items-center justify-center">#{i + 1}</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[13px] font-mono text-gray-900">{info.host}</div>
+                  <div class="text-[11px] text-gray-400">{info.user}@{info.host}:{info.port || 22}</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 group-hover:text-red-500 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            {/each}
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-gray-100 pt-3">
+          <span class="text-[11px] text-gray-400">{t.sshMultiInstanceHint || '点击单个实例连接，或一键全部连接'}</span>
+          <button
+            class="h-9 px-4 text-[12px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+            onclick={() => connectAllInstances(multiInstanceCase, multiInstances)}
+          >
+            {t.sshConnectAll || '全部连接'}
+          </button>
+        </div>
+      {:else if !showManualInput}
         <!-- Active cases list -->
         <div class="mb-4">
           <label class="block text-[12px] font-medium text-gray-700 mb-2">{t.sshActiveCases || '运行中的场景'}</label>

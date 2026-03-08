@@ -226,6 +226,10 @@ export function GetSSHInfoForCase(arg1) {
   return window['go']['main']['App']['GetSSHInfoForCase'](arg1);
 }
 
+export function GetSSHInfosForCase(arg1) {
+  return window['go']['main']['App']['GetSSHInfosForCase'](arg1);
+}
+
 export function GetScheduledTask(arg1) {
   return window['go']['main']['App']['GetScheduledTask'](arg1);
 }
@@ -428,6 +432,10 @@ export function StartPortForward(arg1, arg2, arg3, arg4) {
 
 export function StartSSHTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['StartSSHTerminal'](arg1, arg2, arg3);
+}
+
+export function StartSSHTerminalInstance(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['StartSSHTerminalInstance'](arg1, arg2, arg3, arg4);
 }
 
 export function StopCase(arg1) {

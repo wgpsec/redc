@@ -409,6 +409,35 @@ func (c *Case) GetInstanceInfo(id string) (string, error) {
 	return str, nil
 }
 
+// GetInstanceInfoList 获取 output 值，支持单个字符串和字符串数组两种格式
+func (c *Case) GetInstanceInfoList(id string) ([]string, error) {
+	if c.output == nil {
+		_, err := c.TfOutput()
+		if err != nil {
+			return nil, fmt.Errorf("%s", i18n.T("case_output_not_initialized"))
+		}
+	}
+
+	val, ok := c.output[id]
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.Tf("case_output_not_found", id))
+	}
+
+	// 先尝试解析为单个字符串
+	var str string
+	if err := json.Unmarshal(val.Value, &str); err == nil && str != "" {
+		return []string{str}, nil
+	}
+
+	// 再尝试解析为字符串数组
+	var arr []string
+	if err := json.Unmarshal(val.Value, &arr); err == nil && len(arr) > 0 {
+		return arr, nil
+	}
+
+	return nil, fmt.Errorf("无法解析 output '%s' 为字符串或字符串数组", id)
+}
+
 // runModuleHook 在场景启动成功后执行模板声明的模块钩子
 func (c *Case) runModuleHook() error {
 	// 如果未记录模块名，尝试从 case.json 读取一次

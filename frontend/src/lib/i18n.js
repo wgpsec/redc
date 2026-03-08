@@ -170,6 +170,7 @@ export const i18n = {
     scriptPreview: '脚本预览', uploading: '上传中...', uploadAndExec: '上传并执行', loading: '加载中...',
     sendToAI: '发送到 AI 分析', analyzeTerminalPrompt: '请帮我分析以下终端输出内容',
     sshActiveCases: '运行中的场景', sshNoCasesRunning: '暂无运行中的场景', sshManualInput: '手动输入 ID →', sshBackToCases: '返回场景列表', predefined: '预定义', custom: '自定义',
+    sshSelectInstance: '选择实例', sshMultiInstanceHint: '点击单个实例连接，或一键全部连接', sshConnectAll: '全部连接',
     // Scheduled Tasks
     execSuccess: '执行成功', execFailed: '执行失败',
     uploadFile: '上传文件', downloadFile: '下载文件',
@@ -468,6 +469,7 @@ export const i18n = {
     loading: 'Loading...', noTemplatesHint: 'Please download userdata templates from the Template Registry first', goToTemplateRepo: 'Go to Template Registry →',
     sendToAI: 'Send to AI Analysis', analyzeTerminalPrompt: 'Please help me analyze the following terminal output',
     sshActiveCases: 'Active Scenarios', sshNoCasesRunning: 'No running scenarios', sshManualInput: 'Manual ID input →', sshBackToCases: 'Back to case list', predefined: 'Predefined', custom: 'Custom',
+    sshSelectInstance: 'Select Instance', sshMultiInstanceHint: 'Click an instance to connect, or connect all at once', sshConnectAll: 'Connect All',
     // Scheduled Tasks
     execSuccess: 'Exec Success', execFailed: 'Exec Failed',
     uploadFile: 'Upload File', downloadFile: 'Download File',

@@ -444,13 +444,39 @@ func (a *App) SelectSaveFile(title string, defaultFilename string) (string, erro
 
 // StartSSHTerminal 启动 SSH 终端会话
 func (a *App) StartSSHTerminal(caseID string, rows, cols int) (string, error) {
-	if a.project == nil {
+	return a.StartSSHTerminalInstance(caseID, 0, rows, cols)
+}
+
+// StartSSHTerminalInstance 启动指定实例索引的 SSH 终端（支持多实例场景）
+func (a *App) StartSSHTerminalInstance(caseID string, instanceIndex int, rows, cols int) (string, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
 		return "", fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
-	sshConfig, err := a.getSSHConfig(caseID)
-	if err != nil {
-		return "", err
+	var sshConfig *sshutil.SSHConfig
+
+	// 尝试作为 Case 获取多实例配置
+	c, caseErr := project.GetCase(caseID)
+	if caseErr == nil {
+		configs, err := c.GetSSHConfigs()
+		if err != nil {
+			return "", err
+		}
+		if instanceIndex < 0 || instanceIndex >= len(configs) {
+			return "", fmt.Errorf("实例索引 %d 超出范围 (共 %d 个实例)", instanceIndex, len(configs))
+		}
+		sshConfig = configs[instanceIndex]
+	} else {
+		// 非 Case（自定义部署等），使用原有逻辑
+		var err error
+		sshConfig, err = a.getSSHConfig(caseID)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	client, err := sshutil.NewClient(sshConfig)
@@ -787,4 +813,45 @@ func (a *App) GetSSHInfoForCase(caseID string) (map[string]interface{}, error) {
 		"port": sshConfig.Port,
 		"user": sshConfig.User,
 	}, nil
+}
+
+// GetSSHInfosForCase 获取场景的所有实例 SSH 信息（支持多实例）
+func (a *App) GetSSHInfosForCase(caseID string) ([]map[string]interface{}, error) {
+	a.mu.Lock()
+	project := a.project
+	a.mu.Unlock()
+
+	if project == nil {
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+
+	// 尝试作为 Case 处理
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		// 不是 Case，按单实例处理（自定义部署等）
+		config, err2 := a.getSSHConfig(caseID)
+		if err2 != nil {
+			return nil, err2
+		}
+		return []map[string]interface{}{{
+			"host": config.Host,
+			"port": config.Port,
+			"user": config.User,
+		}}, nil
+	}
+
+	// 是 Case，获取所有实例
+	configs, err := c.GetSSHConfigs()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]map[string]interface{}, 0, len(configs))
+	for _, cfg := range configs {
+		result = append(result, map[string]interface{}{
+			"host": cfg.Host,
+			"port": cfg.Port,
+			"user": cfg.User,
+		})
+	}
+	return result, nil
 }
