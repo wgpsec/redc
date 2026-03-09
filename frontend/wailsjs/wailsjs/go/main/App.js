@@ -338,6 +338,86 @@ export function LoadConfigTemplate(arg1) {
   return window['go']['main']['App']['LoadConfigTemplate'](arg1);
 }
 
+export function MCPCancelScheduledTask(arg1) {
+  return window['go']['main']['App']['MCPCancelScheduledTask'](arg1);
+}
+
+export function MCPComposeDown(arg1, arg2) {
+  return window['go']['main']['App']['MCPComposeDown'](arg1, arg2);
+}
+
+export function MCPComposePreview(arg1, arg2) {
+  return window['go']['main']['App']['MCPComposePreview'](arg1, arg2);
+}
+
+export function MCPComposeUp(arg1, arg2) {
+  return window['go']['main']['App']['MCPComposeUp'](arg1, arg2);
+}
+
+export function MCPGetActiveProfile() {
+  return window['go']['main']['App']['MCPGetActiveProfile']();
+}
+
+export function MCPGetBalances(arg1) {
+  return window['go']['main']['App']['MCPGetBalances'](arg1);
+}
+
+export function MCPGetBills(arg1) {
+  return window['go']['main']['App']['MCPGetBills'](arg1);
+}
+
+export function MCPGetCostEstimate(arg1, arg2) {
+  return window['go']['main']['App']['MCPGetCostEstimate'](arg1, arg2);
+}
+
+export function MCPGetPredictedMonthlyCost() {
+  return window['go']['main']['App']['MCPGetPredictedMonthlyCost']();
+}
+
+export function MCPGetResourceSummary() {
+  return window['go']['main']['App']['MCPGetResourceSummary']();
+}
+
+export function MCPGetTotalRuntime() {
+  return window['go']['main']['App']['MCPGetTotalRuntime']();
+}
+
+export function MCPListCustomDeployments() {
+  return window['go']['main']['App']['MCPListCustomDeployments']();
+}
+
+export function MCPListProfiles() {
+  return window['go']['main']['App']['MCPListProfiles']();
+}
+
+export function MCPListProjects() {
+  return window['go']['main']['App']['MCPListProjects']();
+}
+
+export function MCPListScheduledTasks() {
+  return window['go']['main']['App']['MCPListScheduledTasks']();
+}
+
+export function MCPScheduleTask(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MCPScheduleTask'](arg1, arg2, arg3, arg4);
+}
+
+export function MCPSetActiveProfile(arg1) {
+  return window['go']['main']['App']['MCPSetActiveProfile'](arg1);
+}
+
+export function MCPStartCustomDeployment(arg1) {
+  return window['go']['main']['App']['MCPStartCustomDeployment'](arg1);
+}
+
+export function MCPStopCustomDeployment(arg1) {
+  return window['go']['main']['App']['MCPStopCustomDeployment'](arg1);
+}
+
+export function MCPSwitchProject(arg1) {
+  return window['go']['main']['App']['MCPSwitchProject'](arg1);
+}
+
 export function PullTemplate(arg1, arg2) {
   return window['go']['main']['App']['PullTemplate'](arg1, arg2);
 }

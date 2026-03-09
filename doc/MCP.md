@@ -39,6 +39,39 @@ The redc MCP server exposes the following capabilities:
 17. **get_config** - Get redc current configuration (project path, proxy settings)
 18. **validate_config** - Validate cloud provider configuration (credentials, region, instance type)
 
+#### Extended Tools (GUI mode only)
+
+The following tools are available when using MCP through redc-gui (they require AppBridge):
+
+**Compose Orchestration:**
+19. **compose_preview** - Preview compose orchestration, returns service list and dependency graph
+20. **compose_up** - Start compose orchestration deployment (async)
+21. **compose_down** - Destroy compose orchestration deployment (async)
+
+**Cost & Resources:**
+22. **get_cost_estimate** - Estimate deployment cost for a template
+23. **get_balances** - Query cloud account balances
+24. **get_resource_summary** - Get resource summary across all cloud providers
+25. **get_predicted_monthly_cost** - Get predicted monthly cost
+26. **get_bills** - Get cloud billing information
+27. **get_total_runtime** - Get total runtime of all active cases
+
+**Custom Deployment:**
+28. **list_deployments** - List all custom deployments
+29. **start_deployment** - Start a custom deployment by ID
+30. **stop_deployment** - Stop a custom deployment by ID
+
+**Project & Profile Management:**
+31. **list_projects** - List all projects
+32. **switch_project** - Switch to a different project
+33. **list_profiles** - List all configuration profiles
+34. **get_active_profile** - Get the currently active profile
+35. **set_active_profile** - Set active profile by ID
+
+**Scheduler:**
+36. **schedule_task** - Schedule a future task (start/stop/kill) for a case
+37. **list_scheduled_tasks** - List all pending scheduled tasks
+
 ### Resources
 
 1. **redc://templates** - JSON list of available templates
@@ -355,6 +388,58 @@ Response:
       "provider": "aliyun",
       "region": "cn-hangzhou",
       "instance_type": "ecs.t6-c1m1.large"
+    }
+  }
+}
+```
+
+### Compose Preview (GUI mode)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "tools/call",
+  "params": {
+    "name": "compose_preview",
+    "arguments": {
+      "file": "compose.yaml",
+      "profiles": "proxy,dns"
+    }
+  }
+}
+```
+
+### Get Balances (GUI mode)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "method": "tools/call",
+  "params": {
+    "name": "get_balances",
+    "arguments": {
+      "providers": "aliyun,aws"
+    }
+  }
+}
+```
+
+### Schedule a Task (GUI mode)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "tools/call",
+  "params": {
+    "name": "schedule_task",
+    "arguments": {
+      "case_id": "8a57078ee856",
+      "case_name": "my-test-case",
+      "action": "stop",
+      "scheduled_at": "2025-01-15T10:30:00Z"
     }
   }
 }

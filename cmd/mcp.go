@@ -24,7 +24,7 @@ var mcpStdioCmd = &cobra.Command{
 The server reads JSON-RPC requests from stdin and writes responses to stdout.
 This mode is suitable for integration with AI assistants and tools.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		manager := mcp.NewMCPServerManager(redcProject)
+		manager := mcp.NewMCPServerManager(redcProject, nil)
 		if err := manager.Start(mcp.TransportSTDIO, ""); err != nil {
 			return
 		}
@@ -49,7 +49,7 @@ Example:
 			addr = args[0]
 		}
 
-		manager := mcp.NewMCPServerManager(redcProject)
+		manager := mcp.NewMCPServerManager(redcProject, nil)
 		if err := manager.Start(mcp.TransportSSE, addr); err != nil {
 			return
 		}

@@ -29,6 +29,48 @@ redc MCP 服务器提供以下能力：
 7. **kill_case** - 通过 ID 销毁场景
 8. **get_case_status** - 获取特定场景的状态
 9. **exec_command** - 在场景上执行命令
+10. **get_ssh_info** - 获取场景的 SSH 连接信息
+11. **upload_file** - 通过 SFTP 上传文件到场景服务器
+12. **download_file** - 通过 SFTP 从场景服务器下载文件
+13. **get_template_info** - 获取本地模板的详细信息
+14. **delete_template** - 删除本地模板
+15. **get_case_outputs** - 获取场景的 terraform 输出
+16. **get_config** - 获取 redc 当前配置
+17. **validate_config** - 验证云厂商配置
+18. **search_templates** - 在官方仓库中搜索模板
+
+#### 扩展工具（仅 GUI 模式）
+
+以下工具在通过 redc-gui 使用 MCP 时可用（需要 AppBridge）：
+
+**Compose 编排：**
+19. **compose_preview** - 预览 compose 编排，返回服务列表和依赖关系
+20. **compose_up** - 启动 compose 编排部署（异步）
+21. **compose_down** - 销毁 compose 编排部署（异步）
+
+**成本与资源：**
+22. **get_cost_estimate** - 估算模板部署成本
+23. **get_balances** - 查询云账户余额
+24. **get_resource_summary** - 获取各云厂商资源汇总
+25. **get_predicted_monthly_cost** - 获取当月预估成本
+26. **get_bills** - 获取云账单信息
+27. **get_total_runtime** - 获取所有活跃场景的总运行时长
+
+**自定义部署：**
+28. **list_deployments** - 列出所有自定义部署
+29. **start_deployment** - 通过 ID 启动自定义部署
+30. **stop_deployment** - 通过 ID 停止自定义部署
+
+**项目与配置管理：**
+31. **list_projects** - 列出所有项目
+32. **switch_project** - 切换项目
+33. **list_profiles** - 列出所有配置档案
+34. **get_active_profile** - 获取当前激活的配置
+35. **set_active_profile** - 设置激活的配置
+
+**定时任务：**
+36. **schedule_task** - 创建定时任务（start/stop/kill）
+37. **list_scheduled_tasks** - 列出所有待执行的定时任务
 
 ### 资源
 
@@ -197,6 +239,58 @@ SSE 服务器提供三个端点：
     "arguments": {
       "case_id": "8a57078ee856",
       "command": "whoami"
+    }
+  }
+}
+```
+
+### Compose 预览（GUI 模式）
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "tools/call",
+  "params": {
+    "name": "compose_preview",
+    "arguments": {
+      "file": "compose.yaml",
+      "profiles": "proxy,dns"
+    }
+  }
+}
+```
+
+### 查询余额（GUI 模式）
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "method": "tools/call",
+  "params": {
+    "name": "get_balances",
+    "arguments": {
+      "providers": "aliyun,aws"
+    }
+  }
+}
+```
+
+### 创建定时任务（GUI 模式）
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "tools/call",
+  "params": {
+    "name": "schedule_task",
+    "arguments": {
+      "case_id": "8a57078ee856",
+      "case_name": "my-test-case",
+      "action": "stop",
+      "scheduled_at": "2025-01-15T10:30:00Z"
     }
   }
 }

@@ -130,13 +130,15 @@ type LogCallback func(message string)
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
 	project   *redc.RedcProject
+	app       AppBridge
 	logWriter LogCallback
 }
 
 // NewMCPServer creates a new MCP server instance
-func NewMCPServer(project *redc.RedcProject) *MCPServer {
+func NewMCPServer(project *redc.RedcProject, app AppBridge) *MCPServer {
 	return &MCPServer{
 		project: project,
+		app:     app,
 	}
 }
 
@@ -276,7 +278,7 @@ func (s *MCPServer) HandleRequest(req *MCPRequest) *MCPResponse {
 }
 
 func (s *MCPServer) getTools() []Tool {
-	return []Tool{
+	tools := []Tool{
 		{
 			Name:        "list_templates",
 			Description: "List all available redc templates/images",
@@ -560,6 +562,17 @@ func (s *MCPServer) getTools() []Tool {
 			},
 		},
 	}
+
+	// Append extended tools (require AppBridge)
+	if s.app != nil {
+		tools = append(tools, composeToolSchemas()...)
+		tools = append(tools, costToolSchemas()...)
+		tools = append(tools, deploymentToolSchemas()...)
+		tools = append(tools, projectToolSchemas()...)
+		tools = append(tools, schedulerToolSchemas()...)
+	}
+
+	return tools
 }
 
 func (s *MCPServer) getResources() []Resource {
@@ -799,6 +812,116 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		region, _ := args["region"].(string)
 		instanceType, _ := args["instance_type"].(string)
 		return s.toolValidateConfig(provider, region, instanceType)
+
+	// --- Compose tools ---
+	case "compose_preview":
+		file, _ := args["file"].(string)
+		profiles, _ := args["profiles"].(string)
+		return s.toolComposePreview(file, profiles)
+
+	case "compose_up":
+		file, _ := args["file"].(string)
+		profiles, _ := args["profiles"].(string)
+		return s.toolComposeUp(file, profiles)
+
+	case "compose_down":
+		file, _ := args["file"].(string)
+		profiles, _ := args["profiles"].(string)
+		return s.toolComposeDown(file, profiles)
+
+	// --- Cost & Resource tools ---
+	case "get_cost_estimate":
+		template, ok := args["template"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'template' parameter")
+		}
+		return s.toolGetCostEstimate(template)
+
+	case "get_balances":
+		providers, _ := args["providers"].(string)
+		return s.toolGetBalances(providers)
+
+	case "get_resource_summary":
+		return s.toolGetResourceSummary()
+
+	case "get_predicted_monthly_cost":
+		return s.toolGetPredictedMonthlyCost()
+
+	case "get_bills":
+		providers, _ := args["providers"].(string)
+		return s.toolGetBills(providers)
+
+	case "get_total_runtime":
+		return s.toolGetTotalRuntime()
+
+	// --- Custom Deployment tools ---
+	case "list_deployments":
+		return s.toolListDeployments()
+
+	case "start_deployment":
+		id, ok := args["deployment_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'deployment_id' parameter")
+		}
+		return s.toolStartDeployment(id)
+
+	case "stop_deployment":
+		id, ok := args["deployment_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'deployment_id' parameter")
+		}
+		return s.toolStopDeployment(id)
+
+	// --- Project & Profile tools ---
+	case "list_projects":
+		return s.toolListProjects()
+
+	case "switch_project":
+		name, ok := args["project_name"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'project_name' parameter")
+		}
+		return s.toolSwitchProject(name)
+
+	case "list_profiles":
+		return s.toolListProfiles()
+
+	case "get_active_profile":
+		return s.toolGetActiveProfile()
+
+	case "set_active_profile":
+		profileID, ok := args["profile_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'profile_id' parameter")
+		}
+		return s.toolSetActiveProfile(profileID)
+
+	// --- Scheduler tools ---
+	case "schedule_task":
+		caseID, ok := args["case_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'case_id' parameter")
+		}
+		caseName, _ := args["case_name"].(string)
+		action, ok := args["action"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'action' parameter")
+		}
+		scheduledAt, ok := args["scheduled_at"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'scheduled_at' parameter")
+		}
+		return s.toolScheduleTask(caseID, caseName, action, scheduledAt)
+
+	case "list_scheduled_tasks":
+		return s.toolListScheduledTasks()
+
+	case "cancel_scheduled_task":
+		taskID, ok := args["task_id"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'task_id' parameter")
+		}
+		return s.toolCancelScheduledTask(taskID)
 
 	default:
 		return ToolResult{}, fmt.Errorf("unknown tool: %s", name)
@@ -1394,9 +1517,9 @@ type MCPServerManager struct {
 }
 
 // NewMCPServerManager creates a new server manager
-func NewMCPServerManager(project *redc.RedcProject) *MCPServerManager {
+func NewMCPServerManager(project *redc.RedcProject, app AppBridge) *MCPServerManager {
 	return &MCPServerManager{
-		server: NewMCPServer(project),
+		server: NewMCPServer(project, app),
 	}
 }
 

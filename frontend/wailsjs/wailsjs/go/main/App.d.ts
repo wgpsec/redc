@@ -174,6 +174,46 @@ export function ListUserdataTemplates():Promise<Array<mod.UserdataTemplate>>;
 
 export function LoadConfigTemplate(arg1:string):Promise<mod.DeploymentConfig>;
 
+export function MCPCancelScheduledTask(arg1:string):Promise<void>;
+
+export function MCPComposeDown(arg1:string,arg2:Array<string>):Promise<void>;
+
+export function MCPComposePreview(arg1:string,arg2:Array<string>):Promise<any>;
+
+export function MCPComposeUp(arg1:string,arg2:Array<string>):Promise<void>;
+
+export function MCPGetActiveProfile():Promise<any>;
+
+export function MCPGetBalances(arg1:Array<string>):Promise<any>;
+
+export function MCPGetBills(arg1:Array<string>):Promise<any>;
+
+export function MCPGetCostEstimate(arg1:string,arg2:Record<string, string>):Promise<any>;
+
+export function MCPGetPredictedMonthlyCost():Promise<string>;
+
+export function MCPGetResourceSummary():Promise<any>;
+
+export function MCPGetTotalRuntime():Promise<string>;
+
+export function MCPListCustomDeployments():Promise<any>;
+
+export function MCPListProfiles():Promise<any>;
+
+export function MCPListProjects():Promise<any>;
+
+export function MCPListScheduledTasks():Promise<any>;
+
+export function MCPScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<any>;
+
+export function MCPSetActiveProfile(arg1:string):Promise<any>;
+
+export function MCPStartCustomDeployment(arg1:string):Promise<void>;
+
+export function MCPStopCustomDeployment(arg1:string):Promise<void>;
+
+export function MCPSwitchProject(arg1:string):Promise<void>;
+
 export function PullTemplate(arg1:string,arg2:boolean):Promise<void>;
 
 export function RecommendTemplates(arg1:string):Promise<Array<main.TemplateRecommendation>>;

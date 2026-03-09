@@ -35,7 +35,7 @@ func (a *App) StartMCPServer(mode string, address string) error {
 
 	// Create manager if not exists
 	if a.mcpManager == nil {
-		a.mcpManager = mcp.NewMCPServerManager(a.project)
+		a.mcpManager = mcp.NewMCPServerManager(a.project, a)
 		a.mcpManager.SetLogCallback(a.emitLog)
 	}
 

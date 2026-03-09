@@ -137,7 +137,7 @@ func (a *App) AgentChatStream(conversationId string, messages []AIChatMessage) e
 	systemPrompt := fmt.Sprintf(ai.AgentSystemPrompt, langPrompt)
 
 	// Build tool definitions from MCP server
-	mcpServer := mcp.NewMCPServer(project)
+	mcpServer := mcp.NewMCPServer(project, a)
 	mcpTools := mcpServer.GetTools()
 	toolDefs := make([]ai.ToolDefinition, 0, len(mcpTools))
 	for _, t := range mcpTools {
