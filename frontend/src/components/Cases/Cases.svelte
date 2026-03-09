@@ -458,19 +458,30 @@ let { t, onTabChange = () => {} } = $props();
 
   function getNodeLabel(resource) {
     const parts = resource.type.split('_');
-    // e.g. aws_instance → Instance, volcengine_ecs_instance → ECS Instance
     if (parts.length <= 1) return resource.type;
-    const provider = parts[0];
     const rest = parts.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     return rest;
+  }
+
+  function getNodeDetail(resource) {
+    const d = resource?.detail;
+    if (!d) return '';
+    const parts = [];
+    if (d.instance_type) parts.push(d.instance_type);
+    if (d.cidr) parts.push(d.cidr);
+    if (d.rule) parts.push(d.rule);
+    if (d.ingress) parts.push('in: ' + d.ingress);
+    if (d.egress && !d.ingress) parts.push('out: ' + d.egress);
+    return parts.join(' | ').substring(0, 60);
   }
 
   async function layoutTopology(data) {
     try {
       const elk = new ELK();
 
-      const NODE_W = 180;
-      const NODE_H = 48;
+      const NODE_W = 200;
+      const hasDetail = data.resources.some(r => r.detail && Object.keys(r.detail).length > 0);
+      const NODE_H = hasDetail ? 58 : 48;
 
       // Build address set for filtering edges
       const addrSet = new Set(data.resources.map(r => r.address));
@@ -519,6 +530,7 @@ let { t, onTabChange = () => {} } = $props();
         resource: resMap[n.id],
         color: getActionColor(resMap[n.id]?.actions),
         label: getNodeLabel(resMap[n.id] || {}),
+        detailText: getNodeDetail(resMap[n.id] || {}),
       }));
 
       const newEdges = (layout.edges || []).map(e => {
@@ -1752,6 +1764,41 @@ let { t, onTabChange = () => {} } = $props();
             </div>
           </div>
 
+          <!-- Type Summary Table -->
+          {#if planPreviewModal.data.typeSummary && planPreviewModal.data.typeSummary.length > 0}
+            <div class="mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table class="w-full text-[12px]">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-100">
+                    <th class="text-left px-3 py-1.5 font-medium text-gray-500">{t.resourceType || '资源类型'}</th>
+                    <th class="text-center px-3 py-1.5 font-medium text-gray-500 w-16">{t.count || '数量'}</th>
+                    <th class="text-left px-3 py-1.5 font-medium text-gray-500">{t.keyInfo || '关键信息'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each planPreviewModal.data.typeSummary as ts}
+                    {@const firstRes = planPreviewModal.data.resources.find(r => r.type === ts.type)}
+                    {@const detailStr = firstRes?.detail ? Object.values(firstRes.detail).join(' · ') : ''}
+                    <tr class="border-b border-gray-50 last:border-0">
+                      <td class="px-3 py-1.5">
+                        <span class="font-medium text-gray-700">{ts.label}</span>
+                        <span class="text-gray-400 ml-1 text-[10px]">{ts.type}</span>
+                      </td>
+                      <td class="text-center px-3 py-1.5">
+                        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold {ts.count > 1 ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'}">
+                          {ts.count}
+                        </span>
+                      </td>
+                      <td class="px-3 py-1.5 text-gray-500 text-[11px] truncate max-w-[300px]" title={detailStr}>
+                        {detailStr || '-'}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+
           <!-- Topology SVG -->
           {#if elkNodes.length > 0}
             <div class="relative">
@@ -1786,13 +1833,18 @@ let { t, onTabChange = () => {} } = $props();
                     <g transform="translate({node.x}, {node.y})">
                       <rect width={node.w} height={node.h} rx="8" ry="8"
                         fill="white" stroke={node.color.border} stroke-width="2" class="drop-shadow-sm" />
-                      <circle cx="14" cy={node.h / 2} r="4" fill={node.color.border} />
+                      <circle cx="14" cy="20" r="4" fill={node.color.border} />
                       <text x="26" y="18" font-size="11" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">
                         {node.label}
                       </text>
-                      <text x="26" y="34" font-size="9" fill="#9ca3af" font-family="system-ui, sans-serif">
+                      <text x="26" y="32" font-size="9" fill="#9ca3af" font-family="system-ui, sans-serif">
                         {node.resource?.name || ''}
                       </text>
+                      {#if node.detailText}
+                        <text x="26" y="46" font-size="8" fill="#6b7280" font-family="system-ui, sans-serif" font-style="italic">
+                          {node.detailText}
+                        </text>
+                      {/if}
                       <text x={node.w - 10} y="18" font-size="11" font-weight="700" fill={node.color.text} text-anchor="end" font-family="system-ui, sans-serif">
                         {node.color.label}
                       </text>

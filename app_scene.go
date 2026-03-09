@@ -260,12 +260,13 @@ func (a *App) DeployCase(templateName string, name string, vars map[string]strin
 
 // PlanResourceChange represents a single resource change in the plan
 type PlanResourceChange struct {
-	Address      string   `json:"address"`
-	Type         string   `json:"type"`
-	Name         string   `json:"name"`
-	ProviderName string   `json:"providerName"`
-	Actions      []string `json:"actions"`
-	IsData       bool     `json:"isData"`
+	Address      string            `json:"address"`
+	Type         string            `json:"type"`
+	Name         string            `json:"name"`
+	ProviderName string            `json:"providerName"`
+	Actions      []string          `json:"actions"`
+	IsData       bool              `json:"isData"`
+	Detail       map[string]string `json:"detail,omitempty"`
 }
 
 // PlanEdge represents a dependency edge between two resources
@@ -274,15 +275,24 @@ type PlanEdge struct {
 	To   string `json:"to"`
 }
 
+// PlanTypeSummary summarizes resource count by type
+type PlanTypeSummary struct {
+	Type    string `json:"type"`
+	Label   string `json:"label"`
+	Count   int    `json:"count"`
+	Actions string `json:"actions"`
+}
+
 // PlanPreview contains the full plan preview data for topology visualization
 type PlanPreview struct {
-	HasChanges bool                 `json:"hasChanges"`
-	ToCreate   int                  `json:"toCreate"`
-	ToUpdate   int                  `json:"toUpdate"`
-	ToDelete   int                  `json:"toDelete"`
-	ToRecreate int                  `json:"toRecreate"`
-	Resources  []PlanResourceChange `json:"resources"`
-	Edges      []PlanEdge           `json:"edges"`
+	HasChanges  bool                 `json:"hasChanges"`
+	ToCreate    int                  `json:"toCreate"`
+	ToUpdate    int                  `json:"toUpdate"`
+	ToDelete    int                  `json:"toDelete"`
+	ToRecreate  int                  `json:"toRecreate"`
+	Resources   []PlanResourceChange `json:"resources"`
+	Edges       []PlanEdge           `json:"edges"`
+	TypeSummary []PlanTypeSummary    `json:"typeSummary"`
 }
 
 // GetCasePlanPreview returns structured plan preview data for a case
@@ -340,8 +350,9 @@ func buildPlanPreview(workDir string) (*PlanPreview, error) {
 	defer cancel()
 
 	preview := &PlanPreview{
-		Resources: []PlanResourceChange{},
-		Edges:     []PlanEdge{},
+		Resources:   []PlanResourceChange{},
+		Edges:       []PlanEdge{},
+		TypeSummary: []PlanTypeSummary{},
 	}
 
 	resourceChanges, err := te.GetPlanResourceChanges(ctx)
@@ -352,6 +363,11 @@ func buildPlanPreview(workDir string) (*PlanPreview, error) {
 	if resourceChanges == nil || len(resourceChanges) == 0 {
 		return preview, nil
 	}
+
+	// For type summary
+	typeCount := make(map[string]int)
+	typeAction := make(map[string]string)
+	typeOrder := []string{}
 
 	preview.HasChanges = true
 	for _, rc := range resourceChanges {
@@ -372,6 +388,7 @@ func buildPlanPreview(workDir string) (*PlanPreview, error) {
 			ProviderName: rc.ProviderName,
 			Actions:      actions,
 			IsData:       isData,
+			Detail:       extractResourceDetail(rc.Type, rc.Change.After),
 		}
 		preview.Resources = append(preview.Resources, prc)
 
@@ -387,6 +404,25 @@ func buildPlanPreview(workDir string) (*PlanPreview, error) {
 		} else if len(actions) == 2 && actions[0] == "delete" && actions[1] == "create" {
 			preview.ToRecreate++
 		}
+
+		// Type summary
+		if _, exists := typeCount[rc.Type]; !exists {
+			typeOrder = append(typeOrder, rc.Type)
+		}
+		typeCount[rc.Type]++
+		if _, exists := typeAction[rc.Type]; !exists {
+			typeAction[rc.Type] = actions[0]
+		}
+	}
+
+	// Build type summary in order of first appearance
+	for _, t := range typeOrder {
+		preview.TypeSummary = append(preview.TypeSummary, PlanTypeSummary{
+			Type:    t,
+			Label:   humanizeResourceType(t),
+			Count:   typeCount[t],
+			Actions: typeAction[t],
+		})
 	}
 
 	dot, err := te.GetGraph(ctx)
@@ -395,6 +431,120 @@ func buildPlanPreview(workDir string) (*PlanPreview, error) {
 	}
 
 	return preview, nil
+}
+
+// extractResourceDetail extracts key configuration values from plan after-values
+func extractResourceDetail(resType string, after interface{}) map[string]string {
+	m, ok := after.(map[string]interface{})
+	if !ok || m == nil {
+		return nil
+	}
+
+	detail := make(map[string]string)
+	getString := func(key string) string {
+		if v, ok := m[key]; ok && v != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		return ""
+	}
+
+	// Instance types
+	if v := getString("instance_type"); v != "" {
+		detail["instance_type"] = v
+	}
+	if v := getString("image_id"); v != "" {
+		detail["image"] = v
+	}
+	if v := getString("ami"); v != "" {
+		detail["image"] = v
+	}
+
+	// VPC / Subnet
+	if v := getString("cidr_block"); v != "" {
+		detail["cidr"] = v
+	}
+
+	// Security group rules (alicloud style)
+	if v := getString("port_range"); v != "" {
+		proto := getString("ip_protocol")
+		policy := getString("policy")
+		cidr := getString("cidr_ip")
+		detail["rule"] = fmt.Sprintf("%s %s %s → %s", proto, v, policy, cidr)
+	}
+
+	// Security group (AWS style - embedded ingress/egress)
+	if ingress, ok := m["ingress"]; ok && ingress != nil {
+		detail["ingress"] = formatSGRules(ingress)
+	}
+	if egress, ok := m["egress"]; ok && egress != nil {
+		detail["egress"] = formatSGRules(egress)
+	}
+
+	// Tencent cloud SG rule
+	if v := getString("policy_index"); v != "" {
+		proto := getString("ip_protocol")
+		if proto == "" {
+			proto = "all"
+		}
+		cidr := getString("cidr_ip")
+		policy := getString("policy")
+		ruleType := getString("type")
+		detail["rule"] = fmt.Sprintf("%s %s %s %s → %s", ruleType, proto, policy, cidr, v)
+	}
+
+	if len(detail) == 0 {
+		return nil
+	}
+	return detail
+}
+
+// formatSGRules formats AWS-style security group ingress/egress rules
+func formatSGRules(rules interface{}) string {
+	ruleList, ok := rules.([]interface{})
+	if !ok || len(ruleList) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, r := range ruleList {
+		rm, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		proto := fmt.Sprintf("%v", rm["protocol"])
+		fromPort := fmt.Sprintf("%v", rm["from_port"])
+		toPort := fmt.Sprintf("%v", rm["to_port"])
+		var cidrs []string
+		if cb, ok := rm["cidr_blocks"].([]interface{}); ok {
+			for _, c := range cb {
+				cidrs = append(cidrs, fmt.Sprintf("%v", c))
+			}
+		}
+		cidr := strings.Join(cidrs, ",")
+		if cidr == "" {
+			cidr = "*"
+		}
+		if proto == "-1" {
+			parts = append(parts, fmt.Sprintf("all → %s", cidr))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s:%s-%s → %s", proto, fromPort, toPort, cidr))
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
+// humanizeResourceType converts terraform type to human-readable label
+func humanizeResourceType(resType string) string {
+	parts := strings.Split(resType, "_")
+	if len(parts) <= 1 {
+		return resType
+	}
+	var words []string
+	for _, p := range parts[1:] {
+		if len(p) > 0 {
+			words = append(words, strings.ToUpper(p[:1])+p[1:])
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 // parseDOTEdges extracts edges from DOT format string

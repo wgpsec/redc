@@ -358,6 +358,24 @@ export namespace main {
 	        this.to = source["to"];
 	    }
 	}
+	export class PlanTypeSummary {
+	    type: string;
+	    label: string;
+	    count: number;
+	    actions: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanTypeSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.label = source["label"];
+	        this.count = source["count"];
+	        this.actions = source["actions"];
+	    }
+	}
 	export class PlanResourceChange {
 	    address: string;
 	    type: string;
@@ -365,6 +383,7 @@ export namespace main {
 	    providerName: string;
 	    actions: string[];
 	    isData: boolean;
+	    detail?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new PlanResourceChange(source);
@@ -378,6 +397,7 @@ export namespace main {
 	        this.providerName = source["providerName"];
 	        this.actions = source["actions"];
 	        this.isData = source["isData"];
+	        this.detail = source["detail"];
 	    }
 	}
 	export class PlanPreview {
@@ -388,6 +408,7 @@ export namespace main {
 	    toRecreate: number;
 	    resources: PlanResourceChange[];
 	    edges: PlanEdge[];
+	    typeSummary: PlanTypeSummary[];
 	
 	    static createFrom(source: any = {}) {
 	        return new PlanPreview(source);
@@ -402,6 +423,7 @@ export namespace main {
 	        this.toRecreate = source["toRecreate"];
 	        this.resources = this.convertValues(source["resources"], PlanResourceChange);
 	        this.edges = this.convertValues(source["edges"], PlanEdge);
+	        this.typeSummary = this.convertValues(source["typeSummary"], PlanTypeSummary);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -422,6 +444,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	
 	export class PortForwardInfo {
 	    id: string;
