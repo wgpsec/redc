@@ -103,3 +103,9 @@ func (nm *NotificationManager) SendSceneFailed(sceneName, action string) {
 	message := i18n.Tf("notify_scene_failed_msg", sceneName, action)
 	nm.Send(title, message)
 }
+
+func (nm *NotificationManager) SendSpotTerminated(sceneName, ips string) {
+	title := i18n.T("notify_spot_terminated")
+	message := i18n.Tf("notify_spot_terminated_msg", sceneName, ips)
+	nm.Send(title, message)
+}

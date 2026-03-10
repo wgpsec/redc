@@ -113,6 +113,8 @@ export function SetDebugLogging(arg1:boolean):Promise<void>;
 export function SetDisableRightClick(arg1:boolean):Promise<void>;
 export function SetLanguage(arg1:string):Promise<void>;
 export function SetNotificationEnabled(arg1:boolean):Promise<void>;
+export function SetSpotMonitorEnabled(arg1:boolean):Promise<void>;
+export function GetSpotMonitorEnabled():Promise<boolean>;
 export function SetShowWelcomeDialog(arg1:boolean):Promise<void>;
 export function StartCase(arg1:string):Promise<void>;
 export function StartCustomDeployment(arg1:string):Promise<void>;

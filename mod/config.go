@@ -30,6 +30,7 @@ const MaxTfDepth = 2
 type GUISettings struct {
 	DisableRightClick   bool   `json:"disableRightClick"`
 	NotificationEnabled bool   `json:"notificationEnabled"`
+	SpotMonitorEnabled  bool   `json:"spotMonitorEnabled"`
 	DebugEnabled        bool   `json:"debugEnabled"`
 	HttpProxy           string `json:"httpProxy"`
 	HttpsProxy          string `json:"httpsProxy"`

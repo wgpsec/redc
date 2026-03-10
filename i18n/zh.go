@@ -99,6 +99,8 @@ var zhMessages = map[string]string{
 	"notify_scene_stopped_msg":   "场景「%s」已成功停止",
 	"notify_scene_failed":        "场景操作失败",
 	"notify_scene_failed_msg":    "场景「%s」%s失败",
+	"notify_spot_terminated":     "抢占式实例已回收",
+	"notify_spot_terminated_msg": "场景「%s」的实例 (%s) 已被云厂商回收",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "配置加载成功",
@@ -534,6 +536,9 @@ var zhMessages = map[string]string{
 	"app_scheduler_start_success":     "任务调度器启动成功",
 	"app_deploy_service_init_success": "自定义部署服务初始化成功",
 	"app_unknown_action":              "未知操作: %s",
+	"app_spot_monitor_start_success":  "Spot 实例监控已启动",
+	"app_spot_monitor_stopped":        "Spot 实例监控已停止",
+	"app_spot_terminated":             "抢占式实例已被回收: %s",
 
 	// GitHub/版本相关
 	"github_connect_failed": "无法连接 GitHub",

@@ -250,6 +250,10 @@ export function GetShowWelcomeDialog() {
   return window['go']['main']['App']['GetShowWelcomeDialog']();
 }
 
+export function GetSpotMonitorEnabled() {
+  return window['go']['main']['App']['GetSpotMonitorEnabled']();
+}
+
 export function GetTemplateFiles(arg1) {
   return window['go']['main']['App']['GetTemplateFiles'](arg1);
 }
@@ -504,6 +508,10 @@ export function SetNotificationEnabled(arg1) {
 
 export function SetShowWelcomeDialog(arg1) {
   return window['go']['main']['App']['SetShowWelcomeDialog'](arg1);
+}
+
+export function SetSpotMonitorEnabled(arg1) {
+  return window['go']['main']['App']['SetSpotMonitorEnabled'](arg1);
 }
 
 export function StartCase(arg1) {

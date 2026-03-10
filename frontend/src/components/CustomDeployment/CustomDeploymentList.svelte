@@ -72,7 +72,8 @@
     'stopping': { label: t.stopping || '停止中', color: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-500 animate-pulse' },
     'stopped': { label: t.stopped || '已停止', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },
     'removing': { label: t.removing || '删除中', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500 animate-pulse' },
-    'error': { label: t.error || '错误', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' }
+    'error': { label: t.error || '错误', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' },
+    'terminated': { label: t.terminated || '已回收', color: 'text-red-700', bg: 'bg-red-50', dot: 'bg-red-600 animate-pulse' }
   });
 
   // 云厂商映射

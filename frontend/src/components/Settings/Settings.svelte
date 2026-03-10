@@ -1,7 +1,7 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick } from '../../../wailsjs/go/main/App.js';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled } from '../../../wailsjs/go/main/App.js';
 
-let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
+let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
   let proxySaving = $state(false);
   let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } });
@@ -12,6 +12,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let networkCheckError = $state('');
   let debugSaving = $state(false);
   let notificationSaving = $state(false);
+  let spotMonitorSaving = $state(false);
   let rightClickSaving = $state(false);
   
   // Initialize forms when props change
@@ -144,6 +145,19 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       console.error('Failed to toggle notification:', e);
     } finally {
       notificationSaving = false;
+    }
+  }
+
+  async function handleToggleSpotMonitor() {
+    const nextValue = !spotMonitorEnabled;
+    spotMonitorSaving = true;
+    try {
+      await SetSpotMonitorEnabled(nextValue);
+      spotMonitorEnabled = nextValue;
+    } catch (e) {
+      console.error('Failed to toggle spot monitor:', e);
+    } finally {
+      spotMonitorSaving = false;
     }
   }
 
@@ -449,6 +463,24 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       >
         <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
           class:translate-x-6={notificationEnabled} class:translate-x-1={!notificationEnabled}></span>
+      </button>
+    </div>
+    <!-- Spot 实例监控 -->
+    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
+      <div>
+        <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.spotMonitor || 'Spot 实例监控'}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.spotMonitorDesc || '定期检测运行中的抢占式实例是否被云厂商回收'}</div>
+      </div>
+      <button
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class:bg-emerald-500={spotMonitorEnabled}
+        class:bg-gray-300={!spotMonitorEnabled}
+        onclick={handleToggleSpotMonitor}
+        disabled={spotMonitorSaving}
+        aria-label={spotMonitorEnabled ? t.disable : t.enable}
+      >
+        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={spotMonitorEnabled} class:translate-x-1={!spotMonitorEnabled}></span>
       </button>
     </div>
     <!-- 右键菜单 -->

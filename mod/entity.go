@@ -11,7 +11,8 @@ const (
 	StateUnknown  string = "unknown"
 	StateStarting string = "starting" // 正在启动
 	StateStopping string = "stopping" // 正在停止
-	StateRemoving string = "removing" // 正在删除
+	StateRemoving    string = "removing"    // 正在删除
+	StateTerminated  string = "terminated"  // 被云厂商回收（Spot 实例）
 )
 
 // RedcProject 项目结构体

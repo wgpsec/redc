@@ -99,6 +99,8 @@ var enMessages = map[string]string{
 	"notify_scene_stopped_msg":   "Scene \"%s\" has been stopped successfully",
 	"notify_scene_failed":        "Scene Operation Failed",
 	"notify_scene_failed_msg":    "Scene \"%s\" %s failed",
+	"notify_spot_terminated":     "Spot Instance Reclaimed",
+	"notify_spot_terminated_msg": "Instance(s) in scene \"%s\" (%s) have been reclaimed by provider",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "Configuration loaded successfully",
@@ -534,6 +536,9 @@ var enMessages = map[string]string{
 	"app_scheduler_start_success":     "Task scheduler started successfully",
 	"app_deploy_service_init_success": "Custom deployment service initialized",
 	"app_unknown_action":              "Unknown action: %s",
+	"app_spot_monitor_start_success":  "Spot instance monitor started",
+	"app_spot_monitor_stopped":        "Spot instance monitor stopped",
+	"app_spot_terminated":             "Spot instance terminated by provider: %s",
 
 	// GitHub/版本相关
 	"github_connect_failed": "Cannot connect to GitHub",

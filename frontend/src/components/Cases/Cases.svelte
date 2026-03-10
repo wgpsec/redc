@@ -20,6 +20,9 @@ let { t, onTabChange = () => {} } = $props();
   let templateVariables = $state([]);
   let variableValues = $state({});
   let error = $state('');
+
+  // Spot termination toast
+  let spotTerminatedToast = $state({ show: false, caseName: '', downIPs: [], allDown: false, timer: null });
   
   // SSH Modal state
   let sshModal = $state({ show: false, caseId: null, caseName: '' });
@@ -134,7 +137,8 @@ let { t, onTabChange = () => {} } = $props();
     'pending': { label: t.pending, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
     'starting': { label: t.starting, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
     'stopping': { label: t.stopping, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
-    'removing': { label: t.removing, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' }
+    'removing': { label: t.removing, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
+    'terminated': { label: t.terminated || '已回收', color: 'text-red-700', bg: 'bg-red-50', dot: 'bg-red-600 animate-pulse' }
   });
 
   
@@ -165,12 +169,28 @@ let { t, onTabChange = () => {} } = $props();
         }
       }
     });
+
+    EventsOn('spot-terminated', (data) => {
+      console.log('[SpotMonitor] Instance terminated:', data);
+      if (spotTerminatedToast.timer) clearTimeout(spotTerminatedToast.timer);
+      spotTerminatedToast = {
+        show: true,
+        caseName: data.caseName || '',
+        downIPs: data.downIPs || [],
+        allDown: data.allDown || false,
+        timer: setTimeout(() => { spotTerminatedToast = { show: false, caseName: '', downIPs: [], allDown: false, timer: null }; }, 15000)
+      };
+      refresh();
+    });
   });
   
   onDestroy(() => {
     if (createStatusTimer) {
       clearTimeout(createStatusTimer);
       createStatusTimer = null;
+    }
+    if (spotTerminatedToast.timer) {
+      clearTimeout(spotTerminatedToast.timer);
     }
     if (costEstimateDebounceTimer) {
       clearTimeout(costEstimateDebounceTimer);
@@ -1287,8 +1307,8 @@ let { t, onTabChange = () => {} } = $props();
                 {(stateConfig[c.state] || stateConfig['pending']).label}
               </span>
               {#if c.isSpotInstance}
-                <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                  {t.spotInstance || '抢占式'}
+                <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded {c.state === 'terminated' ? 'text-red-700 bg-red-50 border border-red-300 animate-pulse' : 'text-amber-700 bg-amber-50 border border-amber-200'}">
+                  {c.state === 'terminated' ? (t.spotTerminated || '已回收') : (t.spotInstance || '抢占式')}
                 </span>
               {/if}
             </td>
@@ -1892,6 +1912,29 @@ let { t, onTabChange = () => {} } = $props();
           >{t.planStartScene || '启动场景'}</button>
         {/if}
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Spot Terminated Toast -->
+{#if spotTerminatedToast.show}
+  <div class="fixed bottom-6 right-6 z-[9999] max-w-sm">
+    <div class="flex items-start gap-3 bg-red-50 border border-red-300 rounded-xl shadow-lg px-4 py-3">
+      <span class="text-red-500 mt-0.5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </span>
+      <div class="flex-1">
+        <p class="text-[13px] font-semibold text-red-800">{t.spotTerminatedTitle || '抢占式实例已回收'}</p>
+        <p class="text-[12px] text-red-600 mt-0.5">{spotTerminatedToast.caseName}</p>
+        {#if spotTerminatedToast.downIPs.length > 0}
+          <p class="text-[11px] text-red-500 mt-0.5 font-mono">{spotTerminatedToast.downIPs.join(', ')}</p>
+        {/if}
+      </div>
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => spotTerminatedToast = { show: false, caseName: '', downIPs: [], allDown: false, timer: null }}>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
     </div>
   </div>
 {/if}

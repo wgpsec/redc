@@ -418,6 +418,14 @@ export function SetNotificationEnabled(arg1) {
   return window['go']['main']['App']['SetNotificationEnabled'](arg1);
 }
 
+export function SetSpotMonitorEnabled(arg1) {
+  return window['go']['main']['App']['SetSpotMonitorEnabled'](arg1);
+}
+
+export function GetSpotMonitorEnabled() {
+  return window['go']['main']['App']['GetSpotMonitorEnabled']();
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }

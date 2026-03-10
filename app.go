@@ -31,6 +31,7 @@ type App struct {
 	pricingService          *cost.PricingService
 	costCalculator          *cost.CostCalculator
 	taskScheduler           *redc.TaskScheduler
+	spotMonitor             *SpotMonitor
 	customDeploymentService *redc.CustomDeploymentService
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
@@ -81,6 +82,11 @@ func (a *App) startup(ctx context.Context) {
 		if settings.NoProxy != "" {
 			os.Setenv("NO_PROXY", settings.NoProxy)
 			os.Setenv("no_proxy", settings.NoProxy)
+		}
+
+		// Restore notification enabled state
+		if settings.NotificationEnabled && a.notificationMgr != nil {
+			a.notificationMgr.SetEnabled(true)
 		}
 	}
 
@@ -190,6 +196,13 @@ func (a *App) startup(ctx context.Context) {
 	a.configStore = redc.NewConfigStore()
 
 	runtime.LogInfof(ctx, i18n.T("app_deploy_service_init_success"))
+
+	// Start spot instance termination monitor (if enabled in settings)
+	if settings, err := redc.LoadGUISettings(); err == nil && settings.SpotMonitorEnabled {
+		a.spotMonitor = NewSpotMonitor(a, 120*time.Second)
+		a.spotMonitor.Start()
+		runtime.LogInfof(ctx, i18n.T("app_spot_monitor_start_success"))
+	}
 }
 
 // emitLog sends a log message to the frontend and writes to file

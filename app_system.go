@@ -478,6 +478,50 @@ func (a *App) GetDisableRightClick() bool {
 	return settings.DisableRightClick
 }
 
+func (a *App) SetSpotMonitorEnabled(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Save to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.SpotMonitorEnabled = enabled
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return err
+	}
+
+	// Start or stop the monitor
+	if enabled {
+		if a.spotMonitor != nil {
+			// Already running, no-op
+			return nil
+		}
+		a.spotMonitor = NewSpotMonitor(a, 120*time.Second)
+		a.spotMonitor.Start()
+		a.emitLog(i18n.T("app_spot_monitor_start_success"))
+	} else {
+		if a.spotMonitor != nil {
+			a.spotMonitor.Stop()
+			a.spotMonitor = nil
+		}
+		a.emitLog(i18n.T("app_spot_monitor_stopped"))
+	}
+	return nil
+}
+
+func (a *App) GetSpotMonitorEnabled() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return false
+	}
+	return settings.SpotMonitorEnabled
+}
+
 func (a *App) SetLanguage(lang string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
