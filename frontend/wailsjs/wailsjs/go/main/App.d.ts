@@ -132,6 +132,12 @@ export function GetShowWelcomeDialog():Promise<boolean>;
 
 export function GetSpotAutoRecoverEnabled():Promise<boolean>;
 
+export function GetWebhookConfig():Promise<any>;
+
+export function SetWebhookConfig(arg1:any):Promise<void>;
+
+export function TestWebhook(arg1:string, arg2:string, arg3:string):Promise<void>;
+
 export function GetSpotMonitorEnabled():Promise<boolean>;
 
 export function GetTemplateFiles(arg1:string):Promise<Record<string, string>>;
@@ -145,6 +151,8 @@ export function GetTerraformMirrorConfig():Promise<main.TerraformMirrorConfig>;
 export function GetTotalRuntime():Promise<string>;
 
 export function GetVersion():Promise<string>;
+
+export function GetWebhookConfig():Promise<main.WebhookConfig>;
 
 export function ImportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
@@ -266,6 +274,8 @@ export function SetSpotAutoRecoverEnabled(arg1:boolean):Promise<void>;
 
 export function SetSpotMonitorEnabled(arg1:boolean):Promise<void>;
 
+export function SetWebhookConfig(arg1:main.WebhookConfig):Promise<void>;
+
 export function StartCase(arg1:string):Promise<void>;
 
 export function StartCustomDeployment(arg1:string):Promise<void>;
@@ -291,6 +301,8 @@ export function StopPortForward(arg1:string):Promise<void>;
 export function SwitchProject(arg1:string):Promise<void>;
 
 export function TestTerraformEndpoints():Promise<Array<main.EndpointCheck>>;
+
+export function TestWebhook(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 

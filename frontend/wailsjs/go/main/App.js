@@ -434,6 +434,18 @@ export function GetSpotAutoRecoverEnabled() {
   return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
 }
 
+export function GetWebhookConfig() {
+  return window['go']['main']['App']['GetWebhookConfig']();
+}
+
+export function SetWebhookConfig(arg1) {
+  return window['go']['main']['App']['SetWebhookConfig'](arg1);
+}
+
+export function TestWebhook(arg1, arg2, arg3) {
+  return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }

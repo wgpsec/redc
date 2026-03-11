@@ -611,6 +611,50 @@ func (a *App) GetShowWelcomeDialog() bool {
 	return settings.WelcomeDialogShown == ""
 }
 
+// GetWebhookConfig returns the current webhook configuration
+func (a *App) GetWebhookConfig() WebhookConfig {
+	if a.notificationMgr != nil && a.notificationMgr.webhookMgr != nil {
+		return a.notificationMgr.webhookMgr.GetConfig()
+	}
+	return WebhookConfig{}
+}
+
+// SetWebhookConfig saves webhook configuration to GUI settings and updates the in-memory manager
+func (a *App) SetWebhookConfig(cfg WebhookConfig) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.WebhookEnabled = cfg.Enabled
+	settings.WebhookSlack = cfg.Slack
+	settings.WebhookDingtalk = cfg.Dingtalk
+	settings.WebhookDingtalkSecret = cfg.DingtalkSecret
+	settings.WebhookFeishu = cfg.Feishu
+	settings.WebhookFeishuSecret = cfg.FeishuSecret
+	settings.WebhookDiscord = cfg.Discord
+	settings.WebhookWecom = cfg.Wecom
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return err
+	}
+
+	// Update in-memory webhook manager
+	if a.notificationMgr != nil && a.notificationMgr.webhookMgr != nil {
+		a.notificationMgr.webhookMgr.SetConfig(cfg)
+	}
+	return nil
+}
+
+// TestWebhook sends a test message to the specified platform
+func (a *App) TestWebhook(platform, webhookURL, secret string) error {
+	if a.notificationMgr == nil || a.notificationMgr.webhookMgr == nil {
+		return fmt.Errorf("webhook manager not initialized")
+	}
+	return a.notificationMgr.webhookMgr.TestWebhook(platform, webhookURL, secret)
+}
+
 func detectSystemLanguage() string {
 	// Try to get system locale
 	lang := getSystemLocale()

@@ -254,6 +254,18 @@ export function GetSpotAutoRecoverEnabled() {
   return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
 }
 
+export function GetWebhookConfig() {
+  return window['go']['main']['App']['GetWebhookConfig']();
+}
+
+export function SetWebhookConfig(arg1) {
+  return window['go']['main']['App']['SetWebhookConfig'](arg1);
+}
+
+export function TestWebhook(arg1, arg2, arg3) {
+  return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
+}
+
 export function GetSpotMonitorEnabled() {
   return window['go']['main']['App']['GetSpotMonitorEnabled']();
 }
@@ -280,6 +292,10 @@ export function GetTotalRuntime() {
 
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
+}
+
+export function GetWebhookConfig() {
+  return window['go']['main']['App']['GetWebhookConfig']();
 }
 
 export function ImportConfigTemplate(arg1, arg2) {
@@ -522,6 +538,10 @@ export function SetSpotMonitorEnabled(arg1) {
   return window['go']['main']['App']['SetSpotMonitorEnabled'](arg1);
 }
 
+export function SetWebhookConfig(arg1) {
+  return window['go']['main']['App']['SetWebhookConfig'](arg1);
+}
+
 export function StartCase(arg1) {
   return window['go']['main']['App']['StartCase'](arg1);
 }
@@ -572,6 +592,10 @@ export function SwitchProject(arg1) {
 
 export function TestTerraformEndpoints() {
   return window['go']['main']['App']['TestTerraformEndpoints']();
+}
+
+export function TestWebhook(arg1, arg2, arg3) {
+  return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
 }
 
 export function UpdateProfile(arg1, arg2, arg3, arg4) {

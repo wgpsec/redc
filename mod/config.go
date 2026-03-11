@@ -39,6 +39,14 @@ type GUISettings struct {
 	NoProxy             string `json:"noProxy"`
 	Language            string `json:"language"`
 	WelcomeDialogShown  string `json:"welcomeDialogShown"` // "true" means already shown, user chose to hide
+	WebhookEnabled      bool   `json:"webhookEnabled"`
+	WebhookSlack        string `json:"webhookSlack"`
+	WebhookDingtalk     string `json:"webhookDingtalk"`
+	WebhookDingtalkSecret string `json:"webhookDingtalkSecret"`
+	WebhookFeishu       string `json:"webhookFeishu"`
+	WebhookFeishuSecret string `json:"webhookFeishuSecret"`
+	WebhookDiscord      string `json:"webhookDiscord"`
+	WebhookWecom        string `json:"webhookWecom"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加

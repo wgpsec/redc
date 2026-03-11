@@ -10,13 +10,17 @@ import (
 )
 
 type NotificationManager struct {
-	enabled bool
-	mu      sync.RWMutex
+	enabled    bool
+	mu         sync.RWMutex
+	webhookMgr *WebhookManager
 }
 
 func NewNotificationManager() *NotificationManager {
+	wm := NewWebhookManager()
+	wm.LoadFromSettings()
 	return &NotificationManager{
-		enabled: false,
+		enabled:    false,
+		webhookMgr: wm,
 	}
 }
 
@@ -90,34 +94,52 @@ func (nm *NotificationManager) SendSceneStarted(sceneName string) {
 	title := i18n.T("notify_scene_started")
 	message := i18n.Tf("notify_scene_started_msg", sceneName)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#36a64f")
+	}
 }
 
 func (nm *NotificationManager) SendSceneStopped(sceneName string) {
 	title := i18n.T("notify_scene_stopped")
 	message := i18n.Tf("notify_scene_stopped_msg", sceneName)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#ffa500")
+	}
 }
 
 func (nm *NotificationManager) SendSceneFailed(sceneName, action string) {
 	title := i18n.T("notify_scene_failed")
 	message := i18n.Tf("notify_scene_failed_msg", sceneName, action)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#ff0000")
+	}
 }
 
 func (nm *NotificationManager) SendSpotTerminated(sceneName, ips string) {
 	title := i18n.T("notify_spot_terminated")
 	message := i18n.Tf("notify_spot_terminated_msg", sceneName, ips)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#ff4500")
+	}
 }
 
 func (nm *NotificationManager) SendSpotRecovered(sceneName string) {
 	title := i18n.T("notify_spot_recovered")
 	message := i18n.Tf("notify_spot_recovered_msg", sceneName)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#36a64f")
+	}
 }
 
 func (nm *NotificationManager) SendSpotRecoverFailed(sceneName string) {
 	title := i18n.T("notify_spot_recover_failed")
 	message := i18n.Tf("notify_spot_recover_failed_msg", sceneName)
 	nm.Send(title, message)
+	if nm.webhookMgr != nil {
+		nm.webhookMgr.Send(title, message, "#ff0000")
+	}
 }

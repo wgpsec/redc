@@ -1,5 +1,5 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled } from '../../../wailsjs/go/main/App.js';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook } from '../../../wailsjs/go/main/App.js';
 
 let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
@@ -15,6 +15,12 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let spotMonitorSaving = $state(false);
   let spotAutoRecoverSaving = $state(false);
   let rightClickSaving = $state(false);
+  let webhookForm = $state({ enabled: false, slack: '', dingtalk: '', dingtalkSecret: '', feishu: '', feishuSecret: '', discord: '', wecom: '' });
+  let webhookSaving = $state(false);
+  let webhookMessage = $state('');
+  let webhookMessageType = $state('');
+  let webhookTesting = $state({});
+  let webhookLoaded = $state(false);
   
   // Initialize forms when props change
   $effect(() => {
@@ -216,10 +222,77 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       terraformMirrorSaving = false;
     }
   }
+
+  async function loadWebhookConfig() {
+    if (webhookLoaded) return;
+    try {
+      const cfg = await GetWebhookConfig();
+      webhookForm = {
+        enabled: cfg.enabled || false,
+        slack: cfg.slack || '',
+        dingtalk: cfg.dingtalk || '',
+        dingtalkSecret: cfg.dingtalkSecret || '',
+        feishu: cfg.feishu || '',
+        feishuSecret: cfg.feishuSecret || '',
+        discord: cfg.discord || '',
+        wecom: cfg.wecom || ''
+      };
+      webhookLoaded = true;
+    } catch (e) {
+      console.error('Failed to load webhook config:', e);
+    }
+  }
+
+  async function handleSaveWebhook() {
+    webhookSaving = true;
+    webhookMessage = '';
+    try {
+      await SetWebhookConfig(webhookForm);
+      webhookMessage = t.webhookSaveSuccess || 'Webhook config saved';
+      webhookMessageType = 'success';
+    } catch (e) {
+      webhookMessage = (t.webhookSaveFailed || 'Failed to save') + ': ' + (e.message || String(e));
+      webhookMessageType = 'error';
+    } finally {
+      webhookSaving = false;
+      setTimeout(() => { webhookMessage = ''; }, 3000);
+    }
+  }
+
+  async function handleTestWebhook(platform) {
+    webhookTesting = { ...webhookTesting, [platform]: true };
+    webhookMessage = '';
+    try {
+      let url = '', secret = '';
+      switch (platform) {
+        case 'slack': url = webhookForm.slack; break;
+        case 'dingtalk': url = webhookForm.dingtalk; secret = webhookForm.dingtalkSecret; break;
+        case 'feishu': url = webhookForm.feishu; secret = webhookForm.feishuSecret; break;
+        case 'discord': url = webhookForm.discord; break;
+        case 'wecom': url = webhookForm.wecom; break;
+      }
+      if (!url) {
+        webhookMessage = 'URL is empty';
+        webhookMessageType = 'error';
+        setTimeout(() => { webhookMessage = ''; }, 3000);
+        return;
+      }
+      await TestWebhook(platform, url, secret);
+      webhookMessage = t.webhookTestSuccess || 'Test message sent';
+      webhookMessageType = 'success';
+    } catch (e) {
+      webhookMessage = (t.webhookTestFailed || 'Test failed') + ': ' + (e.message || String(e));
+      webhookMessageType = 'error';
+    } finally {
+      webhookTesting = { ...webhookTesting, [platform]: false };
+      setTimeout(() => { webhookMessage = ''; }, 4000);
+    }
+  }
+
+  $effect(() => { loadWebhookConfig(); });
 </script>
 
 <div class="w-full max-w-2xl mx-auto space-y-4">
-  <!-- 基本信息 -->
   <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
     <div class="text-[13px] sm:text-[14px] font-medium text-gray-900 mb-3">{t.redcPath?.replace('路径', '') || '基本信息'}</div>
     <div class="space-y-2">
@@ -478,6 +551,104 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
         <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
           class:translate-x-6={notificationEnabled} class:translate-x-1={!notificationEnabled}></span>
       </button>
+    </div>
+    <!-- Webhook 通知 -->
+    <div class="px-4 sm:px-5 py-3.5">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.webhookNotification || 'Webhook 通知'}</div>
+          <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.webhookNotificationDesc || '场景状态变化时推送消息'}</div>
+        </div>
+        <button
+          class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+          class:bg-emerald-500={webhookForm.enabled}
+          class:bg-gray-300={!webhookForm.enabled}
+          onclick={() => { webhookForm.enabled = !webhookForm.enabled; }}
+        >
+          <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+            class:translate-x-6={webhookForm.enabled} class:translate-x-1={!webhookForm.enabled}></span>
+        </button>
+      </div>
+      {#if webhookForm.enabled}
+      <div class="mt-3 space-y-3 ml-1 border-l-2 border-gray-200 pl-3">
+        <!-- Slack -->
+        <div>
+          <label class="text-[11px] text-gray-500 mb-1 block">{t.webhookSlack || 'Slack Webhook URL'}</label>
+          <div class="flex gap-2">
+            <input type="text" bind:value={webhookForm.slack} placeholder={t.webhookUrlHint || '留空则不推送'}
+              class="flex-1 text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+            <button onclick={() => handleTestWebhook('slack')} disabled={webhookTesting.slack || !webhookForm.slack}
+              class="text-[11px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
+              {webhookTesting.slack ? '...' : (t.webhookTest || '测试')}
+            </button>
+          </div>
+        </div>
+        <!-- 钉钉 -->
+        <div>
+          <label class="text-[11px] text-gray-500 mb-1 block">{t.webhookDingtalk || '钉钉 Webhook URL'}</label>
+          <div class="flex gap-2">
+            <input type="text" bind:value={webhookForm.dingtalk} placeholder={t.webhookUrlHint || '留空则不推送'}
+              class="flex-1 text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+            <button onclick={() => handleTestWebhook('dingtalk')} disabled={webhookTesting.dingtalk || !webhookForm.dingtalk}
+              class="text-[11px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
+              {webhookTesting.dingtalk ? '...' : (t.webhookTest || '测试')}
+            </button>
+          </div>
+          <input type="text" bind:value={webhookForm.dingtalkSecret} placeholder={t.webhookSecretHint || '签名密钥（可选）'}
+            class="mt-1 w-full text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+        </div>
+        <!-- 飞书 -->
+        <div>
+          <label class="text-[11px] text-gray-500 mb-1 block">{t.webhookFeishu || '飞书 Webhook URL'}</label>
+          <div class="flex gap-2">
+            <input type="text" bind:value={webhookForm.feishu} placeholder={t.webhookUrlHint || '留空则不推送'}
+              class="flex-1 text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+            <button onclick={() => handleTestWebhook('feishu')} disabled={webhookTesting.feishu || !webhookForm.feishu}
+              class="text-[11px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
+              {webhookTesting.feishu ? '...' : (t.webhookTest || '测试')}
+            </button>
+          </div>
+          <input type="text" bind:value={webhookForm.feishuSecret} placeholder={t.webhookSecretHint || '签名密钥（可选）'}
+            class="mt-1 w-full text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+        </div>
+        <!-- Discord -->
+        <div>
+          <label class="text-[11px] text-gray-500 mb-1 block">{t.webhookDiscord || 'Discord Webhook URL'}</label>
+          <div class="flex gap-2">
+            <input type="text" bind:value={webhookForm.discord} placeholder={t.webhookUrlHint || '留空则不推送'}
+              class="flex-1 text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+            <button onclick={() => handleTestWebhook('discord')} disabled={webhookTesting.discord || !webhookForm.discord}
+              class="text-[11px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
+              {webhookTesting.discord ? '...' : (t.webhookTest || '测试')}
+            </button>
+          </div>
+        </div>
+        <!-- 企业微信 -->
+        <div>
+          <label class="text-[11px] text-gray-500 mb-1 block">{t.webhookWecom || '企业微信 Webhook URL'}</label>
+          <div class="flex gap-2">
+            <input type="text" bind:value={webhookForm.wecom} placeholder={t.webhookUrlHint || '留空则不推送'}
+              class="flex-1 text-[12px] px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400" />
+            <button onclick={() => handleTestWebhook('wecom')} disabled={webhookTesting.wecom || !webhookForm.wecom}
+              class="text-[11px] px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">
+              {webhookTesting.wecom ? '...' : (t.webhookTest || '测试')}
+            </button>
+          </div>
+        </div>
+        <!-- 保存按钮 + 状态信息 -->
+        <div class="flex items-center gap-3 pt-1">
+          <button onclick={handleSaveWebhook} disabled={webhookSaving}
+            class="text-[12px] px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
+            {webhookSaving ? '...' : (t.webhookSave || '保存')}
+          </button>
+          {#if webhookMessage}
+            <span class="text-[11px]" class:text-emerald-600={webhookMessageType === 'success'} class:text-red-500={webhookMessageType === 'error'}>
+              {webhookMessage}
+            </span>
+          {/if}
+        </div>
+      </div>
+      {/if}
     </div>
     <!-- Spot 实例监控 -->
     <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">

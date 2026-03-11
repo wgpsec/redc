@@ -686,6 +686,32 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class WebhookConfig {
+	    enabled: boolean;
+	    slack: string;
+	    dingtalk: string;
+	    dingtalkSecret: string;
+	    feishu: string;
+	    feishuSecret: string;
+	    discord: string;
+	    wecom: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WebhookConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.slack = source["slack"];
+	        this.dingtalk = source["dingtalk"];
+	        this.dingtalkSecret = source["dingtalkSecret"];
+	        this.feishu = source["feishu"];
+	        this.feishuSecret = source["feishuSecret"];
+	        this.discord = source["discord"];
+	        this.wecom = source["wecom"];
+	    }
+	}
 
 }
 
