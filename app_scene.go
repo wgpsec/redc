@@ -758,3 +758,61 @@ func isRelativeFilePath(value string) bool {
 	}
 	return false
 }
+
+// CloneCase clones an existing predefined case by re-creating it from the same template
+func (a *App) CloneCase(caseID string, cloneName string) error {
+	a.mu.Lock()
+	if a.project == nil {
+		a.mu.Unlock()
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+	project := a.project
+	a.mu.Unlock()
+
+	cases, err := redc.LoadProjectCases(project.ProjectName)
+	if err != nil {
+		return fmt.Errorf(i18n.Tf("app_clone_load_failed", err))
+	}
+
+	var source *redc.Case
+	for _, c := range cases {
+		if c.Id == caseID || strings.HasPrefix(c.Id, caseID) {
+			source = c
+			break
+		}
+	}
+	if source == nil {
+		return fmt.Errorf(i18n.Tf("app_clone_not_found", caseID))
+	}
+
+	// Parse vars from source parameters
+	vars := make(map[string]string)
+	for _, p := range source.Parameter {
+		if idx := strings.Index(p, "="); idx > 0 {
+			vars[p[:idx]] = p[idx+1:]
+		}
+	}
+
+	if cloneName == "" {
+		cloneName = source.Name + "-clone"
+	}
+	a.emitLog(i18n.Tf("app_clone_starting", source.Name))
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				a.emitLog(fmt.Sprintf("[ERR] clone panic: %v", r))
+			}
+			a.emitRefresh()
+		}()
+
+		c, err := project.CaseCreate(source.Type, redc.U, cloneName, vars)
+		if err != nil {
+			a.emitLog(i18n.Tf("app_clone_failed", err))
+			return
+		}
+		a.emitLog(i18n.Tf("app_clone_success", c.Name, c.GetId()))
+	}()
+
+	return nil
+}

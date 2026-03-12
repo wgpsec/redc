@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, AnalyzeDeploymentError, GetActiveProfile, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames } from '../../../wailsjs/go/main/App';
+  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, AnalyzeDeploymentError, GetActiveProfile, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames, CloneCustomDeployment } from '../../../wailsjs/go/main/App';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import SSHModal from '../Cases/SSHModal.svelte';
   import ScheduleDialog from '../Cases/ScheduleDialog.svelte';
@@ -71,6 +71,10 @@
   let tagEditId = $state<string | null>(null);
   let tagInput = $state('');
   let filteredDeployments = $derived(selectedTag ? deployments.filter(d => (caseTags[d.id] || []).includes(selectedTag)) : deployments);
+
+  // Clone dialog state
+  let cloneDialog = $state({ show: false, deploymentId: '', cloneName: '', sourceName: '' });
+  let cloneLoading = $state(false);
 
   const tagColors = [
     'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700',
@@ -274,6 +278,28 @@
       alert(`启动失败: ${err.message || err}`);
       // 失败后重新加载以恢复正确状态
       await loadDeployments();
+    }
+  }
+
+  function showCloneDialog(deploymentId: string, deploymentName: string) {
+    cloneDialog = { show: true, deploymentId, cloneName: deploymentName + '-clone', sourceName: deploymentName };
+  }
+
+  function cancelClone() {
+    cloneDialog = { show: false, deploymentId: '', cloneName: '', sourceName: '' };
+  }
+
+  async function confirmClone() {
+    const { deploymentId, cloneName } = cloneDialog;
+    cloneDialog = { show: false, deploymentId: '', cloneName: '', sourceName: '' };
+    cloneLoading = true;
+    try {
+      await CloneCustomDeployment(deploymentId, cloneName);
+      await loadDeployments();
+    } catch (err: any) {
+      alert(`${t.cloneFailed || '克隆失败'}: ${err.message || err}`);
+    } finally {
+      cloneLoading = false;
     }
   }
 
@@ -855,6 +881,16 @@
                     >
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </button>
+                    <!-- Clone button -->
+                    <button
+                      class="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded transition-colors"
+                      onclick={() => showCloneDialog(deployment.id, deployment.name)}
+                      title={t.cloneCase || '克隆场景'}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                       </svg>
                     </button>
                   {/if}
@@ -1749,5 +1785,57 @@
         {/if}
       </div>
     </div>
+  </div>
+{/if}
+
+<!-- Clone Dialog -->
+{#if cloneDialog.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelClone}>
+    <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.cloneCase || '克隆场景'}</h3>
+            <p class="text-[13px] text-gray-500">{cloneDialog.sourceName}</p>
+          </div>
+        </div>
+        <label class="block text-[13px] font-medium text-gray-700 mb-1.5">{t.sceneName || '场景名称'}</label>
+        <input
+          type="text"
+          class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+          bind:value={cloneDialog.cloneName}
+          onkeydown={(e) => { if (e.key === 'Enter' && cloneDialog.cloneName.trim()) confirmClone(); }}
+          autofocus
+        />
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+          onclick={cancelClone}
+        >{t.cancel || '取消'}</button>
+        <button 
+          class="px-4 py-2 text-[13px] font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+          onclick={confirmClone}
+          disabled={!cloneDialog.cloneName.trim()}
+        >{t.clone || '克隆'}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Clone Loading Toast -->
+{#if cloneLoading}
+  <div class="fixed bottom-4 right-4 z-50 bg-white rounded-lg border border-violet-200 px-4 py-3 flex items-center gap-3 shadow-lg">
+    <svg class="w-5 h-5 text-violet-600 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span class="text-[13px] text-violet-700 font-medium">{t.cloneCase || '克隆场景'}...</span>
   </div>
 {/if}

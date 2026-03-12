@@ -310,6 +310,7 @@ export const i18n = {
     httpServerStartFailed: 'HTTP Server 启动失败', httpServerStopFailed: 'HTTP Server 停止失败',
     httpServerSaveConfig: '保存配置', httpServerSaveSuccess: '配置已保存',
     webModeFileHint: '浏览器模式下请选择文件', webModeNotSupported: '此功能在浏览器模式下不可用',
+    clone: '克隆', cloneCase: '克隆场景', cloneSuccess: '克隆任务已提交', cloneFailed: '克隆失败',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -632,6 +633,7 @@ export const i18n = {
     httpServerStartFailed: 'Failed to start HTTP Server', httpServerStopFailed: 'Failed to stop HTTP Server',
     httpServerSaveConfig: 'Save config', httpServerSaveSuccess: 'Config saved',
     webModeFileHint: 'Select file in browser mode', webModeNotSupported: 'This feature is not available in browser mode',
+    clone: 'Clone', cloneCase: 'Clone case', cloneSuccess: 'Clone task submitted', cloneFailed: 'Clone failed',
   }
 };
 

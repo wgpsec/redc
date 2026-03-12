@@ -19,6 +19,8 @@ export function BatchStartCustomDeployments(arg1:Array<string>):Promise<Array<mo
 export function BatchStopCustomDeployments(arg1:Array<string>):Promise<Array<mod.BatchOperationResult>>;
 export function CancelScheduledTask(arg1:string):Promise<void>;
 export function CheckForUpdates():Promise<main.VersionCheckResult>;
+export function CloneCase(arg1:string, arg2:string):Promise<void>;
+export function CloneCustomDeployment(arg1:string, arg2:string):Promise<mod.CustomDeployment>;
 export function CloseTerminal(arg1:string):Promise<void>;
 export function ComposeDown(arg1:string,arg2:Array<string>):Promise<void>;
 export function ComposePreview(arg1:string,arg2:Array<string>):Promise<main.ComposeSummary>;

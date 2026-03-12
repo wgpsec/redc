@@ -672,3 +672,64 @@ func (a *App) ImportConfigTemplate(name string, importPath string) error {
 
 	return nil
 }
+
+// CloneCustomDeployment clones an existing custom deployment with the same config
+func (a *App) CloneCustomDeployment(deploymentID string, cloneName string) (*redc.CustomDeployment, error) {
+	a.mu.Lock()
+	service := a.customDeploymentService
+	project := a.project
+	a.mu.Unlock()
+
+	if service == nil {
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
+	}
+	if project == nil {
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_init"))
+	}
+
+	// Load all deployments to find source
+	deployments, err := service.ListCustomDeployments(project.ProjectName)
+	if err != nil {
+		return nil, fmt.Errorf(i18n.Tf("app_clone_load_failed", err))
+	}
+
+	var source *redc.CustomDeployment
+	for _, d := range deployments {
+		if d.ID == deploymentID {
+			source = d
+			break
+		}
+	}
+	if source == nil {
+		return nil, fmt.Errorf(i18n.Tf("app_clone_not_found", deploymentID))
+	}
+
+	// Deep copy config
+	configName := cloneName
+	if configName == "" {
+		configName = source.Config.Name + "-clone"
+	}
+	cloneConfig := &redc.DeploymentConfig{
+		Name:           configName,
+		TemplateName:   source.Config.TemplateName,
+		Provider:       source.Config.Provider,
+		Region:         source.Config.Region,
+		InstanceType:   source.Config.InstanceType,
+		Userdata:       source.Config.Userdata,
+		IsSpotInstance: source.Config.IsSpotInstance,
+		Variables:      make(map[string]string),
+	}
+	for k, v := range source.Config.Variables {
+		cloneConfig.Variables[k] = v
+	}
+
+	deployment, err := service.CreateCustomDeployment(cloneConfig, project.ProjectPath, project.ProjectName)
+	if err != nil {
+		return nil, fmt.Errorf(i18n.Tf("app_clone_failed", err))
+	}
+
+	a.emitLog(i18n.Tf("app_clone_success", deployment.Name, deployment.ID))
+	a.emitRefresh()
+
+	return deployment, nil
+}

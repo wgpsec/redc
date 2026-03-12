@@ -356,6 +356,13 @@ var enMessages = map[string]string{
 	"app_scene_create_success": "Scene created successfully: %s (%s)",
 	"app_scene_starting":       "Starting scene: %s",
 
+	// Clone
+	"app_clone_load_failed": "Failed to load cases: %v",
+	"app_clone_not_found":   "Case not found: %s",
+	"app_clone_starting":    "Cloning case: %s",
+	"app_clone_failed":      "Clone failed: %v",
+	"app_clone_success":     "Clone successful: %s (%s)",
+
 	// 其他操作
 	"app_proxy_updated":         "Proxy config updated - HTTP: %s, HTTPS: %s, SOCKS5: %s, NO_PROXY: %s",
 	"app_tf_mirror_written":     "Terraform mirror config written: %s",

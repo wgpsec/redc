@@ -356,6 +356,13 @@ var zhMessages = map[string]string{
 	"app_scene_create_success": "场景创建成功: %s (%s)",
 	"app_scene_starting":       "正在启动场景: %s",
 
+	// 克隆
+	"app_clone_load_failed": "加载场景列表失败: %v",
+	"app_clone_not_found":   "未找到场景: %s",
+	"app_clone_starting":    "正在克隆场景: %s",
+	"app_clone_failed":      "克隆失败: %v",
+	"app_clone_success":     "克隆成功: %s (%s)",
+
 	// 其他操作
 	"app_proxy_updated":         "代理配置已更新 - HTTP: %s, HTTPS: %s, SOCKS5: %s, NO_PROXY: %s",
 	"app_tf_mirror_written":     "Terraform 镜像配置已写入: %s",

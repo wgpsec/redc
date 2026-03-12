@@ -10,6 +10,7 @@
         "新增：SSE 事件推送 — 所有实时事件（日志、刷新、AI 流式输出、Terminal 输出）通过 SSE 推送到浏览器",
         "新增：前端 HTTP Transport Polyfill — 浏览器模式自动替换 Wails 通信层，前端代码无需修改即可复用",
         "新增：CLI JSON 输出 — 所有命令支持 `--output json` 参数，输出结构化 JSON 数据，方便脚本化调用和自动化集成",
+        "新增：场景克隆 — 预定义场景和自定义部署均支持一键克隆，快速复制已有配置创建相似场景",
         "修复：Windows 黑框问题 — 本地 patch terraform-exec，为 terraform 子进程设置 SysProcAttr.HideWindow=true，彻底消除 GUI 模式下弹出 cmd.exe 黑框"
       ]
     },
