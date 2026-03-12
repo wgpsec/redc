@@ -64,6 +64,23 @@ let { t, onTabChange = () => {} } = $props();
   let tagEditCase = $state(null);
   let tagInput = $state('');
   let filteredCases = $derived(selectedTag ? cases.filter(c => c.tags && c.tags.includes(selectedTag)) : cases);
+
+  // Running time ticker
+  let nowTick = $state(Date.now());
+  let tickTimer = null;
+
+  function formatElapsed(fromStr) {
+    if (!fromStr) return '';
+    const from = new Date(fromStr).getTime();
+    if (isNaN(from)) return '';
+    const diff = Math.max(0, Math.floor((nowTick - from) / 1000));
+    const d = Math.floor(diff / 86400);
+    const h = Math.floor((diff % 86400) / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
   
   // Computed: check if we have persistent error
   let hasPersistentError = $derived(!!getPersistentError());
@@ -152,6 +169,7 @@ let { t, onTabChange = () => {} } = $props();
   
   onMount(async () => {
     await refresh();
+    tickTimer = setInterval(() => { nowTick = Date.now(); }, 60000);
     
     // 设置 AI 分析事件监听
     EventsOn('ai-case-error-chunk', (data) => {
@@ -218,6 +236,7 @@ let { t, onTabChange = () => {} } = $props();
   });
   
   onDestroy(() => {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
     if (createStatusTimer) {
       clearTimeout(createStatusTimer);
       createStatusTimer = null;
@@ -1403,9 +1422,24 @@ let { t, onTabChange = () => {} } = $props();
             </td>
             <td class="px-5 py-3.5">
               <span class="text-[12px] text-gray-500">{c.stateTime}</span>
+              {#if c.state === 'running' && c.stateTime}
+                <span class="ml-1.5 text-[11px] text-emerald-600 font-medium" title={t.runningTime || '运行时间'}>⏱ {formatElapsed(c.stateTime)}</span>
+              {/if}
             </td>
             <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
               <div class="inline-flex items-center gap-1">
+                {#if c.state !== 'starting' && c.state !== 'stopping' && c.state !== 'removing'}
+                  <!-- Tag edit button -->
+                  <button
+                    class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    onclick={() => { tagEditCase = tagEditCase === c.id ? null : c.id; tagInput = ''; }}
+                    title={t.tags || '标签'}
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </button>
+                {/if}
                 {#if c.state === 'starting' || c.state === 'stopping' || c.state === 'removing'}
                   <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600">
                     {stateConfig[c.state]?.label || t.processing}...
@@ -1464,16 +1498,6 @@ let { t, onTabChange = () => {} } = $props();
                   >{t.stop}</button>
                 {/if}
                 {#if c.state !== 'starting' && c.state !== 'stopping' && c.state !== 'removing'}
-                  <!-- Tag edit button -->
-                  <button
-                    class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    onclick={() => { tagEditCase = tagEditCase === c.id ? null : c.id; tagInput = ''; }}
-                    title={t.tags || '标签'}
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </button>
                   <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
                     onclick={() => showDeleteConfirm(c.id, c.name)}

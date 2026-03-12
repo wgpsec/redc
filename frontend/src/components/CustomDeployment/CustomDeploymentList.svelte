@@ -106,6 +106,23 @@
     await loadTags();
   }
 
+  // Running time ticker
+  let nowTick = $state(Date.now());
+  let tickTimer: number | null = null;
+
+  function formatElapsed(fromStr: string): string {
+    if (!fromStr) return '';
+    const from = new Date(fromStr).getTime();
+    if (isNaN(from)) return '';
+    const diff = Math.max(0, Math.floor((nowTick - from) / 1000));
+    const d = Math.floor(diff / 86400);
+    const h = Math.floor((diff % 86400) / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
   // 状态颜色配置（与创建部署页面一致）
   const stateConfig = $derived<Record<string, { label: string; color: string; bg: string; dot: string }>>({
     'pending': { label: t.pending || '待部署', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
@@ -621,6 +638,7 @@
 
   onMount(() => {
     loadDeployments();
+    tickTimer = window.setInterval(() => { nowTick = Date.now(); }, 60000);
     
     // 设置 AI 分析事件监听
     EventsOn('ai-deployment-error-chunk', (data: any) => {
@@ -648,6 +666,7 @@
     
     // 组件卸载时清理轮询
     return () => {
+      if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
       if (pollInterval) {
         clearInterval(pollInterval);
         pollInterval = null;
@@ -819,9 +838,26 @@
                   </span>
                 {/if}
               </td>
-              <td class="date-cell">{formatDate(deployment.created_at)}</td>
+              <td class="date-cell">
+                {formatDate(deployment.created_at)}
+                {#if deployment.state === 'running' && deployment.updated_at}
+                  <span class="ml-1.5 text-[11px] text-emerald-600 font-medium" title={t.runningTime || '运行时间'}>⏱ {formatElapsed(deployment.updated_at)}</span>
+                {/if}
+              </td>
               <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
                 <div class="inline-flex items-center gap-1">
+                  {#if deployment.state !== 'starting' && deployment.state !== 'stopping' && deployment.state !== 'removing'}
+                    <!-- Tag edit button -->
+                    <button
+                      class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      onclick={() => { tagEditId = tagEditId === deployment.id ? null : deployment.id; tagInput = ''; }}
+                      title={t.tags || '标签'}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </button>
+                  {/if}
                   {#if deployment.state === 'starting' || deployment.state === 'stopping' || deployment.state === 'removing'}
                     <span class="px-2.5 py-1 text-[12px] font-medium text-amber-600">
                       {stateConfig[deployment.state]?.label || '处理中'}...
@@ -888,16 +924,6 @@
                     >{t.stop || '停止'}</button>
                   {/if}
                   {#if deployment.state !== 'starting' && deployment.state !== 'stopping' && deployment.state !== 'removing'}
-                    <!-- Tag edit button -->
-                    <button
-                      class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      onclick={() => { tagEditId = tagEditId === deployment.id ? null : deployment.id; tagInput = ''; }}
-                      title={t.tags || '标签'}
-                    >
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                    </button>
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
                       onclick={() => handleDelete(deployment.id, deployment.name)}
