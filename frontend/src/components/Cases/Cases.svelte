@@ -63,7 +63,56 @@ let { t, onTabChange = () => {} } = $props();
   let selectedTag = $state('');
   let tagEditCase = $state(null);
   let tagInput = $state('');
-  let filteredCases = $derived(selectedTag ? cases.filter(c => c.tags && c.tags.includes(selectedTag)) : cases);
+
+  // Search & filter state
+  let searchQuery = $state('');
+  let statusFilter = $state('all'); // 'all' | 'running' | 'stopped' | 'error'
+  let currentPage = $state(1);
+  const pageSize = 20;
+
+  let filteredCases = $derived.by(() => {
+    let result = cases;
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(c => c.state === statusFilter);
+    }
+    // Tag filter
+    if (selectedTag) {
+      result = result.filter(c => c.tags && c.tags.includes(selectedTag));
+    }
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(c =>
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.id && c.id.toLowerCase().includes(q)) ||
+        (c.type && c.type.toLowerCase().includes(q)) ||
+        (c.tags && c.tags.some(tag => tag.toLowerCase().includes(q)))
+      );
+    }
+    return result;
+  });
+
+  let totalPages = $derived(Math.max(1, Math.ceil(filteredCases.length / pageSize)));
+  let paginatedCases = $derived(filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+
+  // Reset page when filters change
+  let _prevFilterKey = $state('');
+  $effect(() => {
+    const key = `${searchQuery}|${statusFilter}|${selectedTag}`;
+    if (_prevFilterKey && key !== _prevFilterKey) {
+      currentPage = 1;
+    }
+    _prevFilterKey = key;
+  });
+
+  // Status counts for tabs
+  let statusCounts = $derived({
+    all: cases.length,
+    running: cases.filter(c => c.state === 'running').length,
+    stopped: cases.filter(c => c.state === 'stopped').length,
+    error: cases.filter(c => c.state === 'error').length,
+  });
 
   // Clone dialog state
   let cloneDialog = $state({ show: false, caseId: null, caseName: '', sourceName: '' });
@@ -151,9 +200,9 @@ let { t, onTabChange = () => {} } = $props();
   let createBusy = $derived(createStatus === 'creating' || createStatus === 'initializing');
 
   
-  let allSelected = $derived(filteredCases.length > 0 && selectedCases.size === filteredCases.length);
+  let allSelected = $derived(paginatedCases.length > 0 && paginatedCases.every(c => selectedCases.has(c.id)));
 
-  let someSelected = $derived(selectedCases.size > 0 && selectedCases.size < filteredCases.length);
+  let someSelected = $derived(selectedCases.size > 0 && !allSelected);
 
   let hasSelection = $derived(selectedCases.size > 0);
 
@@ -927,9 +976,10 @@ let { t, onTabChange = () => {} } = $props();
 
   function toggleSelectAll() {
     if (allSelected) {
-      selectedCases = new Set();
+      const pageIds = new Set(paginatedCases.map(c => c.id));
+      selectedCases = new Set([...selectedCases].filter(id => !pageIds.has(id)));
     } else {
-      selectedCases = new Set(filteredCases.map(c => c.id));
+      selectedCases = new Set([...selectedCases, ...paginatedCases.map(c => c.id)]);
     }
   }
 
@@ -1325,6 +1375,46 @@ let { t, onTabChange = () => {} } = $props();
 
   <!-- Table -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <!-- Search + Status Tabs -->
+    <div class="px-5 py-3 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <!-- Search -->
+        <div class="relative flex-1 max-w-xs">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            placeholder={t.searchCases || '搜索场景...'}
+            class="w-full h-8 pl-9 pr-3 text-[12px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+            bind:value={searchQuery}
+          />
+          {#if searchQuery}
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer" onclick={() => searchQuery = ''}>
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          {/if}
+        </div>
+        <!-- Status Tabs -->
+        <div class="flex items-center gap-1 bg-gray-50 rounded-lg p-0.5">
+          {#each [
+            { key: 'all', label: t.tagFilterAll || '全部' },
+            { key: 'running', label: t.running || '运行中' },
+            { key: 'stopped', label: t.stopped || '已停止' },
+            { key: 'error', label: t.error || '错误' },
+          ] as tab}
+            <button
+              class="px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer
+                {statusFilter === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+              onclick={() => { statusFilter = tab.key; selectedCases = new Set(); }}
+            >
+              {tab.label}
+              <span class="ml-1 text-[10px] {statusFilter === tab.key ? 'text-gray-500' : 'text-gray-400'}">{statusCounts[tab.key]}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
+    </div>
     <!-- Tag Filter Bar -->
     {#if allTagNames.length > 0}
       <div class="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
@@ -1402,7 +1492,7 @@ let { t, onTabChange = () => {} } = $props();
         </tr>
       </thead>
       <tbody>
-        {#each filteredCases || [] as c, i}
+        {#each paginatedCases || [] as c, i}
           <tr 
             class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
             onclick={() => toggleCaseExpand(c.id, c.state)}
@@ -1653,6 +1743,45 @@ let { t, onTabChange = () => {} } = $props();
         {/each}
       </tbody>
     </table>
+    <!-- Pagination -->
+    {#if totalPages > 1}
+      <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+        <span class="text-[11px] text-gray-400">
+          {t.showingResults || '显示'} {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredCases.length)} / {filteredCases.length}
+        </span>
+        <div class="flex items-center gap-1">
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            onclick={() => currentPage = 1}
+            disabled={currentPage === 1}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" /></svg>
+          </button>
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            onclick={() => currentPage = Math.max(1, currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+          </button>
+          <span class="px-3 text-[12px] font-medium text-gray-700">{currentPage} / {totalPages}</span>
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            onclick={() => currentPage = Math.min(totalPages, currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+          </button>
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            onclick={() => currentPage = totalPages}
+            disabled={currentPage === totalPages}
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 4.5l7.5 7.5-7.5 7.5m6-15l7.5 7.5-7.5 7.5" /></svg>
+          </button>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
