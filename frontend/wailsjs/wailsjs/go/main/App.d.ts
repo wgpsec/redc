@@ -82,6 +82,10 @@ export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
 
+export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
+
+export function GetAllTagNames():Promise<Array<string>>;
+
 export function GetBalances(arg1:Array<string>):Promise<Array<main.BalanceInfo>>;
 
 export function GetBaseTemplates():Promise<Array<mod.BaseTemplate>>;
@@ -131,12 +135,6 @@ export function GetScheduledTask(arg1:string):Promise<mod.ScheduledTask>;
 export function GetShowWelcomeDialog():Promise<boolean>;
 
 export function GetSpotAutoRecoverEnabled():Promise<boolean>;
-
-export function GetWebhookConfig():Promise<any>;
-
-export function SetWebhookConfig(arg1:any):Promise<void>;
-
-export function TestWebhook(arg1:string, arg2:string, arg3:string):Promise<void>;
 
 export function GetSpotMonitorEnabled():Promise<boolean>;
 
@@ -259,6 +257,8 @@ export function SelectFile(arg1:string):Promise<string>;
 export function SelectSaveFile(arg1:string,arg2:string):Promise<string>;
 
 export function SetActiveProfile(arg1:string):Promise<mod.ProfileInfo>;
+
+export function SetCaseTags(arg1:string,arg2:Array<string>):Promise<void>;
 
 export function SetDebugLogging(arg1:boolean):Promise<void>;
 

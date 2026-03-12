@@ -425,6 +425,9 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 		return nil, err
 	}
 
+	// Load tags
+	tagMap := a.GetAllCaseTags()
+
 	result := make([]CaseInfo, 0, len(cases))
 	for _, c := range cases {
 		result = append(result, CaseInfo{
@@ -436,6 +439,7 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 			CreateTime:     c.CreateTime,
 			Operator:       c.Operator,
 			IsSpotInstance: detectSpotFromTfFiles(c.Path),
+			Tags:           tagMap[c.Id],
 		})
 	}
 	return result, nil

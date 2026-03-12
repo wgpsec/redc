@@ -47,6 +47,7 @@ type GUISettings struct {
 	WebhookFeishuSecret string `json:"webhookFeishuSecret"`
 	WebhookDiscord      string `json:"webhookDiscord"`
 	WebhookWecom        string `json:"webhookWecom"`
+	CaseTags            map[string][]string `json:"caseTags,omitempty"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加

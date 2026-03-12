@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, AnalyzeDeploymentError, GetActiveProfile, GetDeploymentPlanPreview } from '../../../wailsjs/go/main/App';
+  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, AnalyzeDeploymentError, GetActiveProfile, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames } from '../../../wailsjs/go/main/App';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import SSHModal from '../Cases/SSHModal.svelte';
   import ScheduleDialog from '../Cases/ScheduleDialog.svelte';
@@ -64,6 +64,48 @@
   let svgViewBox = $state('0 0 800 600');
   let topoZoom = $state(1);
 
+  // Tag state
+  let allTagNames = $state<string[]>([]);
+  let caseTags = $state<Record<string, string[]>>({});
+  let selectedTag = $state('');
+  let tagEditId = $state<string | null>(null);
+  let tagInput = $state('');
+  let filteredDeployments = $derived(selectedTag ? deployments.filter(d => (caseTags[d.id] || []).includes(selectedTag)) : deployments);
+
+  const tagColors = [
+    'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700',
+    'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700', 'bg-orange-100 text-orange-700',
+    'bg-cyan-100 text-cyan-700', 'bg-rose-100 text-rose-700', 'bg-lime-100 text-lime-700',
+    'bg-amber-100 text-amber-700',
+  ];
+  function getTagColor(tag: string) {
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) hash = ((hash << 5) - hash + tag.charCodeAt(i)) | 0;
+    return tagColors[Math.abs(hash) % tagColors.length];
+  }
+
+  async function loadTags() {
+    try {
+      [caseTags, allTagNames] = await Promise.all([GetAllCaseTags(), GetAllTagNames()]);
+    } catch { caseTags = {}; allTagNames = []; }
+  }
+
+  async function addTagToDeployment(id: string, tag: string) {
+    if (!tag.trim()) return;
+    const tags = [...(caseTags[id] || [])];
+    if (tags.includes(tag.trim())) return;
+    tags.push(tag.trim());
+    await SetCaseTags(id, tags);
+    await loadTags();
+    tagInput = '';
+  }
+
+  async function removeTagFromDeployment(id: string, tag: string) {
+    const tags = (caseTags[id] || []).filter(t => t !== tag);
+    await SetCaseTags(id, tags);
+    await loadTags();
+  }
+
   // 状态颜色配置（与创建部署页面一致）
   const stateConfig = $derived<Record<string, { label: string; color: string; bg: string; dot: string }>>({
     'pending': { label: t.pending || '待部署', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
@@ -96,6 +138,7 @@
     try {
       const result = await ListCustomDeployments();
       deployments = (result || []) as any;
+      await loadTags();
       
       // 检查是否有中间态的部署，如果有则启动轮询
       checkAndStartPolling();
@@ -698,6 +741,22 @@
     </div>
   {:else}
     <div class="table-container">
+      <!-- Tag Filter Bar -->
+      {#if allTagNames.length > 0}
+        <div class="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] text-gray-400 mr-1">{t.tags || '标签'}:</span>
+          <button
+            class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === '' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+            onclick={() => { selectedTag = ''; }}
+          >{t.tagFilterAll || '全部'}</button>
+          {#each allTagNames as tag}
+            <button
+              class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === tag ? 'bg-gray-900 text-white' : getTagColor(tag)}"
+              onclick={() => { selectedTag = selectedTag === tag ? '' : tag; }}
+            >{tag}</button>
+          {/each}
+        </div>
+      {/if}
       <table class="deployment-table">
         <thead>
           <tr>
@@ -714,7 +773,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each deployments as deployment (deployment.id)}
+          {#each filteredDeployments as deployment (deployment.id)}
             <tr 
               class:selected={!batchMode && expandedDeploymentId === deployment.id}
               class:batch-selected={batchMode && selectedDeploymentIds.has(deployment.id)}
@@ -736,6 +795,9 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                     <span class="name">{deployment.name}</span>
+                    {#each caseTags[deployment.id] || [] as tag}
+                      <span class="px-1.5 py-0 text-[10px] rounded-full {getTagColor(tag)}">{tag}</span>
+                    {/each}
                   </div>
                   <code class="id">{getShortId(deployment.id)}</code>
                 </div>
@@ -826,6 +888,16 @@
                     >{t.stop || '停止'}</button>
                   {/if}
                   {#if deployment.state !== 'starting' && deployment.state !== 'stopping' && deployment.state !== 'removing'}
+                    <!-- Tag edit button -->
+                    <button
+                      class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      onclick={() => { tagEditId = tagEditId === deployment.id ? null : deployment.id; tagInput = ''; }}
+                      title={t.tags || '标签'}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </button>
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
                       onclick={() => handleDelete(deployment.id, deployment.name)}
@@ -834,6 +906,42 @@
                 </div>
               </td>
             </tr>
+            <!-- Tag edit row -->
+            {#if tagEditId === deployment.id}
+              <tr class="bg-blue-50/50">
+                <td colspan="8" class="px-5 py-2.5">
+                  <div class="flex items-center gap-2 flex-wrap pl-6">
+                    <span class="text-[11px] text-gray-500">{t.tags || '标签'}:</span>
+                    {#each caseTags[deployment.id] || [] as tag}
+                      <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] rounded-full {getTagColor(tag)}">
+                        {tag}
+                        <button class="ml-0.5 hover:opacity-70 cursor-pointer" onclick={() => removeTagFromDeployment(deployment.id, tag)}>×</button>
+                      </span>
+                    {/each}
+                    <div class="inline-flex items-center gap-1">
+                      <input
+                        type="text"
+                        class="w-24 text-[11px] px-2 py-0.5 border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        placeholder={t.tagPlaceholder || '输入标签名'}
+                        bind:value={tagInput}
+                        onkeydown={(e) => { if (e.key === 'Enter') { addTagToDeployment(deployment.id, tagInput); } }}
+                        list="tagSuggestionsDep"
+                      />
+                      <datalist id="tagSuggestionsDep">
+                        {#each allTagNames.filter(t => !(caseTags[deployment.id] || []).includes(t)) as suggestion}
+                          <option value={suggestion} />
+                        {/each}
+                      </datalist>
+                      <button
+                        class="text-[11px] px-2 py-0.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        disabled={!tagInput.trim()}
+                        onclick={() => addTagToDeployment(deployment.id, tagInput)}
+                      >+</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {/if}
             <!-- Expanded row for outputs or error -->
             {#if expandedDeploymentId === deployment.id}
               <tr class="bg-slate-50">

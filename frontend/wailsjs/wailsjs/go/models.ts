@@ -169,6 +169,7 @@ export namespace main {
 	    createTime: string;
 	    operator: string;
 	    isSpotInstance: boolean;
+	    tags: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new CaseInfo(source);
@@ -184,6 +185,7 @@ export namespace main {
 	        this.createTime = source["createTime"];
 	        this.operator = source["operator"];
 	        this.isSpotInstance = source["isSpotInstance"];
+	        this.tags = source["tags"];
 	    }
 	}
 	export class ComposeServiceSummary {

@@ -732,3 +732,48 @@ func maskValue(value string) string {
 	}
 	return "****" + value[len(value)-4:]
 }
+
+// SetCaseTags sets tags for a specific case or deployment
+func (a *App) SetCaseTags(id string, tags []string) error {
+settings, err := redc.LoadGUISettings()
+if err != nil {
+settings = &redc.GUISettings{}
+}
+if settings.CaseTags == nil {
+settings.CaseTags = make(map[string][]string)
+}
+if len(tags) == 0 {
+delete(settings.CaseTags, id)
+} else {
+settings.CaseTags[id] = tags
+}
+return redc.SaveGUISettings(settings)
+}
+
+// GetAllCaseTags returns the full tag map {id: [tags]}
+func (a *App) GetAllCaseTags() map[string][]string {
+settings, err := redc.LoadGUISettings()
+if err != nil || settings == nil || settings.CaseTags == nil {
+return map[string][]string{}
+}
+return settings.CaseTags
+}
+
+// GetAllTagNames returns all unique tag names across all cases
+func (a *App) GetAllTagNames() []string {
+settings, err := redc.LoadGUISettings()
+if err != nil || settings == nil || settings.CaseTags == nil {
+return []string{}
+}
+seen := make(map[string]bool)
+var tags []string
+for _, ts := range settings.CaseTags {
+for _, t := range ts {
+if !seen[t] {
+seen[t] = true
+tags = append(tags, t)
+}
+}
+}
+return tags
+}

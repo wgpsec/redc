@@ -154,6 +154,14 @@ export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
 }
 
+export function GetAllCaseTags() {
+  return window['go']['main']['App']['GetAllCaseTags']();
+}
+
+export function GetAllTagNames() {
+  return window['go']['main']['App']['GetAllTagNames']();
+}
+
 export function GetBalances(arg1) {
   return window['go']['main']['App']['GetBalances'](arg1);
 }
@@ -252,18 +260,6 @@ export function GetShowWelcomeDialog() {
 
 export function GetSpotAutoRecoverEnabled() {
   return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
-}
-
-export function GetWebhookConfig() {
-  return window['go']['main']['App']['GetWebhookConfig']();
-}
-
-export function SetWebhookConfig(arg1) {
-  return window['go']['main']['App']['SetWebhookConfig'](arg1);
-}
-
-export function TestWebhook(arg1, arg2, arg3) {
-  return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
 }
 
 export function GetSpotMonitorEnabled() {
@@ -508,6 +504,10 @@ export function SelectSaveFile(arg1, arg2) {
 
 export function SetActiveProfile(arg1) {
   return window['go']['main']['App']['SetActiveProfile'](arg1);
+}
+
+export function SetCaseTags(arg1, arg2) {
+  return window['go']['main']['App']['SetCaseTags'](arg1, arg2);
 }
 
 export function SetDebugLogging(arg1) {

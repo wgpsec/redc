@@ -446,6 +446,18 @@ export function TestWebhook(arg1, arg2, arg3) {
   return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
 }
 
+export function SetCaseTags(arg1, arg2) {
+  return window['go']['main']['App']['SetCaseTags'](arg1, arg2);
+}
+
+export function GetAllCaseTags() {
+  return window['go']['main']['App']['GetAllCaseTags']();
+}
+
+export function GetAllTagNames() {
+  return window['go']['main']['App']['GetAllTagNames']();
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }

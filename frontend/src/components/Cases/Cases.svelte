@@ -1,7 +1,7 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile, GetCasePlanPreview } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile, GetCasePlanPreview, SetCaseTags, GetAllTagNames } from '../../../wailsjs/go/main/App.js';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
@@ -57,6 +57,13 @@ let { t, onTabChange = () => {} } = $props();
   let createStatusMessage = $state('');
   let createStatusDetail = $state('');
   let createStatusTimer = null;
+
+  // Tag state
+  let allTagNames = $state([]);
+  let selectedTag = $state('');
+  let tagEditCase = $state(null);
+  let tagInput = $state('');
+  let filteredCases = $derived(selectedTag ? cases.filter(c => c.tags && c.tags.includes(selectedTag)) : cases);
   
   // Computed: check if we have persistent error
   let hasPersistentError = $derived(!!getPersistentError());
@@ -123,9 +130,9 @@ let { t, onTabChange = () => {} } = $props();
   let createBusy = $derived(createStatus === 'creating' || createStatus === 'initializing');
 
   
-  let allSelected = $derived(cases.length > 0 && selectedCases.size === cases.length);
+  let allSelected = $derived(filteredCases.length > 0 && selectedCases.size === filteredCases.length);
 
-  let someSelected = $derived(selectedCases.size > 0 && selectedCases.size < cases.length);
+  let someSelected = $derived(selectedCases.size > 0 && selectedCases.size < filteredCases.length);
 
   let hasSelection = $derived(selectedCases.size > 0);
 
@@ -364,6 +371,7 @@ let { t, onTabChange = () => {} } = $props();
         ListCases(),
         ListTemplates()
       ]);
+      allTagNames = await GetAllTagNames().catch(() => []);
       
       // Note: Template list cost preview is now manual (user must click button)
       // This prevents automatic loading of all template costs on page load
@@ -877,7 +885,7 @@ let { t, onTabChange = () => {} } = $props();
     if (allSelected) {
       selectedCases = new Set();
     } else {
-      selectedCases = new Set(cases.map(c => c.id));
+      selectedCases = new Set(filteredCases.map(c => c.id));
     }
   }
 
@@ -958,6 +966,37 @@ let { t, onTabChange = () => {} } = $props();
       batchOperating = false;
       await refresh();
     }
+  }
+
+  // Tag colors
+  const tagColors = [
+    'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700',
+    'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700', 'bg-orange-100 text-orange-700',
+    'bg-cyan-100 text-cyan-700', 'bg-rose-100 text-rose-700', 'bg-lime-100 text-lime-700',
+    'bg-amber-100 text-amber-700',
+  ];
+  function getTagColor(tag) {
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) hash = ((hash << 5) - hash + tag.charCodeAt(i)) | 0;
+    return tagColors[Math.abs(hash) % tagColors.length];
+  }
+
+  async function addTagToCase(caseId, tag) {
+    if (!tag.trim()) return;
+    const c = cases.find(x => x.id === caseId);
+    const tags = [...(c?.tags || [])];
+    if (tags.includes(tag.trim())) return;
+    tags.push(tag.trim());
+    await SetCaseTags(caseId, tags);
+    await refresh();
+    tagInput = '';
+  }
+
+  async function removeTagFromCase(caseId, tag) {
+    const c = cases.find(x => x.id === caseId);
+    const tags = (c?.tags || []).filter(t => t !== tag);
+    await SetCaseTags(caseId, tags);
+    await refresh();
   }
 
 
@@ -1242,6 +1281,22 @@ let { t, onTabChange = () => {} } = $props();
 
   <!-- Table -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <!-- Tag Filter Bar -->
+    {#if allTagNames.length > 0}
+      <div class="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+        <span class="text-[11px] text-gray-400 mr-1">{t.tags || '标签'}:</span>
+        <button
+          class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === '' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+          onclick={() => { selectedTag = ''; selectedCases = new Set(); }}
+        >{t.tagFilterAll || '全部'}</button>
+        {#each allTagNames as tag}
+          <button
+            class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === tag ? 'bg-gray-900 text-white' : getTagColor(tag)}"
+            onclick={() => { selectedTag = selectedTag === tag ? '' : tag; selectedCases = new Set(); }}
+          >{tag}</button>
+        {/each}
+      </div>
+    {/if}
     <!-- Batch Operations Bar -->
     {#if hasSelection}
       <div class="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
@@ -1303,7 +1358,7 @@ let { t, onTabChange = () => {} } = $props();
         </tr>
       </thead>
       <tbody>
-        {#each cases || [] as c, i}
+        {#each filteredCases || [] as c, i}
           <tr 
             class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
             onclick={() => toggleCaseExpand(c.id, c.state)}
@@ -1325,7 +1380,12 @@ let { t, onTabChange = () => {} } = $props();
               </div>
             </td>
             <td class="px-5 py-3.5">
-              <span class="text-[13px] font-medium text-gray-900">{c.name}</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[13px] font-medium text-gray-900">{c.name}</span>
+                {#each c.tags || [] as tag}
+                  <span class="px-1.5 py-0 text-[10px] rounded-full {getTagColor(tag)}">{tag}</span>
+                {/each}
+              </div>
             </td>
             <td class="px-5 py-3.5">
               <span class="text-[13px] text-gray-600">{c.type}</span>
@@ -1404,6 +1464,16 @@ let { t, onTabChange = () => {} } = $props();
                   >{t.stop}</button>
                 {/if}
                 {#if c.state !== 'starting' && c.state !== 'stopping' && c.state !== 'removing'}
+                  <!-- Tag edit button -->
+                  <button
+                    class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    onclick={() => { tagEditCase = tagEditCase === c.id ? null : c.id; tagInput = ''; }}
+                    title={t.tags || '标签'}
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </button>
                   <button 
                     class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
                     onclick={() => showDeleteConfirm(c.id, c.name)}
@@ -1412,6 +1482,42 @@ let { t, onTabChange = () => {} } = $props();
               </div>
             </td>
           </tr>
+          <!-- Tag edit row -->
+          {#if tagEditCase === c.id}
+            <tr class="bg-blue-50/50">
+              <td colspan="7" class="px-5 py-2.5">
+                <div class="flex items-center gap-2 flex-wrap pl-6">
+                  <span class="text-[11px] text-gray-500">{t.tags || '标签'}:</span>
+                  {#each c.tags || [] as tag}
+                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[11px] rounded-full {getTagColor(tag)}">
+                      {tag}
+                      <button class="ml-0.5 hover:opacity-70 cursor-pointer" onclick={() => removeTagFromCase(c.id, tag)}>×</button>
+                    </span>
+                  {/each}
+                  <div class="inline-flex items-center gap-1">
+                    <input
+                      type="text"
+                      class="w-24 text-[11px] px-2 py-0.5 border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      placeholder={t.tagPlaceholder || '输入标签名'}
+                      bind:value={tagInput}
+                      onkeydown={(e) => { if (e.key === 'Enter') { addTagToCase(c.id, tagInput); } }}
+                      list="tagSuggestions"
+                    />
+                    <datalist id="tagSuggestions">
+                      {#each allTagNames.filter(t => !(c.tags || []).includes(t)) as suggestion}
+                        <option value={suggestion} />
+                      {/each}
+                    </datalist>
+                    <button
+                      class="text-[11px] px-2 py-0.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                      disabled={!tagInput.trim()}
+                      onclick={() => addTagToCase(c.id, tagInput)}
+                    >+</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {/if}
           <!-- Expanded row for outputs -->
           {#if expandedCase === c.id}
             <tr class="bg-slate-50">
