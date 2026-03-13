@@ -1,6 +1,12 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	redc "red-cloud/mod"
+	"time"
+)
 
 // MCPComposePreview implements AppBridge
 func (a *App) MCPComposePreview(filePath string, profiles []string) (interface{}, error) {
@@ -105,4 +111,16 @@ func (a *App) MCPCancelScheduledTask(taskID string) error {
 // MCPSaveTemplateFiles implements AppBridge
 func (a *App) MCPSaveTemplateFiles(templateName string, files map[string]string) (string, error) {
 	return a.SaveTemplateFiles(templateName, files)
+}
+
+// MCPSaveComposeFile implements AppBridge
+func (a *App) MCPSaveComposeFile(filename string, content string) (string, error) {
+	if filename == "" {
+		filename = "redc-compose.yaml"
+	}
+	savePath := filepath.Join(redc.RedcPath, filename)
+	if err := os.WriteFile(savePath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("写入 compose 文件失败: %v", err)
+	}
+	return savePath, nil
 }

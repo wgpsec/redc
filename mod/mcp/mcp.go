@@ -871,6 +871,14 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		return s.toolValidateConfig(provider, region, instanceType)
 
 	// --- Compose tools ---
+	case "save_compose_file":
+		filename, _ := args["filename"].(string)
+		content, ok := args["content"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'content' parameter")
+		}
+		return s.toolSaveComposeFile(filename, content)
+
 	case "compose_preview":
 		file, _ := args["file"].(string)
 		profiles, _ := args["profiles"].(string)

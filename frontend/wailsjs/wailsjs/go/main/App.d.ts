@@ -243,6 +243,8 @@ export function MCPListProjects():Promise<any>;
 
 export function MCPListScheduledTasks():Promise<any>;
 
+export function MCPSaveComposeFile(arg1:string,arg2:string):Promise<string>;
+
 export function MCPSaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promise<string>;
 
 export function MCPScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<any>;

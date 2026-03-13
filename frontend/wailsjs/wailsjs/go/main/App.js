@@ -474,6 +474,10 @@ export function MCPListScheduledTasks() {
   return window['go']['main']['App']['MCPListScheduledTasks']();
 }
 
+export function MCPSaveComposeFile(arg1, arg2) {
+  return window['go']['main']['App']['MCPSaveComposeFile'](arg1, arg2);
+}
+
 export function MCPSaveTemplateFiles(arg1, arg2) {
   return window['go']['main']['App']['MCPSaveTemplateFiles'](arg1, arg2);
 }

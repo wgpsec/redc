@@ -38,4 +38,7 @@ type AppBridge interface {
 
 	// Template write
 	MCPSaveTemplateFiles(templateName string, files map[string]string) (string, error)
+
+	// Compose file write
+	MCPSaveComposeFile(filename string, content string) (string, error)
 }

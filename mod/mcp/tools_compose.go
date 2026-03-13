@@ -8,6 +8,24 @@ import (
 func composeToolSchemas() []Tool {
 	return []Tool{
 		{
+			Name:        "save_compose_file",
+			Description: "Save a redc-compose YAML file to disk. Use this to create multi-cloud orchestration deployments. The file defines services (cloud instances), their dependencies, and post-deploy setup tasks.",
+			InputSchema: ToolSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"filename": {
+						Type:        "string",
+						Description: "Compose file name (default: redc-compose.yaml). Will be saved under the RedC data directory.",
+					},
+					"content": {
+						Type:        "string",
+						Description: "The full YAML content of the compose file",
+					},
+				},
+				Required: []string{"content"},
+			},
+		},
+		{
 			Name:        "compose_preview",
 			Description: "Preview a redc-compose deployment: list services, dependencies, providers, and replicas without actually deploying",
 			InputSchema: ToolSchema{
@@ -87,6 +105,20 @@ func splitCSV(s string) []string {
 		}
 	}
 	return parts
+}
+
+func (s *MCPServer) toolSaveComposeFile(filename string, content string) (ToolResult, error) {
+	if s.app == nil {
+		return ToolResult{}, fmt.Errorf("save_compose_file requires GUI mode (AppBridge not available)")
+	}
+	savedPath, err := s.app.MCPSaveComposeFile(filename, content)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("failed to save compose file: %v", err)
+	}
+	output := fmt.Sprintf("Compose file saved: %s\n\nYou can now use compose_preview to verify, then compose_up to deploy.", savedPath)
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: output}},
+	}, nil
 }
 
 func (s *MCPServer) toolComposePreview(file string, profiles string) (ToolResult, error) {
