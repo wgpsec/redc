@@ -236,6 +236,13 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
+		// Compress old tool results to prevent context window bloat
+		// Keep system prompt + user messages + recent tool interactions intact,
+		// but shorten tool results from rounds older than the last 2
+		if round > 2 {
+			compressOldToolResults(aiMessages)
+		}
+
 		// Check if cancelled before each round
 		if ctx.Err() != nil {
 			a.emitEvent("ai-chat-chunk", map[string]string{
@@ -372,6 +379,39 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	})
 	return nil
 }
+
+// compressOldToolResults shortens tool result messages beyond the most recent round
+// to prevent context window bloat over many rounds.
+// It keeps the last 4 tool-role messages at full length and compresses older ones.
+func compressOldToolResults(messages []ai.Message) {
+	const maxCompressedLen = 200
+	const keepRecentToolMessages = 4
+
+	// Count total tool messages
+	toolCount := 0
+	for i := range messages {
+		if messages[i].Role == "tool" {
+			toolCount++
+		}
+	}
+	if toolCount <= keepRecentToolMessages {
+		return
+	}
+
+	// Compress older tool messages (keep last keepRecentToolMessages intact)
+	skipCount := toolCount - keepRecentToolMessages
+	compressed := 0
+	for i := 0; i < len(messages); i++ {
+		if messages[i].Role == "tool" && compressed < skipCount {
+			content := messages[i].Content
+			if len(content) > maxCompressedLen {
+				messages[i].Content = content[:maxCompressedLen] + "... (compressed)"
+			}
+			compressed++
+		}
+	}
+}
+
 func (a *App) gatherRunningCasesInfo() (string, int) {
 	a.mu.Lock()
 	project := a.project
