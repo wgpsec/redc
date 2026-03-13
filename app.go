@@ -189,6 +189,38 @@ func (a *App) startup(ctx context.Context) {
 		}
 		return fmt.Errorf(i18n.Tf("app_unknown_action", action))
 	})
+
+	// SSH command callback for task center
+	a.taskScheduler.SetSSHCommandCallback(func(caseID string, command string) (string, error) {
+		c, err := a.project.GetCase(caseID)
+		if err != nil {
+			return "", fmt.Errorf("case not found: %v", err)
+		}
+		sshConfig, err := c.GetSSHConfig()
+		if err != nil {
+			return "", fmt.Errorf("SSH config error: %v", err)
+		}
+		result := a.execSSHCommand(sshConfig, command)
+		output := result.Stdout
+		if result.Stderr != "" {
+			output += "\n[stderr] " + result.Stderr
+		}
+		if !result.Success {
+			return output, fmt.Errorf("exit code %d: %s", result.ExitCode, result.Error)
+		}
+		return output, nil
+	})
+
+	// Notification callback for task center
+	a.taskScheduler.SetNotifyCallback(func(title string, message string) {
+		if a.notificationMgr != nil {
+			a.notificationMgr.Send(title, message)
+			if a.notificationMgr.webhookMgr != nil {
+				a.notificationMgr.webhookMgr.Send(title, message, "#4a90d9")
+			}
+		}
+	})
+
 	a.taskScheduler.Start()
 
 	fmt.Printf("[INFO] %s\n", i18n.T("app_scheduler_start_success"))

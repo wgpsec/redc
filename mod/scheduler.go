@@ -14,7 +14,7 @@ type ScheduledTask struct {
 	ID             string    `json:"id"`
 	CaseID         string    `json:"caseId"`
 	CaseName       string    `json:"caseName"`
-	Action         string    `json:"action"` // "start" or "stop"
+	Action         string    `json:"action"` // "start", "stop", "ssh_command", "auto_stop"
 	ScheduledAt    time.Time `json:"scheduledAt"`
 	CreatedAt      time.Time `json:"createdAt"`
 	Status         string    `json:"status"` // "pending", "completed", "failed", "cancelled"
@@ -22,17 +22,22 @@ type ScheduledTask struct {
 	RepeatType     string    `json:"repeatType,omitempty"`     // "once", "daily", "weekly", "interval"
 	RepeatInterval int       `json:"repeatInterval,omitempty"` // minutes, only for "interval" type
 	CompletedAt    time.Time `json:"completedAt,omitempty"`
+	SSHCommand     string    `json:"sshCommand,omitempty"`     // SSH command to execute (for "ssh_command" action)
+	TaskResult     string    `json:"taskResult,omitempty"`     // execution result (e.g. SSH output)
+	NotifyEnabled  bool      `json:"notifyEnabled,omitempty"`  // send notification on completion
 }
 
 // TaskScheduler 任务调度器
 type TaskScheduler struct {
-	tasks      map[string]*ScheduledTask
-	mu         sync.RWMutex
-	stopChan   chan struct{}
-	project    *RedcProject
-	onExecute  func(caseID string, action string) error
-	db         *sql.DB
-	dbPath     string
+	tasks         map[string]*ScheduledTask
+	mu            sync.RWMutex
+	stopChan      chan struct{}
+	project       *RedcProject
+	onExecute     func(caseID string, action string) error
+	onSSHCommand  func(caseID string, command string) (string, error)
+	onNotify      func(title string, message string)
+	db            *sql.DB
+	dbPath        string
 }
 
 // NewTaskScheduler 创建新的任务调度器
@@ -48,6 +53,16 @@ func NewTaskScheduler(project *RedcProject, dbPath string) *TaskScheduler {
 // SetExecuteCallback 设置执行回调
 func (s *TaskScheduler) SetExecuteCallback(callback func(string, string) error) {
 	s.onExecute = callback
+}
+
+// SetSSHCommandCallback 设置 SSH 命令执行回调
+func (s *TaskScheduler) SetSSHCommandCallback(callback func(string, string) (string, error)) {
+	s.onSSHCommand = callback
+}
+
+// SetNotifyCallback 设置通知回调
+func (s *TaskScheduler) SetNotifyCallback(callback func(string, string)) {
+	s.onNotify = callback
 }
 
 // InitDB 初始化数据库
@@ -87,6 +102,9 @@ func (s *TaskScheduler) InitDB() error {
 		"ALTER TABLE scheduled_tasks ADD COLUMN repeat_type TEXT DEFAULT 'once'",
 		"ALTER TABLE scheduled_tasks ADD COLUMN repeat_interval INTEGER DEFAULT 0",
 		"ALTER TABLE scheduled_tasks ADD COLUMN completed_at DATETIME",
+		"ALTER TABLE scheduled_tasks ADD COLUMN ssh_command TEXT DEFAULT ''",
+		"ALTER TABLE scheduled_tasks ADD COLUMN task_result TEXT DEFAULT ''",
+		"ALTER TABLE scheduled_tasks ADD COLUMN notify_enabled INTEGER DEFAULT 0",
 	} {
 		db.Exec(col) // ignore "duplicate column" errors
 	}
@@ -105,7 +123,8 @@ func (s *TaskScheduler) InitDB() error {
 func (s *TaskScheduler) loadTasksFromDB() error {
 	rows, err := s.db.Query(`
 		SELECT id, case_id, case_name, action, scheduled_at, created_at, status, error,
-		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at
+		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at,
+		       COALESCE(ssh_command, ''), COALESCE(task_result, ''), COALESCE(notify_enabled, 0)
 		FROM scheduled_tasks
 		WHERE status = 'pending'
 	`)
@@ -121,6 +140,7 @@ func (s *TaskScheduler) loadTasksFromDB() error {
 		task := &ScheduledTask{}
 		var scheduledAtStr, createdAtStr string
 		var errorStr, completedAtStr sql.NullString
+		var notifyInt int
 
 		err := rows.Scan(
 			&task.ID,
@@ -134,11 +154,15 @@ func (s *TaskScheduler) loadTasksFromDB() error {
 			&task.RepeatType,
 			&task.RepeatInterval,
 			&completedAtStr,
+			&task.SSHCommand,
+			&task.TaskResult,
+			&notifyInt,
 		)
 		if err != nil {
 			continue
 		}
 
+		task.NotifyEnabled = notifyInt != 0
 		task.ScheduledAt, _ = time.Parse(time.RFC3339, scheduledAtStr)
 		task.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
 		if errorStr.Valid {
@@ -163,10 +187,14 @@ func (s *TaskScheduler) saveTaskToDB(task *ScheduledTask) error {
 	if !task.CompletedAt.IsZero() {
 		completedAt = task.CompletedAt.Format(time.RFC3339)
 	}
+	notifyInt := 0
+	if task.NotifyEnabled {
+		notifyInt = 1
+	}
 	_, err := s.db.Exec(`
 		INSERT OR REPLACE INTO scheduled_tasks 
-		(id, case_id, case_name, action, scheduled_at, created_at, status, error, repeat_type, repeat_interval, completed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(id, case_id, case_name, action, scheduled_at, created_at, status, error, repeat_type, repeat_interval, completed_at, ssh_command, task_result, notify_enabled)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		task.ID,
 		task.CaseID,
@@ -179,6 +207,9 @@ func (s *TaskScheduler) saveTaskToDB(task *ScheduledTask) error {
 		task.RepeatType,
 		task.RepeatInterval,
 		completedAt,
+		task.SSHCommand,
+		task.TaskResult,
+		notifyInt,
 	)
 	return err
 }
@@ -201,6 +232,18 @@ func (s *TaskScheduler) updateTaskStatusInDB(taskID, status, errorMsg string) er
 func (s *TaskScheduler) deleteTaskFromDB(taskID string) error {
 	_, err := s.db.Exec(`DELETE FROM scheduled_tasks WHERE id = ?`, taskID)
 	return err
+}
+
+// updateTaskResultInDB 更新任务执行结果到数据库
+func (s *TaskScheduler) updateTaskResultInDB(taskID, result string) {
+	if s.db == nil {
+		return
+	}
+	// Truncate result to 4KB for DB storage
+	if len(result) > 4096 {
+		result = result[:4096] + "\n...(truncated)"
+	}
+	s.db.Exec(`UPDATE scheduled_tasks SET task_result = ? WHERE id = ?`, result, taskID)
 }
 
 // Start 启动调度器
@@ -269,7 +312,23 @@ func (s *TaskScheduler) executeTask(id string, task *ScheduledTask) {
 	s.updateTaskStatusInDB(id, "executing", "")
 	s.mu.Unlock()
 
-	err := s.onExecute(task.CaseID, task.Action)
+	var err error
+	var result string
+
+	switch task.Action {
+	case "ssh_command":
+		if s.onSSHCommand != nil {
+			result, err = s.onSSHCommand(task.CaseID, task.SSHCommand)
+		} else {
+			err = fmt.Errorf("SSH command callback not configured")
+		}
+	case "auto_stop":
+		// auto_stop is just a stop action
+		err = s.onExecute(task.CaseID, "stop")
+	default:
+		// "start" / "stop"
+		err = s.onExecute(task.CaseID, task.Action)
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -279,11 +338,32 @@ func (s *TaskScheduler) executeTask(id string, task *ScheduledTask) {
 		task.Status = "failed"
 		task.Error = err.Error()
 		task.CompletedAt = now
+		task.TaskResult = result
 		s.updateTaskStatusInDB(id, "failed", err.Error())
 	} else {
 		task.Status = "completed"
 		task.CompletedAt = now
+		task.TaskResult = result
 		s.updateTaskStatusInDB(id, "completed", "")
+	}
+
+	// Update task_result in DB
+	if result != "" {
+		s.updateTaskResultInDB(id, result)
+	}
+
+	// Send notification if enabled
+	if task.NotifyEnabled && s.onNotify != nil {
+		actionLabel := task.Action
+		statusLabel := task.Status
+		msg := fmt.Sprintf("任务 [%s] %s 执行%s", task.CaseName, actionLabel, statusLabel)
+		if task.Action == "ssh_command" {
+			msg = fmt.Sprintf("SSH 命令任务 [%s] 执行%s", task.CaseName, statusLabel)
+		}
+		if err != nil {
+			msg += ": " + task.Error
+		}
+		s.onNotify("任务中心", msg)
 	}
 
 	// Auto-renew periodic tasks (even on failure, schedule next)
@@ -297,12 +377,24 @@ func (s *TaskScheduler) AddTask(caseID, caseName, action string, scheduledAt tim
 
 // AddTaskWithRepeat 添加定时任务（支持周期重复）
 func (s *TaskScheduler) AddTaskWithRepeat(caseID, caseName, action string, scheduledAt time.Time, repeatType string, repeatInterval int) (*ScheduledTask, error) {
+	return s.AddTaskFull(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, "", false)
+}
+
+// AddTaskFull 添加完整配置的定时任务
+func (s *TaskScheduler) AddTaskFull(caseID, caseName, action string, scheduledAt time.Time, repeatType string, repeatInterval int, sshCommand string, notifyEnabled bool) (*ScheduledTask, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// 验证 action
-	if action != "start" && action != "stop" {
+	switch action {
+	case "start", "stop", "ssh_command", "auto_stop":
+	default:
 		return nil, fmt.Errorf("无效的操作类型: %s", action)
+	}
+
+	// SSH command requires a command string
+	if action == "ssh_command" && sshCommand == "" {
+		return nil, fmt.Errorf("SSH 命令任务必须提供命令")
 	}
 
 	// 验证时间
@@ -324,7 +416,7 @@ func (s *TaskScheduler) AddTaskWithRepeat(caseID, caseName, action string, sched
 	}
 
 	// 生成任务 ID
-	taskID := fmt.Sprintf("%s-%s-%d", caseID, action, time.Now().Unix())
+	taskID := fmt.Sprintf("%s-%s-%d", caseID, action, time.Now().UnixNano())
 
 	// 创建任务
 	task := &ScheduledTask{
@@ -337,6 +429,8 @@ func (s *TaskScheduler) AddTaskWithRepeat(caseID, caseName, action string, sched
 		Status:         "pending",
 		RepeatType:     repeatType,
 		RepeatInterval: repeatInterval,
+		SSHCommand:     sshCommand,
+		NotifyEnabled:  notifyEnabled,
 	}
 
 	s.tasks[taskID] = task
@@ -390,6 +484,8 @@ func (s *TaskScheduler) scheduleNextRepeat(task *ScheduledTask) {
 		Status:         "pending",
 		RepeatType:     task.RepeatType,
 		RepeatInterval: task.RepeatInterval,
+		SSHCommand:     task.SSHCommand,
+		NotifyEnabled:  task.NotifyEnabled,
 	}
 
 	s.tasks[nextID] = nextTask
@@ -470,7 +566,8 @@ func (s *TaskScheduler) ListAllTasksFromDB() []*ScheduledTask {
 	cutoff := time.Now().Add(-7 * 24 * time.Hour).Format(time.RFC3339)
 	rows, err := s.db.Query(`
 		SELECT id, case_id, case_name, action, scheduled_at, created_at, status, error,
-		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at
+		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at,
+		       COALESCE(ssh_command, ''), COALESCE(task_result, ''), COALESCE(notify_enabled, 0)
 		FROM scheduled_tasks
 		WHERE created_at > ? OR status = 'pending'
 		ORDER BY scheduled_at DESC
@@ -485,16 +582,19 @@ func (s *TaskScheduler) ListAllTasksFromDB() []*ScheduledTask {
 		task := &ScheduledTask{}
 		var scheduledAtStr, createdAtStr string
 		var errorStr, completedAtStr sql.NullString
+		var notifyInt int
 
 		err := rows.Scan(
 			&task.ID, &task.CaseID, &task.CaseName, &task.Action,
 			&scheduledAtStr, &createdAtStr, &task.Status, &errorStr,
 			&task.RepeatType, &task.RepeatInterval, &completedAtStr,
+			&task.SSHCommand, &task.TaskResult, &notifyInt,
 		)
 		if err != nil {
 			continue
 		}
 
+		task.NotifyEnabled = notifyInt != 0
 		task.ScheduledAt, _ = time.Parse(time.RFC3339, scheduledAtStr)
 		task.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
 		if errorStr.Valid {

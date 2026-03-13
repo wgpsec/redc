@@ -6,6 +6,10 @@
       "changes": [
         "新增：任务中心页面 — 运维工具分组新增独立的「任务中心」页面，将定时任务管理从预定义场景中拆分出来，支持查看待执行任务、历史记录和统计概览",
         "新增：周期性任务支持 — 任务中心支持创建单次（once）、每天（daily）、每周（weekly）和自定义间隔（interval）四种周期模式的定时任务，任务完成后自动创建下一次执行",
+        "新增：SSH 命令执行任务 — 任务中心支持创建定时 SSH 命令任务，在场景实例上定时执行命令（如日志清理、安全更新、健康检查），支持周期性执行，执行结果可在历史记录中查看",
+        "新增：自动停机/成本控制 — 任务中心支持「自动停机」操作，设置 N 小时后自动停止场景，避免忘关实例浪费费用",
+        "新增：任务完成通知 — 创建任务时可开启「完成时通知」开关，任务执行完成或失败时自动发送系统通知和 Webhook（钉钉/飞书/Slack/Discord 等）",
+        "新增：任务结果查看 — SSH 命令任务的执行输出保存到数据库（截断至 4KB），历史记录中可点击「查看结果」查看命令输出",
         "新增：任务统计卡片 — 任务中心顶部显示待执行/已完成/失败/已取消四个统计卡片，直观展示任务运行状态",
         "新增：任务历史记录 — 支持查看最近 7 天的任务执行历史（已完成/失败/已取消），可折叠展开",
         "优化：Agent 工具结果截断 — exec_command 输出限制 32KB（limitedWriter），防止大量输出撑爆 AI context window",
@@ -14,7 +18,7 @@
         "优化：Agent 前端停止按钮 — AI 对话页面 agent/deploy/error 模式新增红色停止按钮，后端通过 context cancel 机制中止正在执行的 Agent 循环",
         "优化：Agent 历史压缩 — 多轮对话自动压缩旧的 tool result（保留最近 4 条完整，更早的截断至 200 字符），减缓 token 消耗膨胀",
         "优化：关于页面更新日志折叠 — 版本号按卡片分组展示，默认只展开最新版本，点击展开/折叠历史版本，优化长更新日志的浏览体验",
-        "后端：ScheduledTask 结构扩展 — 新增 RepeatType、RepeatInterval、CompletedAt 字段，SQLite 数据库自动迁移（ALTER TABLE），向后兼容",
+        "后端：ScheduledTask 结构扩展 — 新增 RepeatType、RepeatInterval、CompletedAt、SSHCommand、TaskResult、NotifyEnabled 字段，SQLite 数据库自动迁移，向后兼容",
         "后端：ListAllScheduledTasks API — 从数据库直接读取任务（含已完成/失败/已取消历史），按 scheduled_at 降序排列"
       ]
     },

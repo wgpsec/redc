@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { ListAllScheduledTasks, ListCases, ScheduleTaskWithRepeat, CancelScheduledTask } from '../../../wailsjs/go/main/App.js';
+  import { ListAllScheduledTasks, ListCases, ScheduleTaskFull, CancelScheduledTask } from '../../../wailsjs/go/main/App.js';
 
   let { t } = $props();
 
@@ -12,6 +12,7 @@
   let showHistory = $state(false);
   let showCreateForm = $state(false);
   let cancelConfirm = $state({ show: false, taskId: null, taskName: '' });
+  let resultModal = $state({ show: false, result: '', title: '' });
 
   // Create form state
   let formCaseId = $state('');
@@ -24,6 +25,9 @@
   let formAbsoluteTime = $state('');
   let formRepeatType = $state('once');
   let formRepeatInterval = $state(60);
+  let formSSHCommand = $state('');
+  let formAutoStopHours = $state(2);
+  let formNotifyEnabled = $state(false);
   let formLoading = $state(false);
   let formError = $state('');
 
@@ -36,7 +40,6 @@
   onMount(async () => {
     await loadTasks();
     refreshInterval = setInterval(loadTasks, 15000);
-    // Init absolute time defaults
     const now = new Date();
     now.setHours(now.getHours() + 1);
     formAbsoluteDate = now.toISOString().split('T')[0];
@@ -70,6 +73,10 @@
   function openCreateForm() {
     showCreateForm = true;
     formError = '';
+    formAction = 'start';
+    formSSHCommand = '';
+    formAutoStopHours = 2;
+    formNotifyEnabled = false;
     loadCases();
   }
 
@@ -82,14 +89,27 @@
 
   async function handleCreate() {
     if (!formCaseId) { formError = t.taskSelectCase || '请选择场景'; return; }
+    if (formAction === 'ssh_command' && !formSSHCommand.trim()) {
+      formError = t.sshCommandRequired || '请输入 SSH 命令';
+      return;
+    }
 
     formLoading = true;
     formError = '';
     try {
       let scheduledAt;
-      if (formScheduleType === 'relative') {
-        const now = new Date();
-        scheduledAt = new Date(now.getTime() + (formRelativeHours * 60 + formRelativeMinutes) * 60 * 1000);
+      let action = formAction;
+      let sshCommand = '';
+      let repeatType = formRepeatType;
+      let repeatInterval = formRepeatType === 'interval' ? formRepeatInterval : 0;
+
+      if (action === 'auto_stop') {
+        // Auto-stop: schedule N hours from now, always once
+        scheduledAt = new Date(Date.now() + formAutoStopHours * 60 * 60 * 1000);
+        repeatType = 'once';
+        repeatInterval = 0;
+      } else if (formScheduleType === 'relative') {
+        scheduledAt = new Date(Date.now() + (formRelativeHours * 60 + formRelativeMinutes) * 60 * 1000);
       } else {
         scheduledAt = new Date(`${formAbsoluteDate}T${formAbsoluteTime}:00`);
       }
@@ -100,8 +120,11 @@
         return;
       }
 
-      const interval = formRepeatType === 'interval' ? formRepeatInterval : 0;
-      await ScheduleTaskWithRepeat(formCaseId, formCaseName, formAction, scheduledAt, formRepeatType, interval);
+      if (action === 'ssh_command') {
+        sshCommand = formSSHCommand.trim();
+      }
+
+      await ScheduleTaskFull(formCaseId, formCaseName, action, scheduledAt, repeatType, repeatInterval, sshCommand, formNotifyEnabled);
       showCreateForm = false;
       await loadTasks();
     } catch (e) {
@@ -112,7 +135,7 @@
   }
 
   function showCancelDialog(taskId, caseName, action) {
-    cancelConfirm = { show: true, taskId, taskName: `${caseName} (${action === 'start' ? t.start || '启动' : t.stop || '停止'})` };
+    cancelConfirm = { show: true, taskId, taskName: `${caseName} (${getActionLabel(action)})` };
   }
 
   async function confirmCancel() {
@@ -124,6 +147,10 @@
     } catch (e) {
       error = e.message || String(e);
     }
+  }
+
+  function showResult(task) {
+    resultModal = { show: true, result: task.taskResult || '', title: `${task.caseName} - ${getActionLabel(task.action)}` };
   }
 
   function formatTime(timeStr) {
@@ -149,6 +176,26 @@
       case 'weekly': return t.repeatWeekly || '每周';
       case 'interval': return `${t.repeatEvery || '每'}${task.repeatInterval}${t.minute || '分钟'}`;
       default: return t.repeatOnce || '单次';
+    }
+  }
+
+  function getActionLabel(action) {
+    switch (action) {
+      case 'start': return t.start || '启动';
+      case 'stop': return t.stop || '停止';
+      case 'ssh_command': return t.sshCommand || 'SSH 命令';
+      case 'auto_stop': return t.autoStop || '自动停机';
+      default: return action;
+    }
+  }
+
+  function getActionBadge(action) {
+    switch (action) {
+      case 'start': return { cls: 'text-emerald-700 bg-emerald-50', icon: '▶' };
+      case 'stop': return { cls: 'text-amber-700 bg-amber-50', icon: '⏹' };
+      case 'ssh_command': return { cls: 'text-cyan-700 bg-cyan-50', icon: '⌨' };
+      case 'auto_stop': return { cls: 'text-orange-700 bg-orange-50', icon: '⏱' };
+      default: return { cls: 'text-gray-600 bg-gray-100', icon: '?' };
     }
   }
 
@@ -259,13 +306,16 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1.5">
                   <span class="text-[13px] font-medium text-gray-900 truncate">{task.caseName}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {task.action === 'start' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}">
-                    {task.action === 'start' ? (t.start || '启动') : (t.stop || '停止')}
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {getActionBadge(task.action).cls}">
+                    {getActionBadge(task.action).icon} {getActionLabel(task.action)}
                   </span>
                   {#if task.repeatType && task.repeatType !== 'once'}
                     <span class="px-1.5 py-0.5 text-[10px] font-medium text-purple-700 bg-purple-50 rounded">
                       🔄 {getRepeatLabel(task)}
                     </span>
+                  {/if}
+                  {#if task.notifyEnabled}
+                    <span class="px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 bg-indigo-50 rounded" title={t.notifyOnComplete || '完成通知'}>🔔</span>
                   {/if}
                   {#if task.status === 'executing'}
                     <span class="px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 rounded flex items-center gap-1">
@@ -278,6 +328,9 @@
                   <span>📅 {formatTime(task.scheduledAt)}</span>
                   {#if task.status === 'pending'}
                     <span>⏳ {t.remaining || '剩余'}: {getTimeRemaining(task.scheduledAt)}</span>
+                  {/if}
+                  {#if task.action === 'ssh_command' && task.sshCommand}
+                    <span class="text-cyan-600 font-mono truncate max-w-[250px]" title={task.sshCommand}>$ {task.sshCommand}</span>
                   {/if}
                 </div>
               </div>
@@ -326,8 +379,8 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
                       <span class="text-[13px] font-medium text-gray-900 truncate">{task.caseName}</span>
-                      <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {task.action === 'start' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}">
-                        {task.action === 'start' ? (t.start || '启动') : (t.stop || '停止')}
+                      <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {getActionBadge(task.action).cls}">
+                        {getActionBadge(task.action).icon} {getActionLabel(task.action)}
                       </span>
                       <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {getStatusBadge(task.status).cls}">{getStatusBadge(task.status).text}</span>
                     </div>
@@ -336,8 +389,17 @@
                       {#if task.error}
                         <span class="text-red-500 truncate max-w-[300px]" title={task.error}>❌ {task.error}</span>
                       {/if}
+                      {#if task.action === 'ssh_command' && task.sshCommand}
+                        <span class="text-cyan-600 font-mono truncate max-w-[200px]" title={task.sshCommand}>$ {task.sshCommand}</span>
+                      {/if}
                     </div>
                   </div>
+                  {#if task.taskResult}
+                    <button
+                      class="px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors cursor-pointer"
+                      onclick={() => showResult(task)}
+                    >{t.viewResult || '查看结果'}</button>
+                  {/if}
                 </div>
               </div>
             {/each}
@@ -382,13 +444,42 @@
         <!-- Action -->
         <div>
           <label class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.action || '操作'}</label>
-          <div class="flex gap-2">
-            <button class="flex-1 px-4 py-2 text-[13px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'start' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'start'}>{t.start || '启动'}</button>
-            <button class="flex-1 px-4 py-2 text-[13px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'stop' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'stop'}>{t.stop || '停止'}</button>
+          <div class="grid grid-cols-4 gap-2">
+            <button class="px-3 py-2 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'start' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'start'}>▶ {t.start || '启动'}</button>
+            <button class="px-3 py-2 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'stop' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'stop'}>⏹ {t.stop || '停止'}</button>
+            <button class="px-3 py-2 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'ssh_command' ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'ssh_command'}>⌨ {t.sshCommand || 'SSH'}</button>
+            <button class="px-3 py-2 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {formAction === 'auto_stop' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700'}" onclick={() => formAction = 'auto_stop'}>⏱ {t.autoStop || '自动停机'}</button>
           </div>
         </div>
 
-        <!-- Time -->
+        <!-- SSH Command input (only for ssh_command action) -->
+        {#if formAction === 'ssh_command'}
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.sshCommandInput || 'SSH 命令'}</label>
+            <textarea
+              class="w-full px-3 py-2 text-[13px] font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-gray-50 resize-none"
+              rows="3"
+              placeholder={t.sshCommandPlaceholder || '例: apt update && apt upgrade -y'}
+              bind:value={formSSHCommand}
+            ></textarea>
+            <p class="text-[11px] text-gray-400 mt-1">{t.sshCommandHint || '命令将通过 SSH 在场景实例上执行'}</p>
+          </div>
+        {/if}
+
+        <!-- Auto-stop duration (only for auto_stop action) -->
+        {#if formAction === 'auto_stop'}
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.autoStopAfter || '运行时长后自动停止'}</label>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0.5" max="168" step="0.5" class="w-24 px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400" bind:value={formAutoStopHours} />
+              <span class="text-[12px] text-gray-600">{t.hoursLater || '小时后自动停止'}</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">{t.autoStopHint || '从现在起计算，到时自动执行停止操作'}</p>
+          </div>
+        {/if}
+
+        <!-- Time (hidden for auto_stop which has its own input) -->
+        {#if formAction !== 'auto_stop'}
         <div>
           <label class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.scheduleType || '时间设置'}</label>
           <div class="flex gap-2 mb-3">
@@ -436,6 +527,21 @@
             </div>
           {/if}
         </div>
+        {/if}
+
+        <!-- Notification toggle -->
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="text-[12px] font-medium text-gray-700">{t.notifyOnComplete || '完成时通知'}</label>
+            <p class="text-[11px] text-gray-400">{t.notifyOnCompleteHint || '任务完成/失败时发送系统通知和 Webhook'}</p>
+          </div>
+          <button
+            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer {formNotifyEnabled ? 'bg-indigo-500' : 'bg-gray-300'}"
+            onclick={() => formNotifyEnabled = !formNotifyEnabled}
+          >
+            <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform {formNotifyEnabled ? 'translate-x-5' : ''}"></span>
+          </button>
+        </div>
       </div>
 
       <div class="px-5 py-4 bg-gray-50 flex justify-end gap-2">
@@ -472,6 +578,24 @@
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
         <button class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer" onclick={() => cancelConfirm = { show: false, taskId: null, taskName: '' }}>{t.cancel || '取消'}</button>
         <button class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 cursor-pointer" onclick={confirmCancel}>{t.confirm || '确认'}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Result Modal -->
+{#if resultModal.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={() => resultModal = { show: false, result: '', title: '' }}>
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-[15px] font-semibold text-gray-900">{resultModal.title}</h3>
+        <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 cursor-pointer" onclick={() => resultModal = { show: false, result: '', title: '' }}>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="px-5 py-4 max-h-[60vh] overflow-auto">
+        <pre class="text-[12px] font-mono text-gray-800 bg-gray-50 rounded-lg p-4 whitespace-pre-wrap break-all">{resultModal.result || '(empty)'}</pre>
       </div>
     </div>
   </div>

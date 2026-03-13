@@ -266,6 +266,8 @@ export function SaveTerraformMirrorConfig(arg1:boolean,arg2:Array<string>,arg3:s
 
 export function ScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<mod.ScheduledTask>;
 
+export function ScheduleTaskFull(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number,arg7:string,arg8:boolean):Promise<mod.ScheduledTask>;
+
 export function ScheduleTaskWithRepeat(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number):Promise<mod.ScheduledTask>;
 
 export function SelectComposeFile():Promise<string>;

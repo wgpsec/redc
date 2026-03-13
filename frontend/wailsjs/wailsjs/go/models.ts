@@ -1184,6 +1184,9 @@ export namespace mod {
 	    repeatType?: string;
 	    repeatInterval?: number;
 	    completedAt?: time.Time;
+	    sshCommand?: string;
+	    taskResult?: string;
+	    notifyEnabled?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ScheduledTask(source);
@@ -1202,6 +1205,9 @@ export namespace mod {
 	        this.repeatType = source["repeatType"];
 	        this.repeatInterval = source["repeatInterval"];
 	        this.completedAt = this.convertValues(source["completedAt"], time.Time);
+	        this.sshCommand = source["sshCommand"];
+	        this.taskResult = source["taskResult"];
+	        this.notifyEnabled = source["notifyEnabled"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

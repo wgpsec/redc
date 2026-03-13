@@ -113,6 +113,8 @@ export function ScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time)
 
 export function ScheduleTaskWithRepeat(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number):Promise<mod.ScheduledTask>;
 
+export function ScheduleTaskFull(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number,arg7:string,arg8:boolean):Promise<mod.ScheduledTask>;
+
 export function ListAllScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 export function SelectComposeFile():Promise<string>;
 export function SelectDirectory(arg1:string):Promise<string>;

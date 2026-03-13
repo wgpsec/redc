@@ -79,6 +79,10 @@ func (a *App) ScheduleTask(caseID string, caseName string, action string, schedu
 }
 
 func (a *App) ScheduleTaskWithRepeat(caseID string, caseName string, action string, scheduledAt time.Time, repeatType string, repeatInterval int) (*redc.ScheduledTask, error) {
+	return a.ScheduleTaskFull(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, "", false)
+}
+
+func (a *App) ScheduleTaskFull(caseID string, caseName string, action string, scheduledAt time.Time, repeatType string, repeatInterval int, sshCommand string, notifyEnabled bool) (*redc.ScheduledTask, error) {
 	a.mu.Lock()
 	scheduler := a.taskScheduler
 	a.mu.Unlock()
@@ -87,7 +91,7 @@ func (a *App) ScheduleTaskWithRepeat(caseID string, caseName string, action stri
 		return nil, fmt.Errorf("%s", i18n.T("app_scheduler_not_init"))
 	}
 
-	task, err := scheduler.AddTaskWithRepeat(caseID, caseName, action, scheduledAt, repeatType, repeatInterval)
+	task, err := scheduler.AddTaskFull(caseID, caseName, action, scheduledAt, repeatType, repeatInterval, sshCommand, notifyEnabled)
 	if err != nil {
 		return nil, err
 	}
