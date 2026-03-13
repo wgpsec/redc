@@ -21,6 +21,7 @@
   import CustomDeployment from './components/CustomDeployment/CustomDeployment.svelte';
   import SSHManager from './components/SSH/SSHManager.svelte';
   import WelcomeDialog from './components/Welcome/WelcomeDialog.svelte';
+  import Toast from './components/Toast/Toast.svelte';
 
   let cases = $state([]);
   let templates = $state([]);
@@ -446,6 +447,9 @@
 
     <!-- Welcome Dialog -->
     <WelcomeDialog {t} show={welcomeDialogReady} onClose={() => welcomeDialogReady = false} />
+
+    <!-- Global Toast -->
+    <Toast />
   </div>
 </div>
 

@@ -3,6 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile, GetCasePlanPreview, SetCaseTags, GetAllTagNames, CloneCase } from '../../../wailsjs/go/main/App.js';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
+  import { toast } from '../../lib/toast.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
   import ScheduledTasksManager from './ScheduledTasksManager.svelte';
@@ -382,7 +383,7 @@ let { t, onTabChange = () => {} } = $props();
   async function handleAIAnalysis() {
     const errorMessage = getPersistentError()?.detail || createStatusDetail;
     if (!errorMessage) {
-      alert(t.noErrorToAnalyze || '没有错误信息可以分析');
+      toast.warning(t.noErrorToAnalyze || '没有错误信息可以分析');
       return;
     }
     
@@ -400,11 +401,11 @@ let { t, onTabChange = () => {} } = $props();
     try {
       const profile = await GetActiveProfile();
       if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
-        alert(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
+        toast.warning(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
         return;
       }
     } catch (err) {
-      alert(`检查 AI 配置失败: ${err.message || err}`);
+      toast.error(`检查 AI 配置失败: ${err.message || err}`);
       return;
     }
     
@@ -423,7 +424,7 @@ let { t, onTabChange = () => {} } = $props();
     try {
       await AnalyzeCaseError(caseId, errorMessage, getProviderFromTemplate(templateName), templateName);
     } catch (err) {
-      alert(`AI 分析失败: ${err.message || err}`);
+      toast.error(`AI 分析失败: ${err.message || err}`);
       aiAnalyzing[caseId] = false;
       aiAnalyzing = { ...aiAnalyzing };
     }

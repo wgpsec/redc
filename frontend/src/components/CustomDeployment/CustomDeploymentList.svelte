@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, AnalyzeDeploymentError, GetActiveProfile, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames, CloneCustomDeployment } from '../../../wailsjs/go/main/App';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
+  import { toast } from '../../lib/toast.js';
   import SSHModal from '../Cases/SSHModal.svelte';
   import ScheduleDialog from '../Cases/ScheduleDialog.svelte';
   import ELK from 'elkjs/lib/elk.bundled.js';
@@ -275,7 +276,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      alert(`启动失败: ${err.message || err}`);
+      toast.error(`启动失败: ${err.message || err}`);
       // 失败后重新加载以恢复正确状态
       await loadDeployments();
     }
@@ -297,7 +298,7 @@
       await CloneCustomDeployment(deploymentId, cloneName);
       await loadDeployments();
     } catch (err: any) {
-      alert(`${t.cloneFailed || '克隆失败'}: ${err.message || err}`);
+      toast.error(`${t.cloneFailed || '克隆失败'}: ${err.message || err}`);
     } finally {
       cloneLoading = false;
     }
@@ -324,7 +325,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      alert(`停止失败: ${err.message || err}`);
+      toast.error(`停止失败: ${err.message || err}`);
       await loadDeployments();
     }
   }
@@ -354,7 +355,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      alert(`删除失败: ${err.message || err}`);
+      toast.error(`删除失败: ${err.message || err}`);
       // 失败后重新加载以恢复正确状态
       await loadDeployments();
     }
@@ -362,7 +363,7 @@
 
   async function handleAIAnalysis(deploymentId: string, errorMessage: string, provider: string, templateName: string) {
     if (!errorMessage) {
-      alert(t.noErrorToAnalyze || '没有错误信息可以分析');
+      toast.warning(t.noErrorToAnalyze || '没有错误信息可以分析');
       return;
     }
     
@@ -370,11 +371,11 @@
     try {
       const profile = await GetActiveProfile();
       if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
-        alert(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
+        toast.warning(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
         return;
       }
     } catch (err: any) {
-      alert(`检查 AI 配置失败: ${err.message || err}`);
+      toast.error(`检查 AI 配置失败: ${err.message || err}`);
       return;
     }
     
@@ -387,7 +388,7 @@
     try {
       await AnalyzeDeploymentError(deploymentId, errorMessage, provider, templateName);
     } catch (err: any) {
-      alert(`AI 分析失败: ${err.message || err}`);
+      toast.error(`AI 分析失败: ${err.message || err}`);
       aiAnalyzing[deploymentId] = false;
       aiAnalyzing = { ...aiAnalyzing };
     }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { GetBaseTemplates, GetTemplateMetadata, EstimateDeploymentCost, CreateCustomDeployment } from '../../../wailsjs/go/main/App.js';
+  import { toast } from '../../lib/toast.js';
   import TemplateSelector from './TemplateSelector.svelte';
   import ConfigEditor from './ConfigEditor.svelte';
   import DeploymentPreview from './DeploymentPreview.svelte';
@@ -200,7 +201,7 @@
       deploymentResult = result;
       
       // Show success message
-      alert(`${t.deploymentCreated || '部署创建成功'}!\n\n${t.deploymentId || '部署 ID'}: ${result.id}\n\n${t.checkDeploymentManagement || '您可以在"部署管理"页面查看部署详情和日志。'}`);
+      toast.success(`${t.deploymentCreated || '部署创建成功'} — ID: ${result.id}`);
       
       // Optionally navigate to deployment management page
       // TODO: Add navigation when deployment management page is ready
@@ -210,7 +211,7 @@
       deploymentError = err.message || String(err);
       
       // Show error message
-      alert(`部署失败：${deploymentError}\n\n请检查配置并重试。`);
+      toast.error(`部署失败: ${deploymentError}`);
     } finally {
       isDeploying = false;
     }

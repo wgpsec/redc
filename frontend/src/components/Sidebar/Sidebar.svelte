@@ -4,6 +4,7 @@
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { Environment } from '../../../wailsjs/runtime/runtime.js';
   import { ListProjects, GetCurrentProject, SwitchProject, CreateProject } from '../../../wailsjs/go/main/App.js';
+  import { toast } from '../../lib/toast.js';
 
 let { 
     t, 
@@ -93,14 +94,14 @@ let {
       window.location.reload();
     } catch (err) {
       console.error('Failed to switch project:', err);
-      alert((t.switchProjectFailed || '切换项目失败') + ': ' + err.message);
+      toast.error((t.switchProjectFailed || '切换项目失败') + ': ' + err.message);
     }
   }
 
   // Create a new project
   async function handleCreateProject() {
     if (!newProjectName.trim()) {
-      alert(t.pleaseEnterProjectName || '请输入项目名称');
+      toast.warning(t.pleaseEnterProjectName || '请输入项目名称');
       return;
     }
     try {
@@ -112,7 +113,7 @@ let {
       await handleSwitchProject(newProjectName.trim());
     } catch (err) {
       console.error('Failed to create project:', err);
-      alert((t.createProjectFailed || '创建项目失败') + ': ' + err.message);
+      toast.error((t.createProjectFailed || '创建项目失败') + ': ' + err.message);
     }
   }
   
