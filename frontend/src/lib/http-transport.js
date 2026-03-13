@@ -19,6 +19,7 @@ function getToken() {
   return localStorage.getItem('redc_token') || '';
 }
 
+/** @returns {Record<string, string>} */
 function buildHeaders() {
   const t = getToken();
   return t ? { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };

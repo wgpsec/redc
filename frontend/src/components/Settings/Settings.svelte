@@ -21,7 +21,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let webhookSaving = $state(false);
   let webhookMessage = $state('');
   let webhookMessageType = $state('');
-  let webhookTesting = $state({});
+  let webhookTesting = $state({ slack: false, dingtalk: false, feishu: false, discord: false, wecom: false });
   let webhookLoaded = $state(false);
   
   // HTTP Server state

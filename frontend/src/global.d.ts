@@ -26,6 +26,11 @@ declare global {
   interface Window {
     __persistentError?: any;
     __persistentOutput?: any;
+    __redcWebMode__?: boolean;
+    __redcReconnect__?: () => void;
+    __wails_loaded__?: boolean;
+    runtime?: any;
+    go?: any;
   }
 
   // $state rune

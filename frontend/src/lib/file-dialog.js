@@ -78,6 +78,7 @@ async function uploadFileToServer(file) {
   const formData = new FormData();
   formData.append('file', file);
 
+  /** @type {Record<string, string>} */
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
