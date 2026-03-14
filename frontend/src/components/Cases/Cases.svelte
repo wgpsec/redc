@@ -65,6 +65,9 @@ let { t, onTabChange = () => {} } = $props();
   let tagEditCase = $state(null);
   let tagInput = $state('');
 
+  // Context menu state
+  let contextMenu = $state({ show: false, x: 0, y: 0, caseId: null, caseName: '', caseState: '', caseType: '' });
+
   // Search & filter state
   let searchQuery = $state('');
   let statusFilter = $state('all'); // 'all' | 'running' | 'stopped' | 'error'
@@ -220,6 +223,10 @@ let { t, onTabChange = () => {} } = $props();
   onMount(async () => {
     await refresh();
     tickTimer = setInterval(() => { nowTick = Date.now(); }, 60000);
+    
+    // Close context menu on Escape
+    const handleKeydown = (e) => { if (e.key === 'Escape' && contextMenu.show) closeContextMenu(); };
+    window.addEventListener('keydown', handleKeydown);
     
     EventsOn('spot-terminated', (data) => {
       console.log('[SpotMonitor] Instance terminated:', data);
@@ -745,6 +752,23 @@ let { t, onTabChange = () => {} } = $props();
   
   function getStateConfig(state) {
     return stateConfig[state] || stateConfig['pending'];
+  }
+
+  function openContextMenu(e, c) {
+    e.preventDefault();
+    // Clamp position to keep menu within viewport
+    const x = Math.min(e.clientX, window.innerWidth - 200);
+    const y = Math.min(e.clientY, window.innerHeight - 300);
+    contextMenu = { show: true, x, y, caseId: c.id, caseName: c.name, caseState: c.state, caseType: c.type };
+  }
+
+  function closeContextMenu() {
+    contextMenu = { show: false, x: 0, y: 0, caseId: null, caseName: '', caseState: '', caseType: '' };
+  }
+
+  function ctxAction(fn) {
+    fn();
+    closeContextMenu();
   }
   
   async function toggleCaseExpand(caseId, state) {
@@ -1450,6 +1474,7 @@ let { t, onTabChange = () => {} } = $props();
           <tr 
             class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
             onclick={() => toggleCaseExpand(c.id, c.state)}
+            oncontextmenu={(e) => openContextMenu(e, c)}
           >
             <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
               <input
@@ -2290,5 +2315,66 @@ let { t, onTabChange = () => {} } = $props();
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
     <span class="text-[13px] text-blue-700 font-medium">{t.cloneCase || '克隆场景'}...</span>
+  </div>
+{/if}
+
+<!-- Context Menu -->
+{#if contextMenu.show}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 z-[100]" onclick={closeContextMenu} oncontextmenu={(e) => { e.preventDefault(); closeContextMenu(); }}></div>
+  <div
+    class="fixed z-[101] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] text-[13px]"
+    style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
+  >
+    {#if contextMenu.caseState !== 'starting' && contextMenu.caseState !== 'stopping' && contextMenu.caseState !== 'removing'}
+      {#if contextMenu.caseState === 'running'}
+        <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => ctxAction(() => sshModal = { show: true, caseId: contextMenu.caseId, caseName: contextMenu.caseName })}>
+          <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+          {t.sshOperations || 'SSH 运维'}
+        </button>
+        <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => ctxAction(() => toggleCaseExpand(contextMenu.caseId, contextMenu.caseState))}>
+          <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" /></svg>
+          {t.viewOutput || '查看输出'}
+        </button>
+        <div class="border-t border-gray-100 my-1"></div>
+        <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-amber-600" onclick={() => ctxAction(() => showStopConfirm(contextMenu.caseId, contextMenu.caseName))}>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /></svg>
+          {t.stop}
+        </button>
+      {:else}
+        <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-emerald-600" onclick={() => ctxAction(() => handleStart(contextMenu.caseId))}>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>
+          {t.start}
+        </button>
+        {#if contextMenu.caseState === 'created' || contextMenu.caseState === 'stopped'}
+          <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => ctxAction(() => handlePlanPreview(contextMenu.caseId, contextMenu.caseName))}>
+            <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            {t.planPreviewBtn || '预览'}
+          </button>
+        {/if}
+      {/if}
+      <div class="border-t border-gray-100 my-1"></div>
+      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => ctxAction(() => showCloneDialog(contextMenu.caseId, contextMenu.caseName))}>
+        <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+        {t.cloneCase || '克隆场景'}
+      </button>
+      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => ctxAction(() => { tagEditCase = contextMenu.caseId; tagInput = ''; })}>
+        <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
+        {t.tags || '标签'}
+      </button>
+      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => { const id = contextMenu.caseId; const name = contextMenu.caseName; const type = contextMenu.caseType; closeContextMenu(); localStorage.setItem('ai-chat-pending-error', JSON.stringify({ error: `场景: ${name} (${type})`, templateName: type, provider: getProviderFromTemplate(type), source: 'context-menu' })); onTabChange('aiChat'); }}>
+        <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+        {t.sendToAI || '发送到 AI'}
+      </button>
+      <div class="border-t border-gray-100 my-1"></div>
+      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-red-600" onclick={() => ctxAction(() => showDeleteConfirm(contextMenu.caseId, contextMenu.caseName))}>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+        {t.delete}
+      </button>
+    {:else}
+      <div class="px-3 py-2 text-gray-400 text-[12px]">
+        {stateConfig[contextMenu.caseState]?.label || t.processing}...
+      </div>
+    {/if}
   </div>
 {/if}
