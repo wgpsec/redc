@@ -376,13 +376,13 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "stop_case",
-			Description: "Stop a running case by ID",
+			Description: "Stop a running case by ID (terraform destroy). Only works on cases with status 'running'. Will refuse to stop cases that are already stopped/created.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
 					"case_id": {
 						Type:        "string",
-						Description: "Case ID to stop",
+						Description: "Case ID to stop (must be in 'running' state)",
 					},
 				},
 				Required: []string{"case_id"},
@@ -390,13 +390,13 @@ func (s *MCPServer) getTools() []Tool {
 		},
 		{
 			Name:        "kill_case",
-			Description: "Kill (destroy) a case by ID",
+			Description: "Kill (force destroy) a case by ID. Only works on cases with status 'running' or 'error'. Will refuse to kill cases that are already stopped. IMPORTANT: Only kill cases that you created in this conversation, do NOT kill pre-existing cases unless the user explicitly asks.",
 			InputSchema: ToolSchema{
 				Type: "object",
 				Properties: map[string]Property{
 					"case_id": {
 						Type:        "string",
-						Description: "Case ID to kill",
+						Description: "Case ID to kill (must be in 'running' or 'error' state)",
 					},
 				},
 				Required: []string{"case_id"},
@@ -1251,6 +1251,10 @@ func (s *MCPServer) toolStopCase(caseID string) (ToolResult, error) {
 		return ToolResult{}, fmt.Errorf("case not found: %v", err)
 	}
 
+	if c.State != redc.StateRunning {
+		return ToolResult{}, fmt.Errorf("case '%s' (%s) is not running (current state: %s), cannot stop", c.Name, c.GetId(), c.State)
+	}
+
 	if err := c.Stop(); err != nil {
 		return ToolResult{}, fmt.Errorf("failed to stop case: %v", err)
 	}
@@ -1268,6 +1272,10 @@ func (s *MCPServer) toolKillCase(caseID string) (ToolResult, error) {
 	c, err := s.project.GetCase(caseID)
 	if err != nil {
 		return ToolResult{}, fmt.Errorf("case not found: %v", err)
+	}
+
+	if c.State == redc.StateStopped {
+		return ToolResult{}, fmt.Errorf("case '%s' (%s) is already stopped, no need to kill", c.Name, c.GetId())
 	}
 
 	if err := c.Kill(); err != nil {
