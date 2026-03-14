@@ -52,6 +52,11 @@ func (pm *PluginManager) RunHooks(hookPoint string, ctx *HookContext) error {
 		return nil
 	}
 
+	// If no plugins are allowed for this case, skip all hooks
+	if ctx != nil && len(ctx.AllowedPlugins) == 0 {
+		return nil
+	}
+
 	// Build allowed set and order map from context
 	var allowed map[string]bool
 	var orderMap map[string]int
