@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled, GetSpotAutoRecoverEnabled } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled, GetSpotAutoRecoverEnabled } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -36,18 +36,11 @@
   let notificationEnabled = $state(false);
   let spotMonitorEnabled = $state(false);
   let spotAutoRecoverEnabled = $state(false);
-  let rightClickDisabled = $state(true);
-  let rightClickDisabledSync = true; // 同步变量用于右键处理
   let appVersion = $state('');
   
   // 控制欢迎弹框是否可见（用于避免闪烁）
   let welcomeDialogReady = $state(false);
   let hasCheckedWelcomeDialog = $state(false);
-  
-  // 当 rightClickDisabled 变化时更新同步变量
-  $effect(() => {
-    rightClickDisabledSync = rightClickDisabled;
-  });
 
   // 监听页面切换到仪表盘时检查欢迎弹框（只检查一次）
   $effect(() => {
@@ -167,14 +160,6 @@
     const env = await Environment();
     isWindows = env.platform === 'windows';
     
-    // 注册右键菜单处理 - 使用同步变量
-     window.addEventListener('contextmenu', (e) => {
-       if (rightClickDisabledSync) {
-         e.preventDefault();
-         e.stopPropagation();
-       }
-     }, true);
-    
     EventsOn('log', (message) => {
       logs = [...logs, { time: new Date().toLocaleTimeString(), message }];
       if (dashboardComponent && dashboardComponent.updateCreateStatusFromLog) {
@@ -209,19 +194,17 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled, lang, appVersion, spotMonitorEnabled, spotAutoRecoverEnabled] = await Promise.all([
+      [cases, templates, config, terraformMirror, notificationEnabled, lang, appVersion, spotMonitorEnabled, spotAutoRecoverEnabled] = await Promise.all([
         ListCases(),
         ListTemplates(),
         GetConfig(),
         GetTerraformMirrorConfig(),
         GetNotificationEnabled(),
-        GetDisableRightClick(),
         GetLanguage(),
         GetVersion(),
         GetSpotMonitorEnabled(),
         GetSpotAutoRecoverEnabled()
       ]);
-      rightClickDisabledSync = rightClickDisabled;
       debugEnabled = !!config.debugEnabled;
     } catch (e) {
       error = e.message || String(e);
@@ -418,7 +401,7 @@
               <Compose {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'settings'}
-              <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:spotMonitorEnabled bind:spotAutoRecoverEnabled bind:rightClickDisabled />
+              <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:spotMonitorEnabled bind:spotAutoRecoverEnabled />
 
             {:else if activeTab === 'registry'}
               <Registry {t} />

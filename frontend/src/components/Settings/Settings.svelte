@@ -1,7 +1,7 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook, GetHTTPServerConfig, SetHTTPServerConfig, StartHTTPServer, StopHTTPServer, GetHTTPServerStatus } from '../../../wailsjs/go/main/App.js';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook, GetHTTPServerConfig, SetHTTPServerConfig, StartHTTPServer, StopHTTPServer, GetHTTPServerStatus } from '../../../wailsjs/go/main/App.js';
 
-let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
+let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
   let proxySaving = $state(false);
   let proxySaved = $state(false);
@@ -16,7 +16,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let notificationSaving = $state(false);
   let spotMonitorSaving = $state(false);
   let spotAutoRecoverSaving = $state(false);
-  let rightClickSaving = $state(false);
   let webhookForm = $state({ enabled: false, slack: '', dingtalk: '', dingtalkSecret: '', feishu: '', feishuSecret: '', discord: '', wecom: '' });
   let webhookSaving = $state(false);
   let webhookMessage = $state('');
@@ -269,19 +268,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       console.error('Failed to toggle spot auto recover:', e);
     } finally {
       spotAutoRecoverSaving = false;
-    }
-  }
-
-  async function handleToggleRightClick() {
-    const nextValue = !rightClickDisabled;
-    rightClickSaving = true;
-    try {
-      await SetDisableRightClick(nextValue);
-      rightClickDisabled = nextValue;
-    } catch (e) {
-      console.error('Failed to toggle right click:', e);
-    } finally {
-      rightClickSaving = false;
     }
   }
   
@@ -795,24 +781,6 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       </button>
     </div>
     {/if}
-    <!-- 右键菜单 -->
-    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
-      <div>
-        <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.disableRightClick}</div>
-        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.disableRightClickDesc}</div>
-      </div>
-      <button
-        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        class:bg-emerald-500={rightClickDisabled}
-        class:bg-gray-300={!rightClickDisabled}
-        onclick={handleToggleRightClick}
-        disabled={rightClickSaving}
-        aria-label={rightClickDisabled ? t.enable : t.disable}
-      >
-        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-          class:translate-x-6={rightClickDisabled} class:translate-x-1={!rightClickDisabled}></span>
-      </button>
-    </div>
   </div>
 
   <!-- HTTP Server Section -->
