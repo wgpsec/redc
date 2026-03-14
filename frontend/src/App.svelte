@@ -16,6 +16,7 @@
   import Dashboard from './components/Dashboard/Dashboard.svelte';
   import Cases from './components/Cases/Cases.svelte';
   import Settings from './components/Settings/Settings.svelte';
+  import HTTPServer from './components/HTTPServer/HTTPServer.svelte';
   import Sidebar from './components/Sidebar/Sidebar.svelte';
   import About from './components/About/About.svelte';
   import CustomDeployment from './components/CustomDeployment/CustomDeployment.svelte';
@@ -301,7 +302,7 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6" style="--wails-draggable:drag">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'agentMemory'}{t.agentMemory || 'Agent 记忆'}{:else if activeTab === 'sshManager'}{t.sshManager || 'SSH 终端管理'}{:else if activeTab === 'taskCenter'}{t.taskCenter || '任务中心'}{:else if activeTab === 'pluginManager'}{t.pluginManager || '插件管理'}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'userdataScripts'}{t.userdataScripts || 'Userdata 脚本库'}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
+        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'agentMemory'}{t.agentMemory || 'Agent 记忆'}{:else if activeTab === 'sshManager'}{t.sshManager || 'SSH 终端管理'}{:else if activeTab === 'taskCenter'}{t.taskCenter || '任务中心'}{:else if activeTab === 'pluginManager'}{t.pluginManager || '插件管理'}{:else if activeTab === 'httpServer'}{t.httpServer || 'Web 服务'}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'userdataScripts'}{t.userdataScripts || 'Userdata 脚本库'}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
         <!-- Window Controls (Windows only, not in web mode) -->
@@ -403,6 +404,9 @@
 
             {:else if activeTab === 'settings'}
               <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:spotMonitorEnabled bind:spotAutoRecoverEnabled />
+
+            {:else if activeTab === 'httpServer'}
+              <HTTPServer {t} />
 
             {:else if activeTab === 'registry'}
               <Registry {t} />
