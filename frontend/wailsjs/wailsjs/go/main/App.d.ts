@@ -35,6 +35,8 @@ export function CheckForUpdates():Promise<main.VersionCheckResult>;
 
 export function ClearAgentMemories():Promise<void>;
 
+export function ClearAuditLogs():Promise<void>;
+
 export function CloneCase(arg1:string,arg2:string):Promise<void>;
 
 export function CloneCustomDeployment(arg1:string,arg2:string):Promise<mod.CustomDeployment>;
@@ -93,6 +95,8 @@ export function ExecCommand(arg1:string,arg2:string):Promise<main.ExecCommandRes
 
 export function ExecUserdata(arg1:string,arg2:string):Promise<main.ExecCommandResult>;
 
+export function ExportAuditLogs():Promise<Array<mod.AuditLogEntry>>;
+
 export function ExportChatLog(arg1:string):Promise<void>;
 
 export function ExportConfigTemplate(arg1:string,arg2:string):Promise<void>;
@@ -112,6 +116,8 @@ export function GetAgentMemories():Promise<Array<mod.MemoryItem>>;
 export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
 
 export function GetAllTagNames():Promise<Array<string>>;
+
+export function GetAuditLogs(arg1:number,arg2:number,arg3:string,arg4:string):Promise<main.AuditLogResult>;
 
 export function GetBalances(arg1:Array<string>):Promise<Array<main.BalanceInfo>>;
 

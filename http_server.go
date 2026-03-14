@@ -137,7 +137,8 @@ var methodMinRole = map[string]string{
 	"ValidateTemplate": "viewer", "ValidateDeploymentConfig": "viewer",
 	"EstimateDeploymentCost": "viewer",
 	"GetProviderRegions": "viewer", "GetInstanceTypes": "viewer",
-	"GetHTTPServerUsers": "viewer",
+	"GetTerraformMirrorConfig": "viewer",
+	"GetAuditLogs": "viewer", "ExportAuditLogs": "viewer",
 	// MCP read
 	"MCPGetCostEstimate": "viewer", "MCPGetBalances": "viewer",
 	"MCPGetResourceSummary": "viewer", "MCPGetPredictedMonthlyCost": "viewer",
@@ -244,6 +245,49 @@ func GenerateToken() string {
 	return hex.EncodeToString(b)
 }
 
+// auditLog records an operation to the audit store
+func (s *HTTPServer) auditLog(username, role, method string, args []json.RawMessage, ip string, success bool, errMsg string) {
+	if s.app.auditStore == nil {
+		return
+	}
+	// Extract first 2 args for context (e.g. caseID, name)
+	argsStr := ""
+	if len(args) > 0 {
+		preview := make([]json.RawMessage, 0, 2)
+		for i, a := range args {
+			if i >= 2 {
+				break
+			}
+			preview = append(preview, a)
+		}
+		if b, err := json.Marshal(preview); err == nil {
+			argsStr = string(b)
+		}
+	}
+	// Strip port from RemoteAddr
+	clientIP := ip
+	if idx := strings.LastIndex(ip, ":"); idx > 0 {
+		clientIP = ip[:idx]
+	}
+	go s.app.auditStore.Log(username, role, method, argsStr, clientIP, success, errMsg)
+}
+
+// isAuditableMethod returns true for methods that should be recorded in the audit log.
+// Read-only methods (Get*, List*, Fetch*, Has*, Validate*, Estimate*) are excluded.
+// High-frequency terminal I/O (WriteToTerminal, ResizeTerminal) is also excluded.
+func isAuditableMethod(method string) bool {
+	for _, prefix := range []string{"Get", "List", "Fetch", "Has", "Validate", "Estimate", "Check"} {
+		if strings.HasPrefix(method, prefix) {
+			return false
+		}
+	}
+	switch method {
+	case "WriteToTerminal", "ResizeTerminal", "SubmitAskUserResponse":
+		return false
+	}
+	return true
+}
+
 // Start starts the HTTP server
 func (s *HTTPServer) Start(staticFS fs.FS) error {
 	mux := http.NewServeMux()
@@ -285,13 +329,24 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 		if RoleLevel(role) < RoleLevel(requiredRole) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(403)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"error": fmt.Sprintf("权限不足: 用户 %s (%s) 无权执行 %s，需要 %s 权限", username, role, req.Method, requiredRole),
-			})
+			errMsg := fmt.Sprintf("权限不足: 用户 %s (%s) 无权执行 %s，需要 %s 权限", username, role, req.Method, requiredRole)
+			// Audit: permission denied
+			s.auditLog(username, role, req.Method, req.Args, r.RemoteAddr, false, errMsg)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": errMsg})
 			return
 		}
 
 		result, err := s.dispatch(req.Method, req.Args)
+
+		// Audit: log write operations (operator+admin methods)
+		if isAuditableMethod(req.Method) {
+			errMsg := ""
+			if err != nil {
+				errMsg = err.Error()
+			}
+			s.auditLog(username, role, req.Method, req.Args, r.RemoteAddr, err == nil, errMsg)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})

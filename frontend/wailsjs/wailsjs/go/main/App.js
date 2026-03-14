@@ -58,6 +58,10 @@ export function ClearAgentMemories() {
   return window['go']['main']['App']['ClearAgentMemories']();
 }
 
+export function ClearAuditLogs() {
+  return window['go']['main']['App']['ClearAuditLogs']();
+}
+
 export function CloneCase(arg1, arg2) {
   return window['go']['main']['App']['CloneCase'](arg1, arg2);
 }
@@ -174,6 +178,10 @@ export function ExecUserdata(arg1, arg2) {
   return window['go']['main']['App']['ExecUserdata'](arg1, arg2);
 }
 
+export function ExportAuditLogs() {
+  return window['go']['main']['App']['ExportAuditLogs']();
+}
+
 export function ExportChatLog(arg1) {
   return window['go']['main']['App']['ExportChatLog'](arg1);
 }
@@ -212,6 +220,10 @@ export function GetAllCaseTags() {
 
 export function GetAllTagNames() {
   return window['go']['main']['App']['GetAllTagNames']();
+}
+
+export function GetAuditLogs(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GetAuditLogs'](arg1, arg2, arg3, arg4);
 }
 
 export function GetBalances(arg1) {

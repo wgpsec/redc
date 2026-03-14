@@ -110,6 +110,10 @@ export function ClearAgentMemories() {
   return window['go']['main']['App']['ClearAgentMemories']();
 }
 
+export function ClearAuditLogs() {
+  return window['go']['main']['App']['ClearAuditLogs']();
+}
+
 export function CreateRemoteDirectory(arg1, arg2) {
   return window['go']['main']['App']['CreateRemoteDirectory'](arg1, arg2);
 }
@@ -170,6 +174,10 @@ export function ExecUserdata(arg1, arg2) {
   return window['go']['main']['App']['ExecUserdata'](arg1, arg2);
 }
 
+export function ExportAuditLogs() {
+  return window['go']['main']['App']['ExportAuditLogs']();
+}
+
 export function ExportChatLog(arg1) {
   return window['go']['main']['App']['ExportChatLog'](arg1);
 }
@@ -200,6 +208,10 @@ export function GetActiveProfile() {
 
 export function GetAgentMemories() {
   return window['go']['main']['App']['GetAgentMemories']();
+}
+
+export function GetAuditLogs(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GetAuditLogs'](arg1, arg2, arg3, arg4);
 }
 
 export function GetAllCaseTags() {

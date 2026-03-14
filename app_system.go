@@ -856,19 +856,17 @@ func (a *App) StopHTTPServer() error {
 	return err
 }
 
-// GetHTTPServerStatus returns whether HTTP server is running and the access URL
+// GetHTTPServerStatus returns whether HTTP server is running and the access URL (no token — use GetHTTPServerConfig)
 func (a *App) GetHTTPServerStatus() map[string]interface{} {
 	if a.httpSrv == nil {
 		return map[string]interface{}{
 			"running": false,
 			"url":     "",
-			"token":   "",
 		}
 	}
 	return map[string]interface{}{
 		"running": true,
 		"url":     fmt.Sprintf("http://%s:%d", a.httpSrv.host, a.httpSrv.port),
-		"token":   a.httpSrv.token,
 	}
 }
 
@@ -975,4 +973,41 @@ func (a *App) UpdateHTTPServerUser(username string, role string, regenerateToken
 		a.httpSrv.users = settings.HTTPServerUsers
 	}
 	return updated, nil
+}
+
+// AuditLogResult is the response for GetAuditLogs
+type AuditLogResult struct {
+	Entries []redc.AuditLogEntry `json:"entries"`
+	Total   int                  `json:"total"`
+}
+
+// GetAuditLogs returns audit log entries with pagination and filters
+func (a *App) GetAuditLogs(limit int, offset int, username string, method string) AuditLogResult {
+	if a.auditStore == nil {
+		return AuditLogResult{}
+	}
+	entries, total, err := a.auditStore.List(limit, offset, username, method)
+	if err != nil {
+		return AuditLogResult{}
+	}
+	if entries == nil {
+		entries = []redc.AuditLogEntry{}
+	}
+	return AuditLogResult{Entries: entries, Total: total}
+}
+
+// ExportAuditLogs returns all audit log entries for export
+func (a *App) ExportAuditLogs() ([]redc.AuditLogEntry, error) {
+	if a.auditStore == nil {
+		return []redc.AuditLogEntry{}, nil
+	}
+	return a.auditStore.ExportAll()
+}
+
+// ClearAuditLogs deletes all audit log entries
+func (a *App) ClearAuditLogs() error {
+	if a.auditStore == nil {
+		return nil
+	}
+	return a.auditStore.Clear()
 }

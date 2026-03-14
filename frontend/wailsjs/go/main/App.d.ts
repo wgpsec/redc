@@ -61,6 +61,8 @@ export function CreateProject(arg1:string):Promise<void>;
 
 export function ClearAgentMemories():Promise<void>;
 
+export function ClearAuditLogs():Promise<void>;
+
 export function CreateRemoteDirectory(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteAgentMemory(arg1:number):Promise<void>;
@@ -91,6 +93,8 @@ export function ExecCommand(arg1:string,arg2:string):Promise<main.ExecCommandRes
 
 export function ExecUserdata(arg1:string,arg2:string):Promise<main.ExecCommandResult>;
 
+export function ExportAuditLogs():Promise<Array<any>>;
+
 export function ExportChatLog(arg1:string):Promise<void>;
 
 export function ExportConfigTemplate(arg1:string,arg2:string):Promise<void>;
@@ -106,6 +110,8 @@ export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
 
 export function GetAgentMemories():Promise<Array<any>>;
+
+export function GetAuditLogs(arg1:number,arg2:number,arg3:string,arg4:string):Promise<any>;
 
 export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
 

@@ -39,6 +39,7 @@ type App struct {
 	configStore             *redc.ConfigStore
 	pluginMgr               *plugin.PluginManager
 	memoryStore             *redc.MemoryStore
+	auditStore              *redc.AuditStore
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
@@ -274,6 +275,14 @@ func (a *App) startup(ctx context.Context) {
 		fmt.Println("[INFO] Agent memory store initialized")
 	} else {
 		fmt.Printf("[WARN] Agent memory store init failed: %v\n", err)
+	}
+
+	// Initialize audit log store
+	if as, err := redc.NewAuditStore(); err == nil {
+		a.auditStore = as
+		fmt.Println("[INFO] Audit log store initialized")
+	} else {
+		fmt.Printf("[WARN] Audit log store init failed: %v\n", err)
 	}
 
 	// Start spot instance termination monitor (if enabled in settings)
