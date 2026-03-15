@@ -432,6 +432,7 @@ type TemplateInfo struct {
 	Version     string `json:"version"`
 	User        string `json:"user"`
 	Module      string `json:"module"`
+	Plugins     string `json:"plugins"`
 }
 
 // ResourceSummary represents aggregated resource counts by type
@@ -513,10 +514,11 @@ type remoteTemplateInfo struct {
 		UpdatedAt string `json:"updated_at"`
 	} `json:"versions"`
 	Metadata struct {
-		Name        string `json:"name"`
-		Author      string `json:"author"`
-		Description string `json:"description"`
-		Readme      string `json:"readme"`
+		Name        string   `json:"name"`
+		Author      string   `json:"author"`
+		Description string   `json:"description"`
+		Readme      string   `json:"readme"`
+		Tags        []string `json:"tags,omitempty"`
 	} `json:"metadata"`
 }
 

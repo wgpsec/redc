@@ -30,6 +30,7 @@ func (a *App) ListTemplates() ([]TemplateInfo, error) {
 			Version:     t.Version,
 			User:        t.User,
 			Module:      t.RedcModule,
+			Plugins:     t.RedcPlugins,
 		})
 	}
 	return result, nil
@@ -48,6 +49,7 @@ func (a *App) ListAllTemplates() ([]TemplateInfo, error) {
 			Version:     t.Version,
 			User:        t.User,
 			Module:      t.RedcModule,
+			Plugins:     t.RedcPlugins,
 		})
 	}
 	return result, nil
@@ -222,10 +224,25 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 			}
 		}
 
-		// Extract tags from provider
+		// Extract tags: prefer remote metadata tags, fallback to local case.json
 		var tags []string
-		if t.Provider != "" {
+		if len(t.Metadata.Tags) > 0 {
+			tags = t.Metadata.Tags
+		} else if t.Provider != "" {
 			tags = []string{t.Provider}
+		}
+
+		// For installed templates, read tags from local case.json
+		if installed {
+			localCasePath := filepath.Join(redc.TemplateDir, name, "case.json")
+			if data, err := os.ReadFile(localCasePath); err == nil {
+				var localCase struct {
+					Tags []string `json:"tags"`
+				}
+				if json.Unmarshal(data, &localCase) == nil && len(localCase.Tags) > 0 {
+					tags = localCase.Tags
+				}
+			}
 		}
 
 		result = append(result, RegistryTemplate{

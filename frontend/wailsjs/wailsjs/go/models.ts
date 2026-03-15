@@ -714,6 +714,7 @@ export namespace main {
 	    version: string;
 	    user: string;
 	    module: string;
+	    plugins: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TemplateInfo(source);
@@ -726,6 +727,7 @@ export namespace main {
 	        this.version = source["version"];
 	        this.user = source["user"];
 	        this.module = source["module"];
+	        this.plugins = source["plugins"];
 	    }
 	}
 	export class TemplateRecommendation {

@@ -122,7 +122,7 @@ export const i18n = {
     noComposeTemplatesHint: '暂无编排模板，请先从"模板仓库"页面下载 compose 模板',
     noComposeTemplatesHintButton: '前往模板仓库',
     // Local templates i18n
-    version: '版本', author: '作者', module: '模块', description: '描述', viewParams: '查看参数',
+    version: '版本', author: '作者', module: '模块', moduleOrPlugin: '模块/插件', description: '描述', viewParams: '查看参数',
     cloneTemplate: '复制模板',
     editTemplate: '编辑模板', templateFiles: '模板文件', saveTemplate: '保存模板',
     cloneTitle: '复制模板', cloneName: '新模板名称', cloneHint: '复制后可独立编辑',
@@ -369,6 +369,7 @@ export const i18n = {
     templateTools: '模板管理', deployTools: '场景部署', remoteTools: '远程操作', userdataTools: 'Userdata', systemTools: '系统/其他',
     aiConfigured: '已配置', aiNotConfigured: '未配置', aiNotConfiguredHint: '请先在凭据管理页面配置 AI API Key', goToCredentials: '前往凭据管理', configureAI: '配置 AI',
     filterAll: '全部', notInstalled: '未安装', updatable: '可更新', updateAll: '全部更新', clearSearch: '清除搜索', noMatchFilter: '当前筛选无结果', showAll: '显示全部',
+    pullAll: '一键全部拉取', allInstalled: '所有模板已安装', notInstalledHint: '尚有模板未拉取',
     templateType: '类型', presetTag: '预定义', customTag: '自定义',
     quickLinks: '快捷入口',
     aiChatHistory: '历史',
@@ -553,7 +554,7 @@ export const i18n = {
     noComposeTemplatesHint: 'No compose templates available. Please download compose templates from the "Template Registry" page first',
     noComposeTemplatesHintButton: 'Go to Template Registry',
     // Local templates i18n
-    version: 'Version', author: 'Author', module: 'Module', description: 'Description', viewParams: 'View Params',
+    version: 'Version', author: 'Author', module: 'Module', moduleOrPlugin: 'Module/Plugin', description: 'Description', viewParams: 'View Params',
     cloneTemplate: 'Clone',
     editTemplate: 'Edit Template', templateFiles: 'Template Files', saveTemplate: 'Save Template',
     cloneTitle: 'Clone Template', cloneName: 'New Template Name', cloneHint: 'The copy is editable',
@@ -792,6 +793,7 @@ export const i18n = {
     templateTools: 'Template', deployTools: 'Deploy', remoteTools: 'Remote', userdataTools: 'Userdata', systemTools: 'System',
     aiConfigured: 'Configured', aiNotConfigured: 'Not Configured', aiNotConfiguredHint: 'Please configure AI API Key in Credentials page first', goToCredentials: 'Go to Credentials', configureAI: 'Configure AI',
     filterAll: 'All', notInstalled: 'Not Installed', updatable: 'Updatable', updateAll: 'Update All', clearSearch: 'Clear search', noMatchFilter: 'No results for current filter', showAll: 'Show all',
+    pullAll: 'Pull All', allInstalled: 'All templates installed', notInstalledHint: 'Some templates not yet pulled',
     templateType: 'Type', presetTag: 'Preset', customTag: 'Custom',
     quickLinks: 'Quick Links',
     aiChatHistory: 'History',

@@ -51,6 +51,7 @@ type RedcTmpl struct {
 	RedcModule   string       `json:"redc_module"`
 	RedcPlugins  string       `json:"redc_plugins"`
 	TemplateType TemplateType `json:"template"`
+	Tags         []string     `json:"tags,omitempty"`
 	Path         string       `json:"-"`
 }
 
@@ -84,10 +85,11 @@ type TemplateItem struct {
 
 // TemplateMetadata 元数据信息
 type TemplateMetadata struct {
-	Name        string `json:"name"`
-	Author      string `json:"author"`
-	Description string `json:"description"`
-	Readme      string `json:"readme"`
+	Name        string   `json:"name"`
+	Author      string   `json:"author"`
+	Description string   `json:"description"`
+	Readme      string   `json:"readme"`
+	Tags        []string `json:"tags,omitempty"`
 }
 
 // TemplateVersion 具体版本信息

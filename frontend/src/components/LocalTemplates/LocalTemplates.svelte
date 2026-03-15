@@ -318,7 +318,8 @@
         const search = localTemplatesSearch.toLowerCase();
         return t.name.toLowerCase().includes(search) ||
           (t.description && t.description.toLowerCase().includes(search)) ||
-          (t.module && t.module.toLowerCase().includes(search));
+          (t.module && t.module.toLowerCase().includes(search)) ||
+          (t.plugins && t.plugins.toLowerCase().includes(search));
       }
       return true;
     })
@@ -695,7 +696,7 @@
               <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-20">{t.templateType || '类型'}</th>
             {/if}
             <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-16">{t.version}</th>
-            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">{t.module}</th>
+            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">{t.moduleOrPlugin || '模块/插件'}</th>
             <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">{t.description}</th>
             <th class="text-right px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-36">{t.actions}</th>
           </tr>
@@ -734,7 +735,13 @@
               </td>
               <td class="px-3 py-3 hidden lg:table-cell">
                 {#if tmpl.module}
-                  <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded truncate max-w-[160px] inline-block" title={tmpl.module}>{tmpl.module}</span>
+                  <span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-medium rounded truncate max-w-[160px] inline-block" title={tmpl.module}>{tmpl.module}</span>
+                {:else if tmpl.plugins}
+                  <div class="flex flex-wrap gap-1">
+                    {#each tmpl.plugins.split(',') as plugin}
+                      <span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-medium rounded truncate max-w-[160px] inline-block" title={plugin.trim()}>{plugin.trim()}</span>
+                    {/each}
+                  </div>
                 {:else}
                   <span class="text-[12px] text-gray-400">-</span>
                 {/if}
@@ -969,9 +976,15 @@
               <p class="text-[13px] text-gray-900">{localTemplateDetail.user || '-'}</p>
             </div>
             <div>
-              <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.module}</div>
+              <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.moduleOrPlugin || '模块/插件'}</div>
               {#if localTemplateDetail.module}
                 <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[12px] font-medium rounded-full">{localTemplateDetail.module}</span>
+              {:else if localTemplateDetail.plugins}
+                <div class="flex flex-wrap gap-1">
+                  {#each localTemplateDetail.plugins.split(',') as plugin}
+                    <span class="px-2 py-0.5 bg-purple-50 text-purple-600 text-[12px] font-medium rounded-full">{plugin.trim()}</span>
+                  {/each}
+                </div>
               {:else}
                 <p class="text-[13px] text-gray-400">-</p>
               {/if}

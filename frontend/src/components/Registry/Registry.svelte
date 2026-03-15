@@ -2,6 +2,7 @@
 
   import { onMount, onDestroy } from 'svelte';
   import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme, GetLanguage } from '../../../wailsjs/go/main/App.js';
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
 
   // Registry state
@@ -17,6 +18,9 @@ let { t } = $props();
 
   // Readme modal state
   let readmeModal = $state({ show: false, content: '', html: '', loading: false, templateName: '' });
+
+  // Flash feedback for successful pull/update
+  let justPulled = $state({});
 
   // Simple markdown to HTML converter
   function parseMarkdown(md) {
@@ -217,6 +221,10 @@ let { t } = $props();
           localVersion: latest || tmpl.localVersion
         };
       });
+      // Flash feedback
+      justPulled[templateName] = true;
+      justPulled = justPulled;
+      setTimeout(() => { delete justPulled[templateName]; justPulled = justPulled; }, 2000);
       setRegistryNotice('success', `${t.pullSuccess}: ${templateName}`);
     } catch (e) {
       setRegistryNotice('error', `${t.pullFailed}: ${templateName}`);
@@ -287,9 +295,13 @@ let { t } = $props();
   async function confirmBatchPull() {
     batchPullConfirm = { show: false, count: 0 };
     batchOperating = true;
+    const targets = _pullAllMode
+      ? registryTemplates.filter(tmpl => !tmpl.installed).map(tmpl => tmpl.name)
+      : canPullTemplates;
+    _pullAllMode = false;
 
     try {
-      await Promise.all(canPullTemplates.map(name => handlePullTemplate(name, false)));
+      await Promise.all(targets.map(name => handlePullTemplate(name, false)));
       selectedTemplates = new Set();
     } catch (e) {
       setRegistryNotice('error', e.message || String(e));
@@ -359,6 +371,57 @@ let { t } = $props();
     }
   });
 
+  // Scenario type label from tags
+  const tagLabelMap = {
+    'c2': { label: 'C2', color: 'bg-red-50 text-red-600' },
+    'proxy': { label: '代理', color: 'bg-purple-50 text-purple-600' },
+    'tunnel': { label: '隧道', color: 'bg-purple-50 text-purple-600' },
+    'phishing': { label: '钓鱼', color: 'bg-orange-50 text-orange-600' },
+    'range': { label: '靶场', color: 'bg-cyan-50 text-cyan-600' },
+    'recon': { label: '侦查', color: 'bg-blue-50 text-blue-600' },
+    'scan': { label: '扫描', color: 'bg-blue-50 text-blue-600' },
+    'mail': { label: '邮件', color: 'bg-amber-50 text-amber-600' },
+    'vpn': { label: 'VPN', color: 'bg-green-50 text-green-600' },
+    'docker': { label: 'Docker', color: 'bg-sky-50 text-sky-600' },
+    'ddos': { label: 'DDoS', color: 'bg-rose-50 text-rose-600' },
+    'dns': { label: 'DNS', color: 'bg-indigo-50 text-indigo-600' },
+    'infra': { label: '基础设施', color: 'bg-gray-100 text-gray-600' },
+    'base': { label: '基础', color: 'bg-gray-100 text-gray-600' },
+    'collaborate': { label: '协作', color: 'bg-teal-50 text-teal-600' },
+    'file': { label: '文件', color: 'bg-lime-50 text-lime-600' },
+  };
+
+  function scenarioLabels(tags) {
+    if (!tags || tags.length === 0) return [];
+    const results = [];
+    for (const tag of tags) {
+      const key = tag.toLowerCase();
+      if (tagLabelMap[key]) {
+        results.push(tagLabelMap[key]);
+      }
+    }
+    return results;
+  }
+
+  // Handle clicks inside README modal to open external links
+  function handleReadmeClick(e) {
+    const link = e.target.closest('a[href]');
+    if (link) {
+      e.preventDefault();
+      BrowserOpenURL(link.href);
+    }
+  }
+
+  // Batch pull all not-installed templates
+  async function pullAllNotInstalled() {
+    const targets = registryTemplates.filter(t => !t.installed).map(t => t.name);
+    if (targets.length === 0) return;
+    batchPullConfirm = { show: true, count: targets.length };
+    _pullAllMode = true;
+  }
+
+  let _pullAllMode = $state(false);
+
   // Export refresh function for parent component
   export function refresh() {
     loadRegistryTemplates();
@@ -376,14 +439,19 @@ let { t } = $props();
       <input 
         type="text" 
         placeholder={t.search}
-        class="w-full h-9 pl-10 pr-4 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        class="w-full h-9 pl-10 pr-8 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
         bind:value={registrySearch} 
       />
+      {#if registrySearch}
+        <button onclick={() => registrySearch = ''} class="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors cursor-pointer">
+          <svg class="w-2.5 h-2.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      {/if}
     </div>
     <div class="flex items-center gap-2">
       {#if updatableCount > 0}
         <button 
-          class="h-9 px-3.5 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+          class="h-9 px-3.5 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
           onclick={handleUpdateAll}
           disabled={batchOperating}
         >
@@ -409,8 +477,8 @@ let { t } = $props();
     </div>
   </div>
 
-  <!-- Filter tabs + stats -->
-  <div class="flex items-center justify-between gap-4">
+  <!-- Filter tabs -->
+  <div class="flex items-center gap-4">
     <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
       <button 
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
@@ -429,12 +497,6 @@ let { t } = $props();
           class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'updatable' ? 'bg-white text-gray-900 shadow-sm' : 'text-amber-600 hover:text-amber-700'}"
           onclick={() => { filterTab = 'updatable'; selectedTemplates = new Set(); }}
         >{t.updatable || '可更新'} ({updatableCount})</button>
-      {/if}
-    </div>
-    <div class="text-[11px] text-gray-400">
-      {registryTemplates.length} {t.templates || '模板'} · {installedCount} {t.installed}
-      {#if updatableCount > 0}
-        · <span class="text-amber-500">{updatableCount} {t.updatable || '可更新'}</span>
       {/if}
     </div>
   </div>
@@ -504,7 +566,7 @@ let { t } = $props();
     <!-- Template Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {#each filteredRegistryTemplates as tmpl}
-        <div class="bg-white rounded-xl border {tmpl.installed ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} p-4 hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl border {justPulled[tmpl.name] ? 'border-emerald-400 ring-2 ring-emerald-200' : tmpl.installed ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} p-4 hover:shadow-md transition-all duration-500">
           <div class="flex gap-3">
             <!-- Checkbox -->
             <div class="pt-0.5 flex-shrink-0">
@@ -521,7 +583,12 @@ let { t } = $props();
               <div class="flex items-start justify-between mb-2">
                 <div class="flex-1 min-w-0">
                   <h3 class="text-[13px] font-semibold text-gray-900 truncate">{tmpl.name}</h3>
-                  <p class="text-[11px] text-gray-400 mt-0.5">v{tmpl.latest}</p>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <p class="text-[11px] text-gray-400">v{tmpl.latest}</p>
+                    {#each scenarioLabels(tmpl.tags) as st}
+                      <span class="px-1.5 py-0 text-[9px] font-medium rounded {st.color}">{st.label}</span>
+                    {/each}
+                  </div>
                 </div>
                 {#if tmpl.installed}
                   {#if hasUpdate(tmpl)}
@@ -573,7 +640,7 @@ let { t } = $props();
                     >{t.viewReadme || '查看'}</button>
                     {#if tmpl.installed && hasUpdate(tmpl)}
                       <button 
-                        class="px-2.5 h-7 text-[11px] font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors cursor-pointer"
+                        class="px-2.5 h-7 text-[11px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors cursor-pointer"
                         onclick={() => handlePullTemplate(tmpl.name, true)}
                       >{t.update}</button>
                     {:else if !tmpl.installed}
@@ -596,6 +663,16 @@ let { t } = $props();
           {#if registrySearch}
             <p class="text-[13px] text-gray-500 mb-2">{t.noMatch}</p>
             <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => registrySearch = ''}>{t.clearSearch || '清除搜索'}</button>
+          {:else if filterTab === 'not-installed'}
+            {#if registryTemplates.filter(tmpl => !tmpl.installed).length === 0}
+              <p class="text-[13px] text-gray-500 mb-3">{t.allInstalled || '所有模板已安装'}</p>
+            {:else}
+              <p class="text-[13px] text-gray-500 mb-3">{t.notInstalledHint || '尚有模板未拉取'}</p>
+              <button 
+                class="h-8 px-4 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                onclick={pullAllNotInstalled}
+              >{t.pullAll || '一键全部拉取'} ({registryTemplates.filter(tmpl => !tmpl.installed).length})</button>
+            {/if}
           {:else if filterTab !== 'all'}
             <p class="text-[13px] text-gray-500 mb-2">{t.noMatchFilter || '当前筛选无结果'}</p>
             <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => filterTab = 'all'}>{t.showAll || '显示全部'}</button>
@@ -651,8 +728,8 @@ let { t } = $props();
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
@@ -671,7 +748,7 @@ let { t } = $props();
           onclick={cancelBatchUpdate}
         >{t.cancel}</button>
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
           onclick={doConfirmBatchUpdate}
         >{t.update}</button>
       </div>
@@ -704,7 +781,8 @@ let { t } = $props();
             </svg>
           </div>
         {:else}
-          <div class="text-[13px] text-gray-700">
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <div class="text-[13px] text-gray-700" onclick={handleReadmeClick}>
             {@html readmeModal.html || readmeModal.content}
           </div>
         {/if}
