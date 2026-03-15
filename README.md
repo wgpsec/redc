@@ -52,11 +52,130 @@ Redc is not just a machine provisioning tool, but an automated cloud resource sc
 
 ---
 
+## GUI Features
+
+The redc GUI provides a comprehensive graphical management interface covering the entire workflow from deployment to operations.
+
+### 📊 Dashboard
+
+- Scenario statistics (total/running/stopped/error)
+- Network diagnostics (Terraform endpoint connectivity)
+- Account balance and monthly bill queries
+- Recent AI conversations, recent tasks, MCP status
+- Quick navigation links
+
+![gui](./img/gui_en.png)
+
+**Pre-configured Scenarios**
+
+![gui2](./img/gui2.png)
+
+### 🤖 AI Chat
+
+Multi-turn conversational AI assistant with 7 modes:
+
+- **Free Chat** — General Q&A
+- **Agent** — Autonomously calls tools to complete complex tasks (create scenarios, execute commands, analyze status)
+- **Deploy Assistant** — Describe your needs in one sentence, AI deploys automatically and returns results
+- **Template Generation** — Generate Terraform templates from requirements
+- **Scenario Recommendation** — Recommend optimal scenario plans based on objectives
+- **Cost Optimization** — Analyze current resource usage and provide cost-saving suggestions
+- **Error Analysis** — Paste error logs, AI analyzes causes and provides fixes
+
+Supports streaming output, tool call visualization, ask_user human-in-the-loop decisions, conversation history persistence, and chat export.
+
+**Automated Attack Testing with Security Tools**
+
+> Launch an AWS instance with nuclei installed, then scan a dedicated vulnerability testing site http://testfire.net/
+
+![ai1](./img/ai1.png)
+
+![ai2](./img/ai2.png)
+
+**Multi-Region + Compose Orchestration**
+
+> Spin up 2 proxy pool machines on both Aliyun and AWS, then generate a Clash config for me
+
+![proxy1](./img/proxy1.png)
+
+![proxy2](./img/proxy2.png)
+
+![proxy3](./img/proxy3.png)
+
+![proxy4](./img/proxy4.png)
+
+**Zero-Friction Vulnerability Reproduction Environment**
+
+> Deploy a vulhub CVE-2017-7504 vulnerability testing environment, enable SSH access and send me the credentials.
+
+![vulhub1](./img/vulhub1.png)
+
+![vulhub2](./img/vulhub2.png)
+
+![vulhub3](./img/vulhub3.png)
+
+### 💻 SSH Terminal
+
+Built-in multi-session SSH terminal manager:
+
+- Multi-tab management for multiple SSH connections
+- One-click SSH from scenario instances (multi-instance selection support)
+- Manual connection to external hosts
+- Command snippet quick input
+- File manager (upload/download/browse)
+- Port forwarding management
+
+![ssh1](./img/ssh1.png)
+
+![ssh2](./img/ssh2.png)
+
+### 🛒 Software Store
+
+One-stop tool installation platform based on [f8x](https://github.com/ffffffff0x/f8x):
+
+- 80+ pentest/dev/ops tools with category browsing
+- Keyword search, batch selection install
+- Quick presets (Full Pentest/Dev Environment/Blue Team/C2 Setup, etc.)
+- Install via SSH terminal with interactive support
+- Online catalog auto-sync (dynamically loaded from f8x repository)
+- Installation history and status tracking
+
+![f8x](./img/f8x.png)
+
+### ⏰ Task Center
+
+Scheduled task management:
+
+- Schedule scenario start/stop
+- Schedule SSH command execution
+- Repeat types: once/daily/weekly/interval
+- Task execution history
+
+![cron](./img/cron.png)
+
+### 🧠 Agent Memory
+
+AI Agent automatically remembers operational experience and user preferences, persisted across conversations. Manageable via the Agent Memory page.
+
+### 🌐 Web Service
+
+Built-in HTTP API service for remote management:
+
+- Admin/Operator/Viewer three-tier role control
+- Operation audit logs
+- Token authentication
+
+![web](./img/web.png)
+
+### 🔌 Plugin System
+
+Supports scenario lifecycle hook plugins that automatically execute custom logic on scenario start/stop.
+
+---
+
 ## GUI Development & Debugging
 
 The redc GUI is built with Wails + Svelte + Vite.
-
-![gui](./img/gui_en.png)
 
 ### Prerequisites
 
