@@ -234,6 +234,10 @@ export function EnsureF8x(arg1) {
   return window['go']['main']['App']['EnsureF8x'](arg1);
 }
 
+export function BuildF8xCommand(arg1) {
+  return window['go']['main']['App']['BuildF8xCommand'](arg1);
+}
+
 export function RunF8xInstall(arg1, arg2) {
   return window['go']['main']['App']['RunF8xInstall'](arg1, arg2);
 }

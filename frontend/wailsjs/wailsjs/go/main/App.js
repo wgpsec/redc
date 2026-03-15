@@ -46,6 +46,10 @@ export function BatchStopCustomDeployments(arg1) {
   return window['go']['main']['App']['BatchStopCustomDeployments'](arg1);
 }
 
+export function BuildF8xCommand(arg1) {
+  return window['go']['main']['App']['BuildF8xCommand'](arg1);
+}
+
 export function CancelScheduledTask(arg1) {
   return window['go']['main']['App']['CancelScheduledTask'](arg1);
 }

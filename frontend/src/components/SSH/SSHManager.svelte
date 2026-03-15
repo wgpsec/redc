@@ -103,6 +103,9 @@
     EventsOn('port-forward-closed', (id) => {
       portForwards = portForwards.filter(pf => pf.id !== id);
     });
+
+    // Listen for f8x command injection from SoftwareStore
+    window.addEventListener('f8x-execute', handleF8xExecute);
   });
 
   onDestroy(() => {
@@ -110,6 +113,31 @@
       cleanupSession(session);
     }
     EventsOff('port-forward-closed');
+    window.removeEventListener('f8x-execute', handleF8xExecute);
+  });
+
+  function handleF8xExecute(event) {
+    const { sessionId, command } = event.detail || {};
+    if (!sessionId || !command) return;
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session || !session.connected || !session.sessionId) return;
+    // Switch to this session
+    const idx = sessions.indexOf(session);
+    if (idx >= 0) activeSessionIndex = idx;
+    // Write command to terminal
+    WriteToTerminal(session.sessionId, command + '\n');
+  }
+
+  // Expose sessions list via window for SoftwareStore to query
+  $effect(() => {
+    window.__sshSessions = sessions.filter(s => s.connected).map(s => ({
+      id: s.id,
+      host: s.host || '',
+      user: s.user || '',
+      caseName: s.caseName || '',
+      connected: s.connected,
+      isExternal: s.isExternal || false,
+    }));
   });
 
   // --- Visibility management ---

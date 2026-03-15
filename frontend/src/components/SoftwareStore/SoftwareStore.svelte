@@ -1,55 +1,37 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, GetF8xCatalog, GetF8xCategories, GetF8xPresets, GetF8xStatus, EnsureF8x, RunF8xInstall, GetF8xInstallHistory, GetF8xRunningTasks, RefreshF8xCatalog } from '../../../wailsjs/go/main/App.js';
-  import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
+  import { GetF8xCatalog, GetF8xCategories, GetF8xPresets, BuildF8xCommand, RefreshF8xCatalog } from '../../../wailsjs/go/main/App.js';
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange } = $props();
 
   let catalog = $state([]);
   let categories = $state([]);
   let presets = $state([]);
-  let cases = $state([]);
   let loading = $state(true);
   let catalogError = $state('');
 
-  let selectedCaseID = $state('');
   let activeCategory = $state('all');
   let searchQuery = $state('');
   let selectedModules = $state(new Set());
-  let f8xStatus = $state(null);
-  let checkingStatus = $state(false);
 
-  let installing = $state(false);
-  let installLog = $state([]);
-  let showLog = $state(false);
-  let currentTaskID = $state('');
-  let installHistory = $state([]);
-
-  // Install confirm dialog
+  // Install confirm dialog (single tool)
   let installConfirm = $state({ show: false, mod: null });
 
-  // Log panel resize
-  let logHeight = $state(256);
-  let resizing = $state(false);
-  let resizeStartY = 0;
-  let resizeStartH = 0;
-
-  // Auto-scroll log
-  let logContainer = $state(null);
+  // SSH session picker modal
+  let sessionPicker = $state({ show: false, flags: [], toolName: '' });
+  let sshSessions = $derived(window.__sshSessions || []);
 
   onMount(async () => {
     try {
-      const [cat, cats, pre, caseList] = await Promise.all([
+      const [cat, cats, pre] = await Promise.all([
         GetF8xCatalog(),
         GetF8xCategories(),
         GetF8xPresets(),
-        ListCases()
       ]);
       catalog = cat || [];
       categories = cats || [];
       presets = pre || [];
-      cases = (caseList || []).filter(c => c.state === 'running');
-      if (cases.length > 0) selectedCaseID = cases[0].id;
       if (catalog.length === 0) {
         catalogError = t.f8xCatalogError || '无法加载工具目录，请检查网络连接后点击 ⟳ 刷新';
       }
@@ -58,81 +40,6 @@
       catalogError = t.f8xCatalogError || '无法加载工具目录，请检查网络连接后点击 ⟳ 刷新';
     }
     loading = false;
-  });
-
-  // Listen for f8x events
-  let cleanupOutput, cleanupDone;
-  onMount(() => {
-    cleanupOutput = EventsOn('f8x:output', (data) => {
-      if (data.taskID === currentTaskID) {
-        installLog = [...installLog, { type: data.type, text: data.text }];
-        scrollLogToBottom();
-      }
-    });
-    cleanupDone = EventsOn('f8x:done', (data) => {
-      if (data.taskID === currentTaskID) {
-        installing = false;
-        installLog = [...installLog, { type: data.status === 'success' ? 'success' : 'error', text: data.status === 'success' ? '\n✅ Installation completed successfully!' : `\n❌ Installation failed: ${data.error || 'Unknown error'}` }];
-        scrollLogToBottom();
-        loadHistory();
-      }
-    });
-
-    // Resize handlers
-    const onMouseMove = (e) => {
-      if (!resizing) return;
-      const delta = resizeStartY - e.clientY;
-      logHeight = Math.max(128, Math.min(600, resizeStartH + delta));
-    };
-    const onMouseUp = () => { resizing = false; };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  });
-  onDestroy(() => {
-    if (cleanupOutput) EventsOff('f8x:output');
-    if (cleanupDone) EventsOff('f8x:done');
-  });
-
-  function scrollLogToBottom() {
-    requestAnimationFrame(() => {
-      if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
-    });
-  }
-
-  function startResize(e) {
-    resizing = true;
-    resizeStartY = e.clientY;
-    resizeStartH = logHeight;
-    e.preventDefault();
-  }
-
-  async function checkF8xStatus() {
-    if (!selectedCaseID) return;
-    checkingStatus = true;
-    try {
-      f8xStatus = await GetF8xStatus(selectedCaseID);
-    } catch (e) {
-      f8xStatus = { error: e.toString() };
-    }
-    checkingStatus = false;
-  }
-
-  async function loadHistory() {
-    if (!selectedCaseID) return;
-    try {
-      installHistory = await GetF8xInstallHistory(selectedCaseID) || [];
-    } catch(e) { /* ignore */ }
-  }
-
-  $effect(() => {
-    if (selectedCaseID) {
-      checkF8xStatus();
-      loadHistory();
-    }
   });
 
   const filteredModules = $derived(() => {
@@ -153,11 +60,6 @@
     return list;
   });
 
-  // Check if a module was installed (from history)
-  function isInstalled(flag) {
-    return installHistory.some(r => r.status === 'success' && r.flags && r.flags.includes(flag));
-  }
-
   function toggleModule(id) {
     const next = new Set(selectedModules);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -173,43 +75,60 @@
     selectedModules = next;
   }
 
-  async function installSelected() {
-    if (selectedModules.size === 0 || !selectedCaseID || installing) return;
+  // --- New SSH session-based install flow ---
+
+  function getActiveSshSessions() {
+    return window.__sshSessions || [];
+  }
+
+  function openSessionPicker(flags, toolName = '') {
+    const sessions = getActiveSshSessions();
+    if (sessions.length === 0) {
+      // No active SSH sessions, prompt to go to SSH terminal
+      sessionPicker = { show: true, flags, toolName, noSessions: true };
+      return;
+    }
+    sessionPicker = { show: true, flags, toolName, noSessions: false };
+  }
+
+  async function executeOnSession(sessionId) {
+    const { flags } = sessionPicker;
+    sessionPicker = { show: false, flags: [], toolName: '' };
+    try {
+      const command = await BuildF8xCommand(flags);
+      // Switch to SSH tab and send command
+      window.dispatchEvent(new CustomEvent('f8x-execute', { detail: { sessionId, command } }));
+      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'sshManager' }));
+    } catch (e) {
+      console.error('BuildF8xCommand failed:', e);
+    }
+  }
+
+  function installSelected() {
+    if (selectedModules.size === 0) return;
     const flags = [];
     for (const id of selectedModules) {
       const mod = catalog.find(m => m.id === id);
       if (mod) flags.push(mod.flag);
     }
-    installing = true;
-    installLog = [];
-    showLog = true;
-    try {
-      currentTaskID = await RunF8xInstall(selectedCaseID, flags);
-    } catch (e) {
-      installing = false;
-      installLog = [{ type: 'error', text: 'Failed to start: ' + e.toString() }];
+    const names = [];
+    for (const id of selectedModules) {
+      const mod = catalog.find(m => m.id === id);
+      if (mod) names.push(mod.nameZh || mod.name);
     }
+    openSessionPicker(flags, names.join(', '));
   }
 
   function showInstallConfirm(e, mod) {
     e.stopPropagation();
-    if (!selectedCaseID || installing) return;
     installConfirm = { show: true, mod };
   }
 
-  async function confirmInstallSingle() {
+  function confirmInstallSingle() {
     const mod = installConfirm.mod;
     installConfirm = { show: false, mod: null };
-    if (!mod || !selectedCaseID || installing) return;
-    installing = true;
-    installLog = [];
-    showLog = true;
-    try {
-      currentTaskID = await RunF8xInstall(selectedCaseID, [mod.flag]);
-    } catch (e) {
-      installing = false;
-      installLog = [{ type: 'error', text: 'Failed to start: ' + e.toString() }];
-    }
+    if (!mod) return;
+    openSessionPicker([mod.flag], mod.nameZh || mod.name);
   }
 
   let catalogSource = $state('');
@@ -247,17 +166,6 @@
     };
     return icons[catId] || '📦';
   }
-
-  function formatDuration(start, end) {
-    if (!start || !end) return '';
-    const ms = new Date(end) - new Date(start);
-    if (ms < 1000) return '<1s';
-    const s = Math.floor(ms / 1000);
-    if (s < 60) return `${s}s`;
-    const m = Math.floor(s / 60);
-    const rs = s % 60;
-    return rs > 0 ? `${m}m${rs}s` : `${m}m`;
-  }
 </script>
 
 <div class="space-y-4">
@@ -292,51 +200,35 @@
     </div>
   {/if}
 
-  <!-- Target VPS Selector -->
+  <!-- Toolbar -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
     <div class="px-5 py-3 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3 flex-1">
         <span class="text-[12px] font-medium text-gray-700 whitespace-nowrap">{t.f8xTargetVPS || '目标主机'}</span>
-        <select bind:value={selectedCaseID} class="text-[12px] border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-red-300 flex-1 max-w-xs">
-          {#if cases.length === 0}
-            <option value="">{t.f8xNoCases || '无可用主机（请先部署场景）'}</option>
+        <span class="text-[11px] text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+          {#if getActiveSshSessions().length > 0}
+            <span class="text-green-600">● {getActiveSshSessions().length}</span> {t.f8xActiveSessions || '个活跃 SSH 连接'}
           {:else}
-            {#each cases as c}
-              <option value={c.id}>{c.name || c.id} ({c.type})</option>
-            {/each}
+            <span class="text-gray-400">● 0</span> {t.f8xNoSessions || '无活跃连接'}
           {/if}
-        </select>
-        {#if cases.length === 0}
-          <button onclick={() => onTabChange && onTabChange('cases')} class="text-[11px] px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-            {t.f8xGoToDeploy || '去部署'}
+        </span>
+        {#if getActiveSshSessions().length === 0}
+          <button onclick={() => { if (onTabChange) onTabChange('sshManager'); }} class="text-[11px] px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors flex items-center gap-1 cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {t.f8xGoToSSH || '去连接'}
           </button>
-        {:else}
-          <button onclick={checkF8xStatus} disabled={!selectedCaseID || checkingStatus} class="text-[11px] px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 disabled:opacity-40 transition-colors flex items-center gap-1.5">
-            {#if checkingStatus}
-              <div class="w-3 h-3 border-[1.5px] border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-              {t.f8xChecking || '检测中...'}
-            {:else}
-              {t.f8xCheckStatus || '检测状态'}
-            {/if}
-          </button>
-          {#if f8xStatus && !checkingStatus}
-            <span class="text-[11px] px-2.5 py-1 rounded-lg {f8xStatus.error ? 'bg-red-50 text-red-600 border border-red-200' : f8xStatus.deployed ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
-              {f8xStatus.error ? '⚠ 连接失败' : f8xStatus.deployed ? `✓ f8x ${f8xStatus.version || '已部署'}` : '✗ f8x 未部署'}
-            </span>
-          {/if}
         {/if}
       </div>
 
       <div class="flex items-center gap-2">
         {#if selectedModules.size > 0}
           <span class="text-[11px] text-gray-500">{t.f8xSelected || '已选'} {selectedModules.size}</span>
-          <button onclick={() => selectedModules = new Set()} class="text-[11px] text-gray-400 hover:text-gray-600">
+          <button onclick={() => selectedModules = new Set()} class="text-[11px] text-gray-400 hover:text-gray-600 cursor-pointer">
             {t.f8xClearSelection || '清除'}
           </button>
         {/if}
-        <button onclick={installSelected} disabled={selectedModules.size === 0 || !selectedCaseID || installing} class="text-[12px] px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 transition-colors font-medium">
-          {installing ? (t.f8xInstalling || '安装中...') : (t.f8xBatchInstall || '批量安装')}
+        <button onclick={installSelected} disabled={selectedModules.size === 0} class="text-[12px] px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 transition-colors font-medium cursor-pointer">
+          {t.f8xBatchInstall || '批量安装'}
         </button>
       </div>
     </div>
@@ -385,15 +277,11 @@
       {#each filteredModules() as mod}
         {@const isSelected = selectedModules.has(mod.id)}
         {@const isBatch = (mod.tags || []).includes('batch')}
-        {@const installed = isInstalled(mod.flag)}
         <div class="group bg-white rounded-xl border transition-all cursor-pointer {isSelected ? 'border-red-400 ring-1 ring-red-200 bg-red-50/30' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'}" onclick={() => toggleModule(mod.id)}>
           <div class="p-3">
             <div class="flex items-start justify-between mb-1.5">
               <div class="flex items-center gap-1.5">
                 <h4 class="text-[12px] font-semibold text-gray-900 leading-tight">{mod.name}</h4>
-                {#if installed}
-                  <span class="text-[8px] px-1 py-0.5 rounded bg-green-50 text-green-600 font-medium leading-none">已装</span>
-                {/if}
               </div>
               <div class="flex items-center gap-1">
                 {#if isBatch}
@@ -405,7 +293,7 @@
             <p class="text-[10px] text-gray-500 leading-relaxed line-clamp-2 mb-2">{mod.descriptionZh || mod.description}</p>
             <div class="flex items-center justify-between">
               <span class="text-[9px] text-gray-400 font-mono">{mod.flag}</span>
-              <button onclick={(e) => showInstallConfirm(e, mod)} disabled={!selectedCaseID || installing} class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 disabled:opacity-30 transition-colors opacity-0 group-hover:opacity-100">
+              <button onclick={(e) => showInstallConfirm(e, mod)} class="text-[10px] px-2 py-0.5 rounded bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
                 {t.f8xInstall || '安装'}
               </button>
             </div>
@@ -419,64 +307,6 @@
         {t.f8xNoResults || '没有匹配的工具'}
       </div>
     {/if}
-  {/if}
-
-  <!-- Install Log Drawer -->
-  {#if showLog}
-    <div class="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="h-1.5 bg-gray-700 hover:bg-gray-600 cursor-ns-resize flex items-center justify-center transition-colors" onmousedown={startResize}>
-        <div class="w-8 h-0.5 bg-gray-500 rounded-full"></div>
-      </div>
-      <div class="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="text-[12px] text-gray-300 font-medium">{t.f8xInstallLog || '安装日志'}</span>
-          {#if installing}
-            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          {/if}
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick={() => installLog = []} class="text-[10px] text-gray-500 hover:text-gray-300">{t.f8xClearLog || '清空'}</button>
-          <button onclick={() => showLog = false} class="text-[10px] text-gray-500 hover:text-gray-300">✕</button>
-        </div>
-      </div>
-      <div bind:this={logContainer} class="p-4 overflow-y-auto font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all" style="max-height: {logHeight}px">
-        {#each installLog as entry}
-          <span class="{entry.type === 'error' ? 'text-red-400' : entry.type === 'success' ? 'text-green-400' : entry.type === 'info' ? 'text-blue-400' : 'text-gray-300'}">{entry.text}</span>
-        {/each}
-        {#if installLog.length === 0}
-          <span class="text-gray-600">{t.f8xWaitingOutput || '等待输出...'}</span>
-        {/if}
-      </div>
-    </div>
-  {/if}
-
-  <!-- Install History -->
-  {#if installHistory.length > 0}
-    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <div class="px-5 py-3 border-b border-gray-100">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.f8xHistory || '安装历史'}</h3>
-      </div>
-      <div class="divide-y divide-gray-50">
-        {#each installHistory.slice().reverse().slice(0, 10) as record}
-          <div class="px-5 py-2 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="w-2 h-2 rounded-full {record.status === 'success' ? 'bg-green-400' : record.status === 'failed' ? 'bg-red-400' : 'bg-yellow-400'}"></span>
-              <span class="text-[11px] font-mono text-gray-700">{record.flags}</span>
-            </div>
-            <div class="flex items-center gap-3">
-              {#if record.startedAt && record.finishedAt}
-                <span class="text-[10px] text-gray-400 font-mono">{formatDuration(record.startedAt, record.finishedAt)}</span>
-              {/if}
-              <span class="text-[10px] text-gray-400">{record.startedAt ? new Date(record.startedAt).toLocaleString() : ''}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full {record.status === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}">
-                {record.status}
-              </span>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
   {/if}
 </div>
 
@@ -494,7 +324,7 @@
           </div>
           <div>
             <h3 class="text-[15px] font-semibold text-gray-900">{t.f8xConfirmInstall || '确认安装'}</h3>
-            <p class="text-[13px] text-gray-500">{t.f8xConfirmInstallDesc || '将在目标主机上执行安装'}</p>
+            <p class="text-[13px] text-gray-500">{t.f8xConfirmInstallDesc || '将通过 SSH 终端执行安装'}</p>
           </div>
         </div>
         <div class="bg-gray-50 rounded-lg px-4 py-3">
@@ -504,12 +334,83 @@
         </div>
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        <button class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           onclick={() => installConfirm = { show: false, mod: null }}
         >{t.cancel || '取消'}</button>
-        <button class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+        <button class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
           onclick={confirmInstallSingle}
         >{t.f8xInstall || '安装'}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- SSH Session Picker Modal -->
+{#if sessionPicker.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => sessionPicker = { show: false, flags: [], toolName: '' }}>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.f8xSelectSession || '选择 SSH 终端'}</h3>
+            <p class="text-[13px] text-gray-500">{sessionPicker.toolName || sessionPicker.flags.join(' ')}</p>
+          </div>
+        </div>
+
+        {#if sessionPicker.noSessions || getActiveSshSessions().length === 0}
+          <div class="text-center py-6">
+            <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="text-[13px] text-gray-500 mb-3">{t.f8xNoActiveSessions || '没有活跃的 SSH 连接'}</p>
+            <p class="text-[11px] text-gray-400 mb-4">{t.f8xGoToSSHHint || '请先在 SSH 终端页面建立连接'}</p>
+            <button 
+              class="h-8 px-4 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+              onclick={() => { sessionPicker = { show: false, flags: [], toolName: '' }; if (onTabChange) onTabChange('sshManager'); }}
+            >
+              <svg class="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              {t.f8xGoToSSH || '去连接'}
+            </button>
+          </div>
+        {:else}
+          <div class="space-y-2 max-h-60 overflow-y-auto">
+            {#each getActiveSshSessions() as session}
+              <button
+                class="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50/50 transition-colors text-left cursor-pointer"
+                onclick={() => executeOnSession(session.id)}
+              >
+                <div class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                  <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[12px] font-medium text-gray-900 truncate">
+                    {session.caseName || session.host || 'SSH'}
+                    {#if session.isExternal}
+                      <span class="text-[10px] text-purple-500 ml-1">(外部)</span>
+                    {/if}
+                  </p>
+                  <p class="text-[10px] text-gray-400 truncate">
+                    {session.user}@{session.host}
+                  </p>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <div class="px-6 py-3 bg-gray-50 flex justify-end">
+        <button class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          onclick={() => sessionPicker = { show: false, flags: [], toolName: '' }}
+        >{t.cancel || '取消'}</button>
       </div>
     </div>
   </div>

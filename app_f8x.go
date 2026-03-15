@@ -145,6 +145,19 @@ func (a *App) EnsureF8x(caseID string) ExecCommandResult {
 	return ExecCommandResult{Error: i18n.T("f8x_deploy_failed"), Success: false}
 }
 
+// BuildF8xCommand returns the shell command string for f8x installation.
+// The command includes: f8x download (if needed) and the install flags.
+// User can interact with f8x prompts directly in the SSH terminal.
+func (a *App) BuildF8xCommand(flags []string) string {
+	flagStr := strings.Join(flags, " ")
+	return fmt.Sprintf(
+		"test -f /tmp/f8x -o -f /usr/local/bin/f8x || (wget -q -O /tmp/f8x %s || curl -sSL -o /tmp/f8x %s) && chmod +x /tmp/f8x 2>/dev/null; "+
+			"F8X=$(which f8x 2>/dev/null || test -f /tmp/f8x && echo /tmp/f8x || echo /usr/local/bin/f8x) && "+
+			"sudo bash \"$F8X\" %s",
+		redc.F8xDefaultURL, redc.F8xFallbackURL, flagStr,
+	)
+}
+
 // RunF8xInstall executes f8x with given flags on target VPS
 // Returns taskID for tracking; output is streamed via events
 func (a *App) RunF8xInstall(caseID string, flags []string) string {

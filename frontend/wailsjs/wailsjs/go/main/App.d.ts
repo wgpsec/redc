@@ -29,6 +29,8 @@ export function BatchStartCustomDeployments(arg1:Array<string>):Promise<Array<mo
 
 export function BatchStopCustomDeployments(arg1:Array<string>):Promise<Array<mod.BatchOperationResult>>;
 
+export function BuildF8xCommand(arg1:Array<string>):Promise<string>;
+
 export function CancelScheduledTask(arg1:string):Promise<void>;
 
 export function CheckForUpdates():Promise<main.VersionCheckResult>;

@@ -123,6 +123,8 @@ export function GetF8xStatus(arg1:string):Promise<any>;
 
 export function EnsureF8x(arg1:string):Promise<any>;
 
+export function BuildF8xCommand(arg1:Array<string>):Promise<string>;
+
 export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function GetF8xInstallHistory(arg1:string):Promise<Array<any>>;
