@@ -1,6 +1,13 @@
 {
   "changelog": [
     {
+      "version": "3.1.8",
+      "date": "2026-03-16",
+      "changes": [
+        "修复：阻止 Webview 内导航，改用 BrowserOpenURL 在系统浏览器打开"
+      ]
+    },
+    {
       "version": "3.1.7",
       "date": "2026-03-15",
       "changes": [

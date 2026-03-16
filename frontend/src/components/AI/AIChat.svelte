@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
   import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
-  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+  import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();
@@ -15,6 +15,15 @@
     if (!content) return '';
     const html = marked.parse(content);
     return html;
+  }
+
+  // Intercept <a> clicks inside chat content → open in system browser
+  function handleContentClick(e) {
+    const a = e.target.closest('a[href]');
+    if (a) {
+      e.preventDefault();
+      BrowserOpenURL(a.href);
+    }
   }
 
   // State
@@ -765,7 +774,7 @@
     <!-- Chat area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Messages -->
-      <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer}>
+      <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer} onclick={handleContentClick}>
         {#each messages as msg (msg.id)}
           {#if msg.role === 'user'}
             <!-- User message -->
