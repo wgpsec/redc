@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
@@ -40,6 +40,8 @@
   let askUserPending = $state(null); // { conversationId, toolCallId, question, choices, allowFreeform }
   let askUserInput = $state('');
   let agentPlan = $state(null); // { title, steps: [{name, status, detail}], currentStep }
+  let lastInterruptedConvId = $state(''); // Track last interrupted conversation for resume
+  let lastUsage = $state(null); // { prompt_tokens, completion_tokens, total_tokens }
   // Conversation history state
   let conversations = $state([]);   // Array of { id, title, mode, messages, updatedAt }
   let activeConvId = $state('');     // Currently active conversation id
@@ -229,6 +231,9 @@
 
     EventsOn('ai-chat-complete', (data) => {
       if (data.conversationId === currentConversationId) {
+        // Capture token usage
+        const usage = data.usage && data.usage.total_tokens > 0 ? data.usage : null;
+
         if (data.success && streamingContent) {
           // For agent mode, include tool call cards in the message
           const toolCards = agentToolCalls.length > 0 ? [...agentToolCalls] : undefined;
@@ -240,8 +245,13 @@
             timestamp: Date.now(),
             mode,
             toolCalls: toolCards,
-            plan: planSnapshot
+            plan: planSnapshot,
+            usage
           }];
+          // Track timeout interruptions (sent as success=true with timeout emoji)
+          if (mode !== 'free' && streamingContent.includes('⏱️')) {
+            lastInterruptedConvId = currentConversationId;
+          }
         } else if (!data.success) {
           // Preserve partial streaming content on error (e.g. timeout)
           if (streamingContent) {
@@ -254,8 +264,13 @@
               timestamp: Date.now(),
               mode,
               toolCalls: toolCards,
-              plan: planSnapshot
+              plan: planSnapshot,
+              usage
             }];
+          }
+          // Track interrupted conversation for potential resume
+          if (mode !== 'free') {
+            lastInterruptedConvId = currentConversationId;
           }
           error = t.aiChatStreamError || 'AI 响应失败，请重试';
         }
@@ -434,6 +449,25 @@
       await StopAgentStream(currentConversationId);
     } catch (e) {
       console.error('Failed to stop agent:', e);
+    }
+  }
+
+  // Resume an interrupted agent conversation from checkpoint
+  async function resumeAgent() {
+    if (!lastInterruptedConvId || isStreaming) return;
+    const convId = lastInterruptedConvId;
+    lastInterruptedConvId = '';
+    error = '';
+    isStreaming = true;
+    currentConversationId = convId;
+    streamingContent = '';
+    agentToolCalls = [];
+    try {
+      await ResumeAgentStream(convId);
+    } catch (e) {
+      error = `恢复失败: ${e}`;
+      isStreaming = false;
+      currentConversationId = '';
     }
   }
 
@@ -762,6 +796,22 @@
       </button>
     </div>
   {/if}
+  {#if lastInterruptedConvId && !isStreaming}
+    <div class="mb-3 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
+      <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.182" />
+      </svg>
+      <span class="text-[12px] text-amber-700 flex-1">{t.aiChatResumeHint || '上次 Agent 任务中断，可从检查点恢复继续执行'}</span>
+      <button class="text-[11px] px-2 py-0.5 bg-amber-500 text-white rounded hover:bg-amber-600 cursor-pointer" onclick={resumeAgent}>
+        {t.aiChatResume || '恢复执行'}
+      </button>
+      <button class="text-amber-400 hover:text-amber-600 cursor-pointer" onclick={() => lastInterruptedConvId = ''}>
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  {/if}
   {#if successMessage}
     <div class="mb-3 flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg flex-shrink-0">
       <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -957,7 +1007,15 @@
                       </div>
                     {/if}
                     {#if msg.timestamp}
-                      <div class="text-[10px] text-gray-300 mt-1 ml-1">{formatTime(msg.timestamp)}</div>
+                      <div class="flex items-center gap-2 mt-1 ml-1">
+                        <span class="text-[10px] text-gray-300">{formatTime(msg.timestamp)}</span>
+                        {#if msg.usage && msg.usage.total_tokens > 0}
+                          <span class="text-[10px] text-gray-300">·</span>
+                          <span class="text-[10px] text-gray-300" title="输入 {msg.usage.prompt_tokens} + 输出 {msg.usage.completion_tokens} = 总计 {msg.usage.total_tokens} tokens">
+                            📊 {msg.usage.prompt_tokens.toLocaleString()} → {msg.usage.completion_tokens.toLocaleString()} ({msg.usage.total_tokens.toLocaleString()} tokens)
+                          </span>
+                        {/if}
+                      </div>
                     {/if}
                   </div>
                 </div>

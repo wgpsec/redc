@@ -319,6 +319,8 @@ export function RenameRemoteFile(arg1:string,arg2:string,arg3:string):Promise<vo
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function ResumeAgentStream(arg1:string):Promise<void>;
+
 export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function SaveConfigTemplate(arg1:string,arg2:mod.DeploymentConfig):Promise<void>;
@@ -417,7 +419,7 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean,arg9:Array<number>):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

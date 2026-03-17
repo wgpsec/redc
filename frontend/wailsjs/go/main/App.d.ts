@@ -379,6 +379,8 @@ export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg
 
 export function StopAgentStream(arg1:string):Promise<void>;
 
+export function ResumeAgentStream(arg1:string):Promise<void>;
+
 export function SubmitAskUserResponse(arg1:string,arg2:string):Promise<void>;
 
 export function StopCase(arg1:string):Promise<void>;

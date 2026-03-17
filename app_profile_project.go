@@ -336,7 +336,7 @@ func (a *App) DeleteProfile(profileID string) error {
 	return redc.DeleteProfile(profileID)
 }
 
-func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, enableMemory bool) error {
+func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, enableMemory bool, contextWindow ...int) error {
 	aiConfig := &redc.AIConfig{
 		Provider:      provider,
 		APIKey:        apiKey,
@@ -345,6 +345,9 @@ func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey st
 		MaxToolRounds: maxToolRounds,
 		EnableAskUser: &enableAskUser,
 		EnableMemory:  &enableMemory,
+	}
+	if len(contextWindow) > 0 && contextWindow[0] > 0 {
+		aiConfig.ContextWindow = contextWindow[0]
 	}
 	return redc.UpdateProfileAIConfig(profileID, aiConfig)
 }

@@ -750,6 +750,10 @@ export function StopAgentStream(arg1) {
   return window['go']['main']['App']['StopAgentStream'](arg1);
 }
 
+export function ResumeAgentStream(arg1) {
+  return window['go']['main']['App']['ResumeAgentStream'](arg1);
+}
+
 export function SubmitAskUserResponse(arg1, arg2) {
   return window['go']['main']['App']['SubmitAskUserResponse'](arg1, arg2);
 }

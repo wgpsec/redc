@@ -911,6 +911,7 @@ export namespace mod {
 	    baseUrl: string;
 	    model: string;
 	    maxToolRounds?: number;
+	    contextWindow?: number;
 	    enableAskUser?: boolean;
 	    enableMemory?: boolean;
 	
@@ -925,6 +926,7 @@ export namespace mod {
 	        this.baseUrl = source["baseUrl"];
 	        this.model = source["model"];
 	        this.maxToolRounds = source["maxToolRounds"];
+	        this.contextWindow = source["contextWindow"];
 	        this.enableAskUser = source["enableAskUser"];
 	        this.enableMemory = source["enableMemory"];
 	    }

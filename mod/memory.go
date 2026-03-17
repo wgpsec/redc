@@ -56,6 +56,9 @@ func NewMemoryStore() (*MemoryStore, error) {
 		task_title TEXT NOT NULL,
 		task_status TEXT DEFAULT 'in_progress',
 		plan_json TEXT,
+		checkpoint_messages TEXT,
+		checkpoint_round INTEGER DEFAULT 0,
+		prompt_template TEXT,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_tasks_project ON agent_tasks(project);
@@ -63,6 +66,15 @@ func NewMemoryStore() (*MemoryStore, error) {
 	if _, err := db.Exec(createSQL); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to create memory table: %v", err)
+	}
+
+	// Migration: add checkpoint columns if they don't exist (for existing databases)
+	for _, col := range []string{
+		"ALTER TABLE agent_tasks ADD COLUMN checkpoint_messages TEXT",
+		"ALTER TABLE agent_tasks ADD COLUMN checkpoint_round INTEGER DEFAULT 0",
+		"ALTER TABLE agent_tasks ADD COLUMN prompt_template TEXT",
+	} {
+		db.Exec(col) // ignore errors (column already exists)
 	}
 
 	return &MemoryStore{db: db}, nil
@@ -268,4 +280,63 @@ func (m *MemoryStore) GetRecentTasks(project string, limit int) ([]TaskItem, err
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+// AgentCheckpoint holds the state needed to resume an agent conversation
+type AgentCheckpoint struct {
+	ConversationID string `json:"conversationId"`
+	Round          int    `json:"round"`
+	Messages       string `json:"messages"`       // JSON-encoded compressed messages
+	PromptTemplate string `json:"promptTemplate"` // which prompt template was used
+}
+
+// SaveCheckpoint persists agent loop state for resumption after interruption (upsert)
+func (m *MemoryStore) SaveCheckpoint(project, conversationId string, messagesJSON string, round int, promptTemplate string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	// Try update first
+	res, err := m.db.Exec(
+		"UPDATE agent_tasks SET checkpoint_messages = ?, checkpoint_round = ?, prompt_template = ?, updated_at = ? WHERE conversation_id = ?",
+		messagesJSON, round, promptTemplate, now, conversationId,
+	)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected > 0 {
+		return nil
+	}
+
+	// No existing row — insert
+	_, err = m.db.Exec(
+		"INSERT INTO agent_tasks (project, conversation_id, task_title, task_status, checkpoint_messages, checkpoint_round, prompt_template, updated_at) VALUES (?, ?, 'Agent Task', 'in_progress', ?, ?, ?, ?)",
+		project, conversationId, messagesJSON, round, promptTemplate, now,
+	)
+	return err
+}
+
+// LoadCheckpoint retrieves the latest checkpoint for a conversation
+func (m *MemoryStore) LoadCheckpoint(conversationId string) (*AgentCheckpoint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var cp AgentCheckpoint
+	cp.ConversationID = conversationId
+	var messagesJSON, promptTemplate sql.NullString
+	err := m.db.QueryRow(
+		"SELECT COALESCE(checkpoint_round, 0), checkpoint_messages, prompt_template FROM agent_tasks WHERE conversation_id = ? AND task_status = 'in_progress'",
+		conversationId,
+	).Scan(&cp.Round, &messagesJSON, &promptTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("no checkpoint found: %v", err)
+	}
+	if !messagesJSON.Valid || messagesJSON.String == "" {
+		return nil, fmt.Errorf("no checkpoint data for conversation %s", conversationId)
+	}
+	cp.Messages = messagesJSON.String
+	if promptTemplate.Valid {
+		cp.PromptTemplate = promptTemplate.String
+	}
+	return &cp, nil
 }

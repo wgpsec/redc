@@ -29,6 +29,7 @@ type AIConfig struct {
 	BaseURL       string `json:"baseUrl"`
 	Model         string `json:"model"`
 	MaxToolRounds int    `json:"maxToolRounds,omitempty"`
+	ContextWindow int    `json:"contextWindow,omitempty"` // model context window size in tokens (default 120000)
 	EnableAskUser *bool  `json:"enableAskUser,omitempty"`
 	EnableMemory  *bool  `json:"enableMemory,omitempty"`
 }

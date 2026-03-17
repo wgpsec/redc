@@ -13,6 +13,7 @@ import (
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/ai"
+	"red-cloud/mod/gologger"
 	"red-cloud/mod/mcp"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -261,6 +262,45 @@ func (a *App) StopAgentStream(conversationId string) {
 	agentCancelMap.Unlock()
 }
 
+// ResumeAgentStream resumes an interrupted agent conversation from its last checkpoint
+func (a *App) ResumeAgentStream(conversationId string) error {
+	if a.memoryStore == nil {
+		return fmt.Errorf("memory store not available")
+	}
+	cp, err := a.memoryStore.LoadCheckpoint(conversationId)
+	if err != nil {
+		return fmt.Errorf("无法恢复: %v", err)
+	}
+
+	// Deserialize checkpoint messages
+	var aiMessages []ai.Message
+	if err := json.Unmarshal([]byte(cp.Messages), &aiMessages); err != nil {
+		return fmt.Errorf("checkpoint data corrupted: %v", err)
+	}
+
+	// Convert to AIChatMessage for the agent loop (only user/assistant messages)
+	var chatMessages []AIChatMessage
+	for _, m := range aiMessages {
+		if m.Role == "user" || m.Role == "assistant" {
+			chatMessages = append(chatMessages, AIChatMessage{Role: m.Role, Content: m.Content})
+		}
+	}
+
+	// Notify frontend that resume is starting
+	a.emitEvent("ai-chat-chunk", map[string]string{
+		"conversationId": conversationId,
+		"chunk":          fmt.Sprintf("\n\n🔄 从第 %d 轮检查点恢复执行...\n\n", cp.Round),
+	})
+
+	// Re-run agent loop with remaining rounds
+	promptTemplate := cp.PromptTemplate
+	if promptTemplate == "" {
+		promptTemplate = ai.DeployAgentSystemPrompt
+	}
+
+	return a.runAgentLoop(conversationId, chatMessages, promptTemplate, 50, 15*time.Minute)
+}
+
 // SubmitAskUserResponse sends user's answer back to a waiting ask_user tool call
 func (a *App) SubmitAskUserResponse(conversationId string, answer string) {
 	askUserChannels.Lock()
@@ -455,17 +495,39 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	})
 	defer mcpServer.UnregisterExecTimeoutAsk(conversationId)
 
+	// Determine context window budget (use 90% of configured window, reserve for output)
+	contextBudget := 108000 // default ~90% of 120K
+	if aiConfig.ContextWindow > 0 {
+		contextBudget = aiConfig.ContextWindow * 9 / 10
+	}
+
+	// Accumulate token usage across all rounds
+	var totalUsage ai.TokenUsage
+
+	// Helper to save checkpoint at current state
+	saveCheckpoint := func(round int) {
+		if enableMemory && a.memoryStore != nil {
+			if cpJSON, err := json.Marshal(aiMessages); err == nil {
+				a.memoryStore.SaveCheckpoint(project.ProjectName, conversationId, string(cpJSON), round, promptTemplate)
+			}
+		}
+	}
+
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
-		// Compress old tool results to prevent context window bloat
-		// Keep system prompt + user messages + recent tool interactions intact,
-		// but shorten tool results from rounds older than the last 2
-		if round > 2 {
+		// Smart context window management: estimate tokens and compact if needed
+		estimated := ai.EstimateTokens(aiMessages)
+		if estimated > contextBudget {
+			aiMessages = compactMessages(aiMessages, contextBudget)
+			gologger.Info().Msgf("agent: context compacted from ~%d to ~%d tokens (budget: %d)", estimated, ai.EstimateTokens(aiMessages), contextBudget)
+		} else if round > 2 {
+			// Light compression for older tool results even when under budget
 			compressOldToolResults(aiMessages)
 		}
 
 		// Check if cancelled before each round
 		if ctx.Err() != nil {
+			saveCheckpoint(round)
 			msg := "\n\n⏹️ 操作已被用户停止。"
 			if ctx.Err() == context.DeadlineExceeded {
 				msg = fmt.Sprintf("\n\n⏱️ 操作超时（已执行 %d 轮）。如需更长时间，请在 AI 配置中调整最大工具调用轮次。", round)
@@ -477,6 +539,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        true,
+				"usage":          totalUsage,
 			})
 			return nil
 		}
@@ -490,6 +553,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			return nil
 		})
 		if err != nil {
+			saveCheckpoint(round)
 			if ctx.Err() != nil {
 				msg := "\n\n⏹️ 操作已被用户停止。"
 				if ctx.Err() == context.DeadlineExceeded {
@@ -502,15 +566,22 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				a.emitEvent("ai-chat-complete", map[string]interface{}{
 					"conversationId": conversationId,
 					"success":        true,
+					"usage":          totalUsage,
 				})
 				return nil
 			}
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        false,
+				"usage":          totalUsage,
 			})
 			return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 		}
+
+		// Accumulate token usage
+		totalUsage.PromptTokens += resp.Usage.PromptTokens
+		totalUsage.CompletionTokens += resp.Usage.CompletionTokens
+		totalUsage.TotalTokens += resp.Usage.TotalTokens
 
 		// No tool calls → final answer (already streamed via callback)
 		if len(resp.ToolCalls) == 0 {
@@ -524,6 +595,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        true,
+				"usage":          totalUsage,
 			})
 			return nil
 		}
@@ -536,164 +608,110 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		})
 
 		// Execute each tool call
-		for _, tc := range resp.ToolCalls {
-			var args map[string]interface{}
-			var jsonParseErr error
-			if tc.Function.Arguments != "" {
-				if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
-					// Streaming may produce incomplete JSON for no-arg tools; treat as empty
-					trimmed := strings.TrimSpace(tc.Function.Arguments)
-					if trimmed == "{" || trimmed == "" {
-						args = map[string]interface{}{}
-					} else {
-						jsonParseErr = jsonErr
-						args = map[string]interface{}{}
-					}
-				}
+		// Determine if we can parallelize (multiple calls, none are interactive/write)
+		parallelizable := len(resp.ToolCalls) > 1 && canParallelizeToolCalls(resp.ToolCalls)
+
+		type toolExecResult struct {
+			tc            ai.ToolCall
+			args          map[string]interface{}
+			resultContent string
+			success       bool
+		}
+
+		var execResults []toolExecResult
+
+		if parallelizable {
+			// Parallel execution for independent read-only tools
+			execResults = make([]toolExecResult, len(resp.ToolCalls))
+			var wg sync.WaitGroup
+			for i, tc := range resp.ToolCalls {
+				wg.Add(1)
+				go func(idx int, call ai.ToolCall) {
+					defer wg.Done()
+					res := toolExecResult{tc: call}
+					res.args = parseToolArgs(call)
+					res.resultContent, res.success = a.executeSingleTool(call, res.args, mcpServer, conversationId, ctx)
+					execResults[idx] = res
+				}(i, tc)
 			}
+			wg.Wait()
 
-			a.emitEvent("ai-agent-tool-call", map[string]interface{}{
-				"conversationId": conversationId,
-				"toolCallId":     tc.ID,
-				"toolName":       tc.Function.Name,
-				"toolArgs":       args,
-			})
+			// Emit events for all parallel results
+			for _, res := range execResults {
+				a.emitEvent("ai-agent-tool-call", map[string]interface{}{
+					"conversationId": conversationId,
+					"toolCallId":     res.tc.ID,
+					"toolName":       res.tc.Function.Name,
+					"toolArgs":       res.args,
+				})
 
-			var resultContent string
-			var success bool
-
-			if jsonParseErr != nil {
-				// Report JSON parse failure as tool result so AI knows the root cause
-				resultContent = fmt.Sprintf("工具参数 JSON 解析失败: %v\n原始参数: %s", jsonParseErr, tc.Function.Arguments)
-				success = false
-			} else if tc.Function.Name == "ask_user" {
-				// Special handling: pause loop, emit event, wait for user response
-				question, _ := args["question"].(string)
-				var choices []string
-				if rawChoices, ok := args["choices"].([]interface{}); ok {
-					for _, c := range rawChoices {
-						if s, ok := c.(string); ok {
-							choices = append(choices, s)
-						}
-					}
-				}
-				allowFreeform := true
-				if af, ok := args["allow_freeform"].(bool); ok {
-					allowFreeform = af
+				// Truncate large results
+				content := res.resultContent
+				const maxToolResultLen = 8000
+				if len(content) > maxToolResultLen {
+					content = content[:maxToolResultLen] + "\n\n... (output truncated, total " + fmt.Sprintf("%d", len(content)) + " bytes)"
 				}
 
-				// Create response channel
-				ch := make(chan string, 1)
-				askUserChannels.Lock()
-				askUserChannels.m[conversationId] = ch
-				askUserChannels.Unlock()
-				defer func() {
-					askUserChannels.Lock()
-					delete(askUserChannels.m, conversationId)
-					askUserChannels.Unlock()
-				}()
+				a.emitEvent("ai-agent-tool-result", map[string]interface{}{
+					"conversationId": conversationId,
+					"toolCallId":     res.tc.ID,
+					"toolName":       res.tc.Function.Name,
+					"success":        res.success,
+					"content":        content,
+				})
 
-				// Emit ask_user event to frontend
-				a.emitEvent("ai-agent-ask-user", map[string]interface{}{
+				aiMessages = append(aiMessages, ai.Message{
+					Role:       "tool",
+					Content:    content,
+					ToolCallID: res.tc.ID,
+					Name:       res.tc.Function.Name,
+				})
+			}
+		} else {
+			// Serial execution (original path + retry enhancement)
+			for _, tc := range resp.ToolCalls {
+				args := parseToolArgs(tc)
+
+				a.emitEvent("ai-agent-tool-call", map[string]interface{}{
 					"conversationId": conversationId,
 					"toolCallId":     tc.ID,
-					"question":       question,
-					"choices":        choices,
-					"allowFreeform":  allowFreeform,
+					"toolName":       tc.Function.Name,
+					"toolArgs":       args,
 				})
 
-				// Wait for user response or cancellation
-				select {
-				case answer := <-ch:
-					resultContent = answer
-					success = true
-				case <-ctx.Done():
-					resultContent = "用户未回答，操作已取消"
-					success = false
-				}
-			} else if tc.Function.Name == "update_plan" {
-				// Special handling: emit plan event to frontend + persist to task memory
-				title, _ := args["title"].(string)
-				steps, _ := args["steps"]
-				currentStep := 0
-				if cs, ok := args["current_step"].(float64); ok {
-					currentStep = int(cs)
+				resultContent, success := a.executeSingleTool(tc, args, mcpServer, conversationId, ctx)
+
+				// Truncate large tool results to prevent context window overflow
+				const maxToolResultLen = 8000
+				if len(resultContent) > maxToolResultLen {
+					resultContent = resultContent[:maxToolResultLen] + "\n\n... (output truncated, total " + fmt.Sprintf("%d", len(resultContent)) + " bytes)"
 				}
 
-				// Normalize step field: AI may use "content" instead of "name"
-				if stepsArr, ok := steps.([]interface{}); ok {
-					for _, s := range stepsArr {
-						if stepMap, ok := s.(map[string]interface{}); ok {
-							if _, hasName := stepMap["name"]; !hasName {
-								if content, hasContent := stepMap["content"]; hasContent {
-									stepMap["name"] = content
-								}
-							}
-						}
-					}
-				}
-
-				a.emitEvent("ai-agent-plan", map[string]interface{}{
+				a.emitEvent("ai-agent-tool-result", map[string]interface{}{
 					"conversationId": conversationId,
-					"title":          title,
-					"steps":          steps,
-					"currentStep":    currentStep,
+					"toolCallId":     tc.ID,
+					"toolName":       tc.Function.Name,
+					"success":        success,
+					"content":        resultContent,
 				})
 
-				// Persist task plan to memory store
-				if a.memoryStore != nil {
-					a.mu.Lock()
-					proj := a.project
-					a.mu.Unlock()
-					if proj != nil {
-						planJSON, _ := json.Marshal(args)
-						a.memoryStore.SaveTaskPlan(proj.ProjectName, conversationId, title, string(planJSON))
-					}
-				}
-
-				resultContent = "Plan updated and displayed to user."
-				success = true
-			} else {
-				// Inject conversation ID for exec timeout handling
-				args["_conversation_id"] = conversationId
-				result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
-				delete(args, "_conversation_id")
-				success = execErr == nil
-				if execErr != nil {
-					resultContent = fmt.Sprintf("工具执行失败: %v", execErr)
-				} else if len(result.Content) > 0 {
-					var parts []string
-					for _, item := range result.Content {
-						parts = append(parts, item.Text)
-					}
-					resultContent = strings.Join(parts, "\n")
-				}
+				aiMessages = append(aiMessages, ai.Message{
+					Role:       "tool",
+					Content:    resultContent,
+					ToolCallID: tc.ID,
+					Name:       tc.Function.Name,
+				})
 			}
+		}
 
-			// Truncate large tool results to prevent context window overflow
-			const maxToolResultLen = 8000
-			if len(resultContent) > maxToolResultLen {
-				resultContent = resultContent[:maxToolResultLen] + "\n\n... (output truncated, total " + fmt.Sprintf("%d", len(resultContent)) + " bytes)"
-			}
-
-			a.emitEvent("ai-agent-tool-result", map[string]interface{}{
-				"conversationId": conversationId,
-				"toolCallId":     tc.ID,
-				"toolName":       tc.Function.Name,
-				"success":        success,
-				"content":        resultContent,
-			})
-
-			aiMessages = append(aiMessages, ai.Message{
-				Role:       "tool",
-				Content:    resultContent,
-				ToolCallID: tc.ID,
-				Name:       tc.Function.Name,
-			})
+		// Save checkpoint every 3 rounds for resumption after interruption
+		if round > 0 && round%3 == 0 {
+			saveCheckpoint(round)
 		}
 	}
 
 	// Exceeded max rounds
+	saveCheckpoint(maxRounds)
 	// Extract memories asynchronously
 	if enableMemory && a.memoryStore != nil {
 		go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
@@ -706,6 +724,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	a.emitEvent( "ai-chat-complete", map[string]interface{}{
 		"conversationId": conversationId,
 		"success":        true,
+		"usage":          totalUsage,
 	})
 	return nil
 }
@@ -746,6 +765,262 @@ func compressOldToolResults(messages []ai.Message) {
 			compressed++
 		}
 	}
+}
+
+// compactMessages performs aggressive compression when context exceeds budget.
+// Keeps: system prompt (first msg) + all user messages + last 3 rounds of full interactions.
+// Compresses: older assistant messages to first 200 chars, older tool results to 100 chars.
+func compactMessages(messages []ai.Message, budget int) []ai.Message {
+	if len(messages) <= 4 {
+		return messages
+	}
+
+	// Find boundary: keep last N tool+assistant messages at full length
+	const keepRecentFull = 6 // last ~3 rounds (assistant + tool pairs)
+
+	// Count non-system, non-user messages from the end
+	recentCount := 0
+	boundary := len(messages)
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == "assistant" || messages[i].Role == "tool" {
+			recentCount++
+			if recentCount >= keepRecentFull {
+				boundary = i
+				break
+			}
+		}
+	}
+
+	result := make([]ai.Message, 0, len(messages))
+	for i, m := range messages {
+		if i == 0 && m.Role == "system" {
+			result = append(result, m)
+			continue
+		}
+		if m.Role == "user" {
+			// Keep user messages full (they're usually short)
+			result = append(result, m)
+			continue
+		}
+		if i >= boundary {
+			// Recent messages: keep full
+			result = append(result, m)
+			continue
+		}
+		// Older messages: compress
+		compressed := m
+		switch m.Role {
+		case "assistant":
+			if len(m.Content) > 200 {
+				compressed.Content = m.Content[:200] + "... (compacted)"
+			}
+			// Strip tool_calls detail from old assistant messages
+			if len(m.ToolCalls) > 0 {
+				names := make([]string, len(m.ToolCalls))
+				for j, tc := range m.ToolCalls {
+					names[j] = tc.Function.Name
+				}
+				compressed.Content += fmt.Sprintf(" [called: %s]", strings.Join(names, ", "))
+			}
+		case "tool":
+			if len(m.Content) > 100 {
+				// For failed tools, keep more context
+				if strings.Contains(m.Content, "失败") || strings.Contains(m.Content, "error") || strings.Contains(m.Content, "Error") {
+					if len(m.Content) > 300 {
+						compressed.Content = m.Content[:300] + "... (compacted)"
+					}
+				} else {
+					compressed.Content = m.Content[:100] + "... (compacted)"
+				}
+			}
+		}
+		result = append(result, compressed)
+	}
+
+	return result
+}
+
+// parseToolArgs parses tool call arguments JSON, handling streaming edge cases
+func parseToolArgs(tc ai.ToolCall) map[string]interface{} {
+	args := map[string]interface{}{}
+	if tc.Function.Arguments != "" {
+		if jsonErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); jsonErr != nil {
+			trimmed := strings.TrimSpace(tc.Function.Arguments)
+			if trimmed != "{" && trimmed != "" {
+				args["_parse_error"] = jsonErr.Error()
+				args["_raw_arguments"] = tc.Function.Arguments
+			}
+		}
+	}
+	return args
+}
+
+// canParallelizeToolCalls checks if multiple tool calls can run in parallel.
+// Interactive tools (ask_user, update_plan) and write operations must run serially.
+func canParallelizeToolCalls(calls []ai.ToolCall) bool {
+	for _, tc := range calls {
+		switch tc.Function.Name {
+		case "ask_user", "update_plan",
+			"start_case", "stop_case", "kill_case", "plan_case", "delete_case",
+			"compose_up", "compose_down",
+			"exec_command", "exec_userdata",
+			"save_compose_file", "save_template_files",
+			"pull_template", "delete_template",
+			"schedule_task":
+			return false
+		}
+	}
+	return true
+}
+
+// isRetryableError checks if an error is transient and worth retrying automatically
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	retryablePatterns := []string{
+		"connection refused",
+		"connection reset",
+		"i/o timeout",
+		"broken pipe",
+		"no route to host",
+		"failed to create SSH client",
+		"failed to create SSH session",
+		"dial tcp",
+	}
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// executeSingleTool handles execution of a single tool call with retry for transient errors
+func (a *App) executeSingleTool(tc ai.ToolCall, args map[string]interface{}, mcpServer *mcp.MCPServer, conversationId string, ctx context.Context) (string, bool) {
+	// Check for parse error
+	if parseErr, ok := args["_parse_error"]; ok {
+		raw, _ := args["_raw_arguments"].(string)
+		return fmt.Sprintf("工具参数 JSON 解析失败: %v\n原始参数: %s", parseErr, raw), false
+	}
+
+	if tc.Function.Name == "ask_user" {
+		return a.handleAskUser(args, conversationId, ctx)
+	}
+
+	if tc.Function.Name == "update_plan" {
+		return a.handleUpdatePlan(args, conversationId)
+	}
+
+	// Generic tool execution with auto-retry for transient errors
+	args["_conversation_id"] = conversationId
+	result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
+	delete(args, "_conversation_id")
+
+	if execErr != nil && isRetryableError(execErr) {
+		gologger.Info().Msgf("agent: retrying %s after transient error: %v", tc.Function.Name, execErr)
+		time.Sleep(5 * time.Second)
+		result, execErr = mcpServer.ExecuteTool(tc.Function.Name, args)
+		delete(args, "_conversation_id")
+	}
+
+	if execErr != nil {
+		return fmt.Sprintf("工具执行失败: %v", execErr), false
+	}
+	if len(result.Content) > 0 {
+		var parts []string
+		for _, item := range result.Content {
+			parts = append(parts, item.Text)
+		}
+		return strings.Join(parts, "\n"), true
+	}
+	return "", true
+}
+
+// handleAskUser handles the ask_user tool call
+func (a *App) handleAskUser(args map[string]interface{}, conversationId string, ctx context.Context) (string, bool) {
+	question, _ := args["question"].(string)
+	var choices []string
+	if rawChoices, ok := args["choices"].([]interface{}); ok {
+		for _, c := range rawChoices {
+			if s, ok := c.(string); ok {
+				choices = append(choices, s)
+			}
+		}
+	}
+	allowFreeform := true
+	if af, ok := args["allow_freeform"].(bool); ok {
+		allowFreeform = af
+	}
+
+	ch := make(chan string, 1)
+	askUserChannels.Lock()
+	askUserChannels.m[conversationId] = ch
+	askUserChannels.Unlock()
+	defer func() {
+		askUserChannels.Lock()
+		delete(askUserChannels.m, conversationId)
+		askUserChannels.Unlock()
+	}()
+
+	a.emitEvent("ai-agent-ask-user", map[string]interface{}{
+		"conversationId": conversationId,
+		"toolCallId":     fmt.Sprintf("ask-%d", time.Now().UnixMilli()),
+		"question":       question,
+		"choices":        choices,
+		"allowFreeform":  allowFreeform,
+	})
+
+	select {
+	case answer := <-ch:
+		return answer, true
+	case <-ctx.Done():
+		return "用户未回答，操作已取消", false
+	}
+}
+
+// handleUpdatePlan handles the update_plan tool call
+func (a *App) handleUpdatePlan(args map[string]interface{}, conversationId string) (string, bool) {
+	title, _ := args["title"].(string)
+	steps, _ := args["steps"]
+	currentStep := 0
+	if cs, ok := args["current_step"].(float64); ok {
+		currentStep = int(cs)
+	}
+
+	// Normalize step field: AI may use "content" instead of "name"
+	if stepsArr, ok := steps.([]interface{}); ok {
+		for _, s := range stepsArr {
+			if stepMap, ok := s.(map[string]interface{}); ok {
+				if _, hasName := stepMap["name"]; !hasName {
+					if content, hasContent := stepMap["content"]; hasContent {
+						stepMap["name"] = content
+					}
+				}
+			}
+		}
+	}
+
+	a.emitEvent("ai-agent-plan", map[string]interface{}{
+		"conversationId": conversationId,
+		"title":          title,
+		"steps":          steps,
+		"currentStep":    currentStep,
+	})
+
+	// Persist task plan to memory store
+	if a.memoryStore != nil {
+		a.mu.Lock()
+		proj := a.project
+		a.mu.Unlock()
+		if proj != nil {
+			planJSON, _ := json.Marshal(args)
+			a.memoryStore.SaveTaskPlan(proj.ProjectName, conversationId, title, string(planJSON))
+		}
+	}
+
+	return "Plan updated and displayed to user.", true
 }
 
 func (a *App) gatherRunningCasesInfo() (string, int) {

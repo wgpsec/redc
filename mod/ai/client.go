@@ -109,6 +109,14 @@ type ToolFunctionDef struct {
 type ToolCallResponse struct {
 	Content   string     `json:"content"`
 	ToolCalls []ToolCall `json:"tool_calls"`
+	Usage     TokenUsage `json:"usage"`
+}
+
+// TokenUsage tracks API token consumption
+type TokenUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 // StreamCallback is called for each chunk of the stream
@@ -126,6 +134,9 @@ func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, to
 		"tools":       tools,
 		"tool_choice": "auto",
 		"stream":      true,
+		"stream_options": map[string]interface{}{
+			"include_usage": true,
+		},
 	}
 
 	bodyBytes, err := json.Marshal(reqBody)
@@ -153,6 +164,7 @@ func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, to
 
 	var contentBuilder strings.Builder
 	toolCallMap := make(map[int]*ToolCall) // index → accumulated tool call
+	var usage TokenUsage
 
 	reader := bufio.NewReader(resp.Body)
 	for {
@@ -191,10 +203,25 @@ func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, to
 					} `json:"tool_calls"`
 				} `json:"delta"`
 			} `json:"choices"`
+			Usage *struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+				TotalTokens      int `json:"total_tokens"`
+			} `json:"usage"`
 		}
 		if err := json.Unmarshal(data, &chunk); err != nil {
 			continue
 		}
+
+		// Capture usage from the final chunk (OpenAI sends it with stream_options)
+		if chunk.Usage != nil {
+			usage = TokenUsage{
+				PromptTokens:     chunk.Usage.PromptTokens,
+				CompletionTokens: chunk.Usage.CompletionTokens,
+				TotalTokens:      chunk.Usage.TotalTokens,
+			}
+		}
+
 		if len(chunk.Choices) == 0 {
 			continue
 		}
@@ -242,6 +269,7 @@ func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, to
 	return &ToolCallResponse{
 		Content:   contentBuilder.String(),
 		ToolCalls: toolCalls,
+		Usage:     usage,
 	}, nil
 }
 
@@ -287,6 +315,11 @@ func (c *Client) ChatWithTools(ctx context.Context, messages []Message, tools []
 				ToolCalls []ToolCall `json:"tool_calls"`
 			} `json:"message"`
 		} `json:"choices"`
+		Usage *struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
@@ -296,10 +329,18 @@ func (c *Client) ChatWithTools(ctx context.Context, messages []Message, tools []
 	}
 
 	msg := apiResp.Choices[0].Message
-	return &ToolCallResponse{
+	result := &ToolCallResponse{
 		Content:   msg.Content,
 		ToolCalls: msg.ToolCalls,
-	}, nil
+	}
+	if apiResp.Usage != nil {
+		result.Usage = TokenUsage{
+			PromptTokens:     apiResp.Usage.PromptTokens,
+			CompletionTokens: apiResp.Usage.CompletionTokens,
+			TotalTokens:      apiResp.Usage.TotalTokens,
+		}
+	}
+	return result, nil
 }
 
 // ChatStream sends a chat request and streams the response
@@ -406,7 +447,7 @@ func (c *Client) chatStreamAnthropic(ctx context.Context, messages []Message, ca
 	reqBody := map[string]interface{}{
 		"model":      c.Model,
 		"messages":   userMessages,
-		"max_tokens": 4096,
+		"max_tokens": 8192,
 		"stream":     true,
 	}
 	if systemMsg != "" {
@@ -479,4 +520,42 @@ func (c *Client) chatStreamAnthropic(ctx context.Context, messages []Message, ca
 	}
 
 	return nil
+}
+
+// EstimateTokens estimates token count for a message list.
+// Uses heuristic: Chinese ~1.5 chars/token, ASCII ~4 chars/token, plus per-message overhead.
+func EstimateTokens(messages []Message) int {
+	total := 0
+	for _, m := range messages {
+		total += 4 // per-message overhead (role, separators)
+		total += estimateContentTokens(m.Content)
+		for _, tc := range m.ToolCalls {
+			total += 4 // tool_call overhead
+			total += estimateContentTokens(tc.Function.Name)
+			total += estimateContentTokens(tc.Function.Arguments)
+		}
+	}
+	return total
+}
+
+func estimateContentTokens(s string) int {
+	if s == "" {
+		return 0
+	}
+	chinese := 0
+	ascii := 0
+	for _, r := range s {
+		if r > 127 {
+			chinese++
+		} else {
+			ascii++
+		}
+	}
+	// Chinese chars ~0.67 tokens each, ASCII ~0.25 tokens each
+	tokens := (chinese*2 + 1) / 3
+	tokens += (ascii + 3) / 4
+	if tokens < 1 {
+		tokens = 1
+	}
+	return tokens
 }

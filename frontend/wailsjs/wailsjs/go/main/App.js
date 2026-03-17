@@ -626,6 +626,10 @@ export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
 }
 
+export function ResumeAgentStream(arg1) {
+  return window['go']['main']['App']['ResumeAgentStream'](arg1);
+}
+
 export function RunF8xInstall(arg1, arg2) {
   return window['go']['main']['App']['RunF8xInstall'](arg1, arg2);
 }
@@ -822,8 +826,8 @@ export function UpdateProfile(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateProfile'](arg1, arg2, arg3, arg4);
 }
 
-export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
+  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 
 export function UploadFile(arg1, arg2, arg3) {
