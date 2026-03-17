@@ -33,6 +33,8 @@ export function BuildF8xCommand(arg1:Array<string>):Promise<string>;
 
 export function CancelScheduledTask(arg1:string):Promise<void>;
 
+export function CheckAllUpdates():Promise<main.UpdateCheckResult>;
+
 export function CheckForUpdates():Promise<main.VersionCheckResult>;
 
 export function ClearAgentMemories():Promise<void>;

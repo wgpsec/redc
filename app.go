@@ -417,6 +417,27 @@ type VersionCheckResult struct {
 	Error          string `json:"error"`
 }
 
+// UpdateCheckResult aggregates version checks for redc, templates, and plugins
+type UpdateCheckResult struct {
+	Redc      VersionCheckResult    `json:"redc"`
+	Templates []TemplateUpdateInfo  `json:"templates"`
+	Plugins   []PluginUpdateInfo    `json:"plugins"`
+}
+
+// TemplateUpdateInfo represents a template that may have an update
+type TemplateUpdateInfo struct {
+	Name         string `json:"name"`
+	LocalVersion string `json:"localVersion"`
+	LatestVersion string `json:"latestVersion"`
+	HasUpdate    bool   `json:"hasUpdate"`
+}
+
+// PluginUpdateInfo represents a plugin with its current version
+type PluginUpdateInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 // ProjectInfo represents project information for frontend display
 type ProjectInfo struct {
 	Name       string `json:"name"`

@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, GetResourceSummary, GetBalances, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, CheckAllUpdates, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
@@ -36,11 +36,13 @@
   let resourceSummary = $state([]);
   let balances = $state([]);
   let balancesLoading = $state(false);
-  let bills = $state([]);
-  let billsLoading = $state(false);
   let recentCases = $state([]);
   let loading = $state(true);
   let stopConfirm = $state({ show: false, caseId: null, caseName: '' });
+  
+  // Version check
+  let updateResult = $state(null);
+  let updateLoading = $state(false);
   
   // Real data for templates and projects
   let templateCount = $state(0);
@@ -137,16 +139,15 @@
     }
   }
   
-  async function queryBills() {
-    billsLoading = true;
-    bills = [];
+  async function checkUpdates() {
+    updateLoading = true;
     try {
-      bills = await GetBills(['aws', 'vultr']);
+      updateResult = await CheckAllUpdates();
     } catch (e) {
-      console.error('Failed to load bills:', e);
-      bills = [];
+      console.error('Failed to check updates:', e);
+      updateResult = null;
     } finally {
-      billsLoading = false;
+      updateLoading = false;
     }
   }
   
@@ -321,7 +322,7 @@
   }
 
   function navigateToCreate() {
-    onTabChange('customDeployment');
+    onTabChange('cases');
   }
 
   function navigateToCredentials() {
@@ -459,7 +460,7 @@
       </div>
     </div>
 
-    <!-- Balance + Bill sub-grid under Recent Cases -->
+    <!-- Balance + Version Check sub-grid under Recent Cases -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <!-- Account Balances -->
       <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -500,44 +501,88 @@
         </div>
       </div>
 
-      <!-- Current Month Bill -->
+      <!-- Version Check -->
       <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.currentMonthBill || '当月账单'}</h3>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.versionCheck || '版本检查'}</h3>
           <button 
-            onclick={queryBills}
-            disabled={billsLoading}
+            onclick={checkUpdates}
+            disabled={updateLoading}
             class="h-6 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 text-[10px] font-medium rounded transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1"
           >
-            <svg class="w-3 h-3 {billsLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
-            {billsLoading ? (t.loading || '...') : (t.queryBill || '查询')}
+            <svg class="w-3 h-3 {updateLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+            {updateLoading ? (t.loading || '...') : (t.checkUpdate || '检查')}
           </button>
         </div>
         <div class="px-4 py-3">
-          {#if billsLoading}
+          {#if updateLoading}
             <div class="text-center py-4 text-[12px] text-gray-400">
               {t.loading || '加载中...'}
             </div>
-          {:else if bills.length === 0}
-            <div class="text-center py-2">
-              <div class="text-[12px] text-gray-400">{t.clickToQueryBill || '点击上方按钮查询当月账单'}</div>
-              <div class="mt-1 text-[10px] text-amber-500">{t.billCostWarning || 'AWS Cost Explorer 每次查询约 $0.01'}</div>
+          {:else if !updateResult}
+            <div class="text-center py-4 text-[12px] text-gray-400">
+              {t.clickToCheckUpdate || '点击上方按钮检查版本更新'}
             </div>
           {:else}
             <div class="divide-y divide-gray-50">
-              {#each bills as bill}
+              <!-- RedC version -->
+              <div class="flex items-center justify-between py-1.5">
+                <span class="text-[11px] text-gray-500">RedC</span>
+                {#if updateResult.redc.error}
+                  <span class="text-[10px] text-gray-400">{updateResult.redc.error}</span>
+                {:else if updateResult.redc.hasUpdate}
+                  <span class="text-[11px]">
+                    <span class="text-gray-400">{updateResult.redc.currentVersion}</span>
+                    <span class="text-gray-300 mx-1">→</span>
+                    <span class="text-emerald-600 font-medium">{updateResult.redc.latestVersion}</span>
+                    <span class="ml-1 text-[10px] text-white bg-emerald-500 px-1 py-0.5 rounded">NEW</span>
+                  </span>
+                {:else}
+                  <span class="text-[11px] text-emerald-600">✓ {updateResult.redc.currentVersion}</span>
+                {/if}
+              </div>
+              <!-- Templates -->
+              {#if updateResult.templates && updateResult.templates.length > 0}
+                {@const updatable = updateResult.templates.filter(t => t.hasUpdate)}
                 <div class="flex items-center justify-between py-1.5">
-                  <span class="text-[11px] text-gray-500 uppercase">{bill.provider}</span>
-                  {#if bill.error}
-                    <span class="text-[10px] text-gray-400">{translateError(bill.error)}</span>
+                  <span class="text-[11px] text-gray-500">{t.templates || '模板'}</span>
+                  {#if updatable.length > 0}
+                    <span class="text-[11px]">
+                      <span class="text-amber-600 font-medium">{updatable.length}</span>
+                      <span class="text-gray-400 ml-0.5">{t.updatesAvailable || '个可更新'}</span>
+                    </span>
                   {:else}
-                    <span class="text-[12px] font-medium text-gray-900 tabular-nums">{bill.currency} {bill.totalAmount}</span>
+                    <span class="text-[11px] text-emerald-600">✓ {t.allUpToDate || '全部最新'}</span>
                   {/if}
                 </div>
-              {/each}
-              {#if bills.length > 0 && bills[0].startDate}
-                <div class="pt-1.5">
-                  <span class="text-[10px] text-gray-400">{bills[0].startDate} ~ {bills[0].endDate}</span>
+                {#if updatable.length > 0}
+                  {#each updatable as tmpl}
+                    <div class="flex items-center justify-between py-1 pl-4">
+                      <span class="text-[10px] text-gray-400">{tmpl.name}</span>
+                      <span class="text-[10px]">
+                        <span class="text-gray-400">{tmpl.localVersion}</span>
+                        <span class="text-gray-300 mx-0.5">→</span>
+                        <span class="text-emerald-600">{tmpl.latestVersion}</span>
+                      </span>
+                    </div>
+                  {/each}
+                {/if}
+              {:else}
+                <div class="flex items-center justify-between py-1.5">
+                  <span class="text-[11px] text-gray-500">{t.templates || '模板'}</span>
+                  <span class="text-[11px] text-gray-400">{t.noLocalTemplates || '暂无本地模板'}</span>
+                </div>
+              {/if}
+              <!-- Plugins -->
+              {#if updateResult.plugins && updateResult.plugins.length > 0}
+                <div class="flex items-center justify-between py-1.5">
+                  <span class="text-[11px] text-gray-500">{t.plugins || '插件'}</span>
+                  <span class="text-[11px] text-emerald-600">✓ {t.allUpToDate || '全部最新'}</span>
+                </div>
+              {:else}
+                <div class="flex items-center justify-between py-1.5">
+                  <span class="text-[11px] text-gray-500">{t.plugins || '插件'}</span>
+                  <span class="text-[11px] text-gray-400">{t.noPlugins || '暂无插件'}</span>
                 </div>
               {/if}
             </div>
@@ -547,8 +592,8 @@
     </div>
     </div> <!-- close left column wrapper -->
     
-    <!-- Right column: Network + Quick Links + Resource -->
-    <div class="space-y-3">
+    <!-- Right column: Network + Quick Links -->
+    <div class="flex flex-col gap-3">
       <!-- Network Diagnostics -->
       <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -603,7 +648,7 @@
       </div>
 
       <!-- Quick Links -->
-      <div class="bg-white rounded-xl border border-gray-100 p-4">
+      <div class="bg-white rounded-xl border border-gray-100 p-4 flex-1">
         <h3 class="text-[13px] font-semibold text-gray-900 mb-3">{t.quickLinks || '快捷入口'}</h3>
         <div class="grid grid-cols-2 gap-2">
           <button class="flex items-center gap-2 px-3 py-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick={() => onTabChange('aiChat')}>
@@ -622,33 +667,6 @@
             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
             {t.credentials || '凭据管理'}
           </button>
-        </div>
-      </div>
-
-      <!-- Resource Summary -->
-      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-100">
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.resourceSummary || '资源概览'}</h3>
-        </div>
-        <div class="px-4 py-3">
-          {#if loading}
-            <div class="text-center py-4 text-[12px] text-gray-400">
-              {t.loading || '加载中...'}
-            </div>
-          {:else if resourceSummary.length === 0}
-            <div class="text-center py-4 text-[12px] text-gray-400">
-              {t.noResources || '暂无资源'}
-            </div>
-          {:else}
-            <div class="divide-y divide-gray-50">
-              {#each resourceSummary.slice(0, 8) as resource}
-                <div class="flex items-center justify-between py-1.5">
-                  <span class="text-[11px] text-gray-500">{resource.type}</span>
-                  <span class="text-[12px] font-medium text-gray-900 tabular-nums">{resource.count}</span>
-                </div>
-              {/each}
-            </div>
-          {/if}
         </div>
       </div>
     </div>

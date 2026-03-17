@@ -122,6 +122,86 @@ func compareVersions(current, latest string) int {
 	return 0
 }
 
+// CheckAllUpdates checks for updates of redc itself, templates, and plugins in one call
+func (a *App) CheckAllUpdates() (UpdateCheckResult, error) {
+	result := UpdateCheckResult{}
+
+	// 1. Check redc version
+	redcResult, _ := a.CheckForUpdates()
+	result.Redc = redcResult
+
+	// 2. Check template updates (local vs remote registry)
+	result.Templates = a.checkTemplateUpdates()
+
+	// 3. List installed plugins (version info)
+	result.Plugins = a.checkPluginVersions()
+
+	return result, nil
+}
+
+func (a *App) checkTemplateUpdates() []TemplateUpdateInfo {
+	// Get local templates
+	localTemplates, err := a.ListTemplates()
+	if err != nil {
+		return nil
+	}
+	localMap := make(map[string]string)
+	for _, t := range localTemplates {
+		localMap[t.Name] = t.Version
+	}
+
+	// Fetch remote registry index
+	registryURL := "https://redc.wgpsec.org"
+	client := redc.NewProxyHTTPClient(15 * time.Second)
+	resp, err := client.Get(fmt.Sprintf("%s/index.json?t=%d", registryURL, time.Now().Unix()))
+	if err != nil {
+		gologger.Warning().Msgf("checkTemplateUpdates: failed to fetch registry: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var idx remoteIndexResponse
+	if err := json.NewDecoder(resp.Body).Decode(&idx); err != nil {
+		return nil
+	}
+
+	var updates []TemplateUpdateInfo
+	for name, remote := range idx.Templates {
+		localVer, installed := localMap[name]
+		if !installed {
+			continue
+		}
+		latest := strings.TrimPrefix(remote.Latest, "v")
+		local := strings.TrimPrefix(localVer, "v")
+		hasUpdate := local != "" && latest != "" && compareVersions(local, latest) < 0
+		updates = append(updates, TemplateUpdateInfo{
+			Name:          name,
+			LocalVersion:  localVer,
+			LatestVersion: remote.Latest,
+			HasUpdate:     hasUpdate,
+		})
+	}
+	return updates
+}
+
+func (a *App) checkPluginVersions() []PluginUpdateInfo {
+	plugins, err := a.ListPlugins()
+	if err != nil {
+		return nil
+	}
+	var result []PluginUpdateInfo
+	for _, p := range plugins {
+		result = append(result, PluginUpdateInfo{
+			Name:    p.Name,
+			Version: p.Version,
+		})
+	}
+	return result
+}
+
 func (a *App) SaveProxyConfig(httpProxy, httpsProxy, socks5Proxy, noProxy string) error {
 	// Set environment variables for current process
 	if httpProxy != "" {

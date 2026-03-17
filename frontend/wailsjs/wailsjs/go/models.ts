@@ -578,6 +578,20 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class PluginUpdateInfo {
+	    name: string;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PluginUpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	    }
+	}
 	export class PortForwardInfo {
 	    id: string;
 	    caseId: string;
@@ -756,6 +770,24 @@ export namespace main {
 	        this.installed = source["installed"];
 	    }
 	}
+	export class TemplateUpdateInfo {
+	    name: string;
+	    localVersion: string;
+	    latestVersion: string;
+	    hasUpdate: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateUpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.localVersion = source["localVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.hasUpdate = source["hasUpdate"];
+	    }
+	}
 	export class TemplateValidateDiagnostic {
 	    severity: string;
 	    summary: string;
@@ -874,6 +906,41 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class UpdateCheckResult {
+	    redc: VersionCheckResult;
+	    templates: TemplateUpdateInfo[];
+	    plugins: PluginUpdateInfo[];
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateCheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.redc = this.convertValues(source["redc"], VersionCheckResult);
+	        this.templates = this.convertValues(source["templates"], TemplateUpdateInfo);
+	        this.plugins = this.convertValues(source["plugins"], PluginUpdateInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class WebhookConfig {
 	    enabled: boolean;
 	    slack: string;

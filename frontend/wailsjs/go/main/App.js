@@ -50,6 +50,10 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function CheckAllUpdates() {
+  return window['go']['main']['App']['CheckAllUpdates']();
+}
+
 export function CloneCase(arg1, arg2) {
   return window['go']['main']['App']['CloneCase'](arg1, arg2);
 }

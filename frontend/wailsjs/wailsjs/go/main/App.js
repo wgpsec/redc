@@ -54,6 +54,10 @@ export function CancelScheduledTask(arg1) {
   return window['go']['main']['App']['CancelScheduledTask'](arg1);
 }
 
+export function CheckAllUpdates() {
+  return window['go']['main']['App']['CheckAllUpdates']();
+}
+
 export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
