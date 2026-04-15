@@ -187,6 +187,8 @@ export function GetNotificationEnabled():Promise<boolean>;
 
 export function GetPluginConfig(arg1:string):Promise<string>;
 
+export function GetPluginsDir():Promise<string>;
+
 export function GetPredictedMonthlyCost():Promise<string>;
 
 export function GetProviderRegions(arg1:string):Promise<Array<mod.Region>>;

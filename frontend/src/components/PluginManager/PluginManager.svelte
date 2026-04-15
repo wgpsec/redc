@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListPlugins, InstallPlugin, UninstallPlugin, EnablePlugin, DisablePlugin, UpdatePlugin, GetPluginConfig, SavePluginConfig, FetchPluginRegistry } from '../../../wailsjs/go/main/App.js';
+  import { ListPlugins, InstallPlugin, UninstallPlugin, EnablePlugin, DisablePlugin, UpdatePlugin, GetPluginConfig, SavePluginConfig, FetchPluginRegistry, GetPluginsDir } from '../../../wailsjs/go/main/App.js';
   import { compareVersions } from '../../utils/version.js';
 
   let { t } = $props();
@@ -18,6 +18,7 @@
 
   let configModal = $state({ show: false, plugin: null, config: '', schema: null, saving: false });
   let confirmModal = $state({ show: false, action: '', pluginName: '', message: '' });
+  let pluginsDir = $state('');
 
   const enabledPlugins = $derived(plugins.filter(p => p.enabled));
   const disabledPlugins = $derived(plugins.filter(p => !p.enabled));
@@ -141,7 +142,7 @@
     }
   }
 
-  onMount(() => { loadPlugins(); });
+  onMount(() => { loadPlugins(); GetPluginsDir().then(d => pluginsDir = d).catch(() => {}); });
 
   async function loadRegistry() {
     registryLoading = true;
@@ -271,6 +272,12 @@
       {/if}
     </button>
   </div>
+  {#if pluginsDir}
+    <div class="flex items-center gap-1.5 text-[10px] text-gray-400 -mt-2">
+      <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+      <span class="font-mono select-all">{pluginsDir}</span>
+    </div>
+  {/if}
 
   <!-- Plugin list -->
   <div class="bg-white rounded-xl border border-gray-100">

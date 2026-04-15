@@ -162,6 +162,17 @@ func (a *App) setupPluginHooks(c *redc.Case) {
 	})
 }
 
+// GetPluginsDir returns the base plugins installation directory
+func (a *App) GetPluginsDir() string {
+	if a.pluginMgr != nil {
+		return a.pluginMgr.PluginsDir()
+	}
+	if d, err := plugin.DefaultPluginsDir(); err == nil {
+		return d
+	}
+	return ""
+}
+
 // FetchPluginRegistry fetches available plugins from the remote registry
 func (a *App) FetchPluginRegistry() ([]plugin.RegistryPlugin, error) {
 	index, err := plugin.FetchRegistry("")

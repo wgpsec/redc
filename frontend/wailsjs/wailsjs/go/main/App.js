@@ -350,6 +350,10 @@ export function GetPluginConfig(arg1) {
   return window['go']['main']['App']['GetPluginConfig'](arg1);
 }
 
+export function GetPluginsDir() {
+  return window['go']['main']['App']['GetPluginsDir']();
+}
+
 export function GetPredictedMonthlyCost() {
   return window['go']['main']['App']['GetPredictedMonthlyCost']();
 }
