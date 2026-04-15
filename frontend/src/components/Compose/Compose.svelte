@@ -6,6 +6,8 @@
   import { composeState, initComposeEvents, dismissComposeStatus, onComposeStateChange } from '../../lib/composeState.js';
   import { onMount, onDestroy, tick } from 'svelte';
   import ELK from 'elkjs/lib/elk.bundled.js';
+  import ZoomControls from '../UI/ZoomControls.svelte';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, onTabChange } = $props();
 
@@ -610,10 +612,7 @@
   </div>
 </div>
 
-{#if composeTopoModal}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={() => composeTopoModal = false}>
+<Modal show={composeTopoModal} onclose={() => composeTopoModal = false}>
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[1100px] mx-4 max-h-[90vh] flex flex-col overflow-hidden" onclick={e => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -673,15 +672,7 @@
         <!-- Topology SVG -->
         {#if elkNodes.length > 0}
           <div class="relative">
-            <!-- Zoom controls -->
-            <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur rounded-lg border border-gray-200 shadow-sm px-1 py-0.5">
-              <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors cursor-pointer font-bold text-[14px]" onclick={() => topoZoom = Math.max(0.3, topoZoom - 0.1)}>−</button>
-              <span class="text-[11px] text-gray-500 w-10 text-center">{Math.round(topoZoom * 100)}%</span>
-              <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors cursor-pointer font-bold text-[14px]" onclick={() => topoZoom = Math.min(3, topoZoom + 0.1)}>+</button>
-              <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = 1} title="重置">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-              </button>
-            </div>
+            <ZoomControls bind:zoom={topoZoom} {t} />
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 65vh;"
               onwheel={(e) => { e.preventDefault(); topoZoom = Math.min(3, Math.max(0.3, topoZoom + (e.deltaY > 0 ? -0.08 : 0.08))); }}>
@@ -746,13 +737,9 @@
         </button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
-{#if destroyConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={cancelDestroy}>
+<Modal show={destroyConfirm.show} onclose={cancelDestroy}>
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden" onclick={e => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -785,5 +772,4 @@
         </button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

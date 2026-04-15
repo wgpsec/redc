@@ -1,5 +1,6 @@
 <script>
 
+  import Modal from '../UI/Modal.svelte';
   import { onMount } from 'svelte';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { Environment } from '../../../wailsjs/runtime/runtime.js';
@@ -335,8 +336,7 @@ let {
   </div>
 
   <!-- New Project Modal -->
-  {#if showNewProjectModal}
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible">
+  <Modal show={showNewProjectModal} onclose={() => { showNewProjectModal = false; newProjectName = ''; }}>
       <div class="bg-white rounded-lg p-4 w-64 border border-gray-200">
         <h3 class="text-[13px] font-medium text-gray-900 mb-3">{t.newProject || '新建项目'}</h3>
         <input
@@ -362,8 +362,7 @@ let {
           </button>
         </div>
       </div>
-    </div>
-  {/if}
+  </Modal>
 
   <!-- Footer -->
   <div class="p-2 border-t border-gray-100">

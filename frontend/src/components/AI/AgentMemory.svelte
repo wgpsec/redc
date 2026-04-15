@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Modal from '../UI/Modal.svelte';
   import { GetAgentMemories, DeleteAgentMemory, ClearAgentMemories } from '../../../wailsjs/go/main/App.js';
 
   let { t } = $props();
@@ -140,8 +141,7 @@
 </div>
 
 <!-- Clear confirm modal -->
-{#if showClearConfirm}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+<Modal show={showClearConfirm} onclose={() => showClearConfirm = false}>
     <div class="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
       <h3 class="text-[14px] font-semibold text-gray-900 mb-2">{t.clearConfirmTitle || '确认清空'}</h3>
       <p class="text-[12px] text-gray-600 mb-4">{t.clearConfirmMessage || '确定要清空所有 Agent 记忆吗？此操作不可撤销。'}</p>
@@ -156,5 +156,4 @@
         >{t.confirmClear || '确认清空'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

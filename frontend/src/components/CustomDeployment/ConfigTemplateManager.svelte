@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { ListConfigTemplates, LoadConfigTemplate, DeleteConfigTemplate } from '../../../wailsjs/go/main/App.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, onLoadTemplate } = $props();
   
@@ -105,7 +106,7 @@
       <button 
         class="text-red-400 hover:text-red-600" 
         onclick={() => error = ''}
-        aria-label="关闭错误"
+        aria-label={t.closeError}
       >
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -168,9 +169,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-{#if showDeleteConfirm}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={cancelDelete}>
+<Modal show={showDeleteConfirm} onclose={cancelDelete}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full mx-4" onclick={(e) => e.stopPropagation()}>
       <div class="p-6">
         <div class="flex items-start gap-4">
@@ -219,8 +218,7 @@
         </button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <style>
   /* Component-specific styles */

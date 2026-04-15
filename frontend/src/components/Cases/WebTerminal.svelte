@@ -3,6 +3,7 @@
   import { StartSSHTerminal, WriteToTerminal, ResizeTerminal, CloseTerminal, UploadUserdataScript } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, caseId, caseName, onClose } = $props();
 
@@ -217,8 +218,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
 </svelte:head>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleBackdropClick}>
+<Modal show={true} onclose={handleClose} class="p-4">
   <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-5xl h-[80vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
@@ -265,7 +265,7 @@
         <button
           class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition-colors"
           onclick={handleClose}
-          aria-label="关闭"
+          aria-label={t.close}
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -366,7 +366,7 @@
       </div>
     {/if}
   </div>
-</div>
+</Modal>
 
 <style>
   :global(.xterm) {

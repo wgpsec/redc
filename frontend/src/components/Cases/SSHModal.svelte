@@ -5,6 +5,7 @@
   import WebTerminal from './WebTerminal.svelte';
   import FileManager from './FileManager.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, caseId, caseName, onClose } = $props();
 
@@ -152,8 +153,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleBackdropClick}>
+<Modal show={true} onclose={onClose} class="p-4">
   <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
       <div>
@@ -163,7 +163,7 @@
       <button
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
         onclick={onClose}
-        aria-label="关闭"
+        aria-label={t.close}
       >
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -579,7 +579,7 @@
       {/if}
     </div>
   </div>
-</div>
+</Modal>
 
 <!-- Web Terminal -->
 {#if showTerminal}

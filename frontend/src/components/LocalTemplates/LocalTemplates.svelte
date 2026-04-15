@@ -4,6 +4,7 @@
   import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates, CreateLocalTemplate, DeleteTemplateFile, ValidateTemplate, GetTemplatesDir } from '../../../wailsjs/go/main/App.js';
   import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
+  import Modal from '../UI/Modal.svelte';
 
   // Translation object passed from parent component
 
@@ -605,7 +606,7 @@
   {#if exportMessage}
     <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
       <span class="flex-1">{exportMessage}</span>
-      <button class="text-blue-400 hover:text-blue-600 cursor-pointer" onclick={() => exportMessage = ''} aria-label="close">
+      <button class="text-blue-400 hover:text-blue-600 cursor-pointer" onclick={() => exportMessage = ''} aria-label={t.close}>
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>
@@ -652,7 +653,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="close">
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label={t.close}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>
@@ -840,9 +841,7 @@
 </div>
 
 <!-- Batch Delete Confirmation Modal -->
-{#if batchDeleteConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchDelete}>
+<Modal show={batchDeleteConfirm.show} onclose={cancelBatchDelete}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -871,13 +870,10 @@
         >{t.delete}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Delete Template Confirmation Modal -->
-{#if deleteTemplateConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelDeleteTemplate}>
+<Modal show={deleteTemplateConfirm.show} onclose={cancelDeleteTemplate}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -906,13 +902,10 @@
         >{t.delete}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Clone Template Modal -->
-{#if cloneTemplateModal.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelCloneTemplate}>
+<Modal show={cloneTemplateModal.show} onclose={cancelCloneTemplate}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -945,13 +938,10 @@
         >{t.cloneTemplate}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Template Detail Drawer -->
-{#if localTemplateDetail}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex justify-end z-50" onclick={closeTemplateDetail}>
+<Modal show={!!localTemplateDetail} onclose={closeTemplateDetail} class="!justify-end !items-stretch">
     <div class="w-full max-w-2xl bg-white h-full overflow-auto shadow-xl" onclick={(e) => e.stopPropagation()}>
       <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div>
@@ -961,7 +951,7 @@
         <button 
           class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           onclick={closeTemplateDetail}
-          aria-label="关闭详情"
+          aria-label={t.closeDetail}
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1073,13 +1063,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Template Editor Modal -->
-{#if templateEditor.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={closeTemplateEditor}>
+<Modal show={templateEditor.show} onclose={closeTemplateEditor} class="p-4">
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-6xl w-full h-[85vh] overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
@@ -1182,13 +1169,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Create Template Dialog -->
-{#if createTemplateDialog.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelCreateTemplate}>
+<Modal show={createTemplateDialog.show} onclose={cancelCreateTemplate}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-4">
@@ -1269,13 +1253,10 @@
         >{createTemplateDialog.loading ? t.loading : (t.create || '创建')}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Delete File Confirmation Modal -->
-{#if deleteFileConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] overflow-visible" onclick={cancelDeleteFile}>
+<Modal show={deleteFileConfirm.show} onclose={cancelDeleteFile} zIndex={60}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -1304,13 +1285,10 @@
         >{t.delete}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Template Validation Result Modal -->
-{#if validateResult.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] overflow-visible" onclick={closeValidateResult}>
+<Modal show={validateResult.show} onclose={closeValidateResult} zIndex={60}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-lg w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-4">
@@ -1392,5 +1370,4 @@
         </div>
       {/if}
     </div>
-  </div>
-{/if}
+</Modal>

@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { GetF8xCatalog, GetF8xCategories, GetF8xPresets, BuildF8xCommand, RefreshF8xCatalog } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, onTabChange } = $props();
 
@@ -193,7 +194,7 @@
       {#if catalogSource}
         <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">{catalogSource}</span>
       {/if}
-      <button onclick={refreshCatalog} disabled={refreshing} class="text-[11px] text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40" title="刷新在线目录">
+      <button onclick={refreshCatalog} disabled={refreshing} class="text-[11px] text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40" title={t.refreshOnlineCatalog}>
         {refreshing ? '⟳...' : '⟳'}
       </button>
       <button onclick={() => BrowserOpenURL('https://github.com/ffffffff0x/f8x')} class="text-[11px] text-gray-400 hover:text-red-500 transition-colors">
@@ -210,7 +211,7 @@
         <span class="text-[12px] text-red-700">{catalogError}</span>
       </div>
       <button onclick={refreshCatalog} disabled={refreshing} class="text-[11px] px-3 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 disabled:opacity-40 transition-colors">
-        {refreshing ? '⟳...' : '⟳ 重试'}
+        {refreshing ? '⟳...' : `⟳ ${t.retry}`}
       </button>
     </div>
   {/if}
@@ -353,9 +354,7 @@
 </div>
 
 <!-- Install Confirm Dialog -->
-{#if installConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => installConfirm = { show: false, mod: null }}>
+<Modal show={installConfirm.show} onclose={() => installConfirm = { show: false, mod: null }}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -384,13 +383,10 @@
         >{t.f8xInstall || '安装'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- SSH Session Picker Modal -->
-{#if sessionPicker.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => sessionPicker = { show: false, flags: [], toolName: '' }}>
+<Modal show={sessionPicker.show} onclose={() => sessionPicker = { show: false, flags: [], toolName: '' }}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-md w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-4">
@@ -455,5 +451,4 @@
         >{t.cancel || '取消'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

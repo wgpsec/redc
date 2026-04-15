@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ListPlugins, InstallPlugin, UninstallPlugin, EnablePlugin, DisablePlugin, UpdatePlugin, GetPluginConfig, SavePluginConfig, FetchPluginRegistry, GetPluginsDir } from '../../../wailsjs/go/main/App.js';
   import { compareVersions } from '../../utils/version.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t } = $props();
 
@@ -479,8 +480,7 @@
 </div>
 
 <!-- Config Modal -->
-{#if configModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false, formValues: {}, useForm: false }}>
+<Modal show={configModal.show} onclose={() => configModal = { show: false, plugin: null, config: '', schema: null, saving: false, formValues: {}, useForm: false }}>
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4" onclick={(e) => e.stopPropagation()}>
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[13px] font-medium text-gray-900">{t.pluginConfig || '插件配置'} — {configModal.plugin?.name}</h3>
@@ -555,12 +555,10 @@
         >{configModal.saving ? (t.saving || '保存中...') : (t.save || '保存')}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Confirm Modal -->
-{#if confirmModal.show}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => confirmModal = { show: false, action: '', pluginName: '', message: '' }}>
+<Modal show={confirmModal.show} onclose={() => confirmModal = { show: false, action: '', pluginName: '', message: '' }}>
     <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4" onclick={(e) => e.stopPropagation()}>
       <div class="p-5 text-center">
         <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
@@ -579,5 +577,4 @@
         >{t.pluginConfirmBtn || '确认卸载'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

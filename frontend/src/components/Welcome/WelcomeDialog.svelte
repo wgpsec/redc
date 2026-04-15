@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SetShowWelcomeDialog } from '../../../wailsjs/go/main/App.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, show = false, onClose } = $props();
   
@@ -41,17 +42,7 @@
   }
 </script>
 
-{#if show}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <!-- Backdrop -->
-    <div 
-      class="absolute inset-0 bg-black/50"
-      onclick={handleClose}
-      onkeydown={(e) => e.key === 'Escape' && handleClose()}
-      role="button"
-      tabindex="0"
-    ></div>
-    
+<Modal show={show} onclose={handleClose}>
     <!-- Dialog -->
     <div class="relative bg-white rounded-xl border border-gray-100 max-w-md w-full mx-4 overflow-hidden">
       <!-- Header -->
@@ -193,5 +184,4 @@
         {/if}
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

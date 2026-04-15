@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { onToastChange, getToasts, removeToast } from '../../lib/toast.js';
+  import { i18n as i18nStrings } from '../../lib/i18n.js';
 
   let toasts = $state(getToasts());
   let unsubscribe = null;
@@ -37,7 +38,7 @@
         <button
           class="flex-shrink-0 p-0.5 rounded hover:bg-black/5 transition-colors cursor-pointer {s.text} opacity-50 hover:opacity-100"
           onclick={() => removeToast(t.id)}
-          aria-label="Close"
+          aria-label={i18nStrings.zh.close}
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

@@ -5,6 +5,8 @@
   import SSHModal from '../Cases/SSHModal.svelte';
   import ScheduleDialog from '../Cases/ScheduleDialog.svelte';
   import ELK from 'elkjs/lib/elk.bundled.js';
+  import ZoomControls from '../UI/ZoomControls.svelte';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, onSelectDeployment = () => {}, onRefresh = () => {}, onTabChange = () => {} } = $props();
 
@@ -939,7 +941,7 @@
                     <button 
                       class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       onclick={() => showScheduleDialog(deployment.id, deployment.name, 'start')}
-                      title="定时启动"
+                      title={t.scheduleStart}
                     >
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -953,7 +955,7 @@
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
                       onclick={() => showSSHModal(deployment.id, deployment.name)}
-                      title="SSH 运维"
+                      title={t.sshOps}
                     >
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
@@ -963,7 +965,7 @@
                     <button 
                       class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
                       onclick={() => showScheduleDialog(deployment.id, deployment.name, 'stop')}
-                      title="定时停止"
+                      title={t.scheduleStop}
                     >
                       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1136,9 +1138,7 @@
 </style>
 
 <!-- Batch Delete Confirmation Modal -->
-{#if batchDeleteConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchDelete}>
+<Modal show={batchDeleteConfirm.show} onclose={cancelBatchDelete}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -1167,13 +1167,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Stop Confirmation Modal -->
-{#if stopConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelStop}>
+<Modal show={stopConfirm.show} onclose={cancelStop}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -1202,13 +1199,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Batch Stop Confirmation Modal -->
-{#if batchStopConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchStop}>
+<Modal show={batchStopConfirm.show} onclose={cancelBatchStop}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -1237,13 +1231,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Single Delete Confirmation Modal -->
-{#if deleteConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelDelete}>
+<Modal show={deleteConfirm.show} onclose={cancelDelete}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -1272,13 +1263,10 @@
         </div>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Plan Preview Modal -->
-{#if planPreviewModal.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}>
+<Modal show={planPreviewModal.show} onclose={() => planPreviewModal = { ...planPreviewModal, show: false }}>
     <div class="bg-white rounded-2xl shadow-2xl border border-gray-200 w-[92vw] max-w-[1100px] max-h-[90vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -1403,19 +1391,7 @@
           <!-- Topology SVG -->
           {#if elkNodes.length > 0}
             <div class="relative">
-              <!-- Zoom controls -->
-              <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur rounded-lg border border-gray-200 shadow-sm px-1 py-0.5">
-                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.max(0.3, topoZoom - 0.15)} title="缩小">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M5 12h14" /></svg>
-                </button>
-                <span class="text-[11px] text-gray-400 min-w-[36px] text-center">{Math.round(topoZoom * 100)}%</span>
-                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.min(3, topoZoom + 0.15)} title="放大">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14m-7-7h14" /></svg>
-                </button>
-                <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = 1} title="重置">
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-                </button>
-              </div>
+              <ZoomControls bind:zoom={topoZoom} {t} />
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 65vh;"
                 onwheel={(e) => { e.preventDefault(); topoZoom = Math.min(3, Math.max(0.3, topoZoom + (e.deltaY > 0 ? -0.08 : 0.08))); }}>
@@ -1483,13 +1459,9 @@
         {/if}
       </div>
     </div>
-  </div>
-{/if}
-
+</Modal>
 <!-- Clone Dialog -->
-{#if cloneDialog.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelClone}>
+<Modal show={cloneDialog.show} onclose={cancelClone}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-4">
@@ -1524,8 +1496,7 @@
         >{t.clone || '克隆'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Clone Loading Toast -->
 {#if cloneLoading}

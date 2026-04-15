@@ -8,6 +8,8 @@
   import ScheduleDialog from './ScheduleDialog.svelte';
   // import ScheduledTasksManager from './ScheduledTasksManager.svelte'; // Moved to TaskCenter
   import ELK from 'elkjs/lib/elk.bundled.js';
+  import ZoomControls from '../UI/ZoomControls.svelte';
+  import Modal from '../UI/Modal.svelte';
 
 let { t, onTabChange = () => {} } = $props();
   let cases = $state([]);
@@ -1082,7 +1084,7 @@ let { t, onTabChange = () => {} } = $props();
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误">
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label={t.closeError}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -1225,7 +1227,7 @@ let { t, onTabChange = () => {} } = $props();
           <div class="text-[12px] text-amber-700 mt-0.5">{costEstimateError}</div>
           <div class="text-[11px] text-amber-600 mt-1">{t.costEstimateErrorHint}</div>
         </div>
-        <button class="text-amber-400 hover:text-amber-600 cursor-pointer" onclick={() => costEstimateError = ''} aria-label="关闭提示">
+        <button class="text-amber-400 hover:text-amber-600 cursor-pointer" onclick={() => costEstimateError = ''} aria-label={t.closeTip}>
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -1270,7 +1272,7 @@ let { t, onTabChange = () => {} } = $props();
             <button 
               class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0 cursor-pointer"
               onclick={dismissPersistentError}
-              title="关闭"
+              title={t.close}
             >
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1292,7 +1294,7 @@ let { t, onTabChange = () => {} } = $props();
         <button
           class="absolute right-2 top-2 text-amber-400 hover:text-amber-600 cursor-pointer"
           onclick={dismissTerraformInitHint}
-          aria-label="close"
+          aria-label={t.close}
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1800,149 +1802,135 @@ let { t, onTabChange = () => {} } = $props();
 </div>
 
 <!-- Delete Confirmation Modal -->
-{#if deleteConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelDelete}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <div class="px-6 py-5">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmDelete}</h3>
-            <p class="text-[13px] text-gray-500">{t.cannotUndo}</p>
-          </div>
+<Modal show={deleteConfirm.show} onclose={cancelDelete}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
         </div>
-        <p class="text-[13px] text-gray-600">
-          {t.confirmDeleteScene} <span class="font-medium text-gray-900">"{deleteConfirm.caseName}"</span>?
-        </p>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmDelete}</h3>
+          <p class="text-[13px] text-gray-500">{t.cannotUndo}</p>
+        </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-          onclick={cancelDelete}
-        >{t.cancel}</button>
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          onclick={confirmDelete}
-        >{t.delete}</button>
-      </div>
+      <p class="text-[13px] text-gray-600">
+        {t.confirmDeleteScene} <span class="font-medium text-gray-900">"{deleteConfirm.caseName}"</span>?
+      </p>
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelDelete}
+      >{t.cancel}</button>
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+        onclick={confirmDelete}
+      >{t.delete}</button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Batch Delete Confirmation Modal -->
-{#if batchDeleteConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchDelete}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <div class="px-6 py-5">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchDelete}</h3>
-            <p class="text-[13px] text-gray-500">{t.cannotUndo}</p>
-          </div>
+<Modal show={batchDeleteConfirm.show} onclose={cancelBatchDelete}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
         </div>
-        <p class="text-[13px] text-gray-600">
-          {t.confirmBatchDeleteMessage} <span class="font-medium text-gray-900">{batchDeleteConfirm.count}</span> {t.scenes}?
-        </p>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchDelete}</h3>
+          <p class="text-[13px] text-gray-500">{t.cannotUndo}</p>
+        </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-          onclick={cancelBatchDelete}
-        >{t.cancel}</button>
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          onclick={confirmBatchDelete}
-        >{t.delete}</button>
-      </div>
+      <p class="text-[13px] text-gray-600">
+        {t.confirmBatchDeleteMessage} <span class="font-medium text-gray-900">{batchDeleteConfirm.count}</span> {t.scenes}?
+      </p>
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelBatchDelete}
+      >{t.cancel}</button>
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+        onclick={confirmBatchDelete}
+      >{t.delete}</button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Batch Stop Confirmation Modal -->
-{#if batchStopConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchStop}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <div class="px-6 py-5">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchStop}</h3>
-            <p class="text-[13px] text-gray-500">{t.stopWarning}</p>
-          </div>
+<Modal show={batchStopConfirm.show} onclose={cancelBatchStop}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
         </div>
-        <p class="text-[13px] text-gray-600">
-          {t.confirmBatchStopMessage} <span class="font-medium text-gray-900">{batchStopConfirm.count}</span> {t.scenes}?
-        </p>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmBatchStop}</h3>
+          <p class="text-[13px] text-gray-500">{t.stopWarning}</p>
+        </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-          onclick={cancelBatchStop}
-        >{t.cancel}</button>
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-          onclick={confirmBatchStop}
-        >{t.stop}</button>
-      </div>
+      <p class="text-[13px] text-gray-600">
+        {t.confirmBatchStopMessage} <span class="font-medium text-gray-900">{batchStopConfirm.count}</span> {t.scenes}?
+      </p>
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelBatchStop}
+      >{t.cancel}</button>
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+        onclick={confirmBatchStop}
+      >{t.stop}</button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Stop Confirmation Modal -->
-{#if stopConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelStop}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <div class="px-6 py-5">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmStop}</h3>
-            <p class="text-[13px] text-gray-500">{t.stopWarning}</p>
-          </div>
+<Modal show={stopConfirm.show} onclose={cancelStop}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
         </div>
-        <p class="text-[13px] text-gray-600">
-          {t.confirmStopScene} <span class="font-medium text-gray-900">"{stopConfirm.caseName}"</span>?
-        </p>
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmStop}</h3>
+          <p class="text-[13px] text-gray-500">{t.stopWarning}</p>
+        </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-          onclick={cancelStop}
-        >{t.cancel}</button>
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-          onclick={confirmStop}
-        >{t.stop}</button>
-      </div>
+      <p class="text-[13px] text-gray-600">
+        {t.confirmStopScene} <span class="font-medium text-gray-900">"{stopConfirm.caseName}"</span>?
+      </p>
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelStop}
+      >{t.cancel}</button>
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+        onclick={confirmStop}
+      >{t.stop}</button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Cost Estimate Modal -->
-{#if showCostEstimate && costEstimate}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={() => showCostEstimate = false}>
+<Modal show={showCostEstimate && costEstimate} onclose={() => showCostEstimate = false}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-2xl w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="px-6 py-5 border-b border-gray-100">
@@ -2014,8 +2002,7 @@ let { t, onTabChange = () => {} } = $props();
         >{t.close}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- SSH Operations Modal -->
 {#if sshModal.show}
@@ -2042,9 +2029,8 @@ let { t, onTabChange = () => {} } = $props();
 {/if}
 
 <!-- Plan Preview Topology Modal -->
-{#if planPreviewModal.show}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}>
-    <div class="bg-white rounded-xl border border-gray-100 shadow-2xl w-[92vw] max-w-[1100px] max-h-[90vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
+<Modal show={planPreviewModal.show} onclose={() => planPreviewModal = { ...planPreviewModal, show: false }}>
+  <div class="bg-white rounded-xl border border-gray-100 shadow-2xl w-[92vw] max-w-[1100px] max-h-[90vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div class="flex items-center gap-2">
@@ -2165,19 +2151,7 @@ let { t, onTabChange = () => {} } = $props();
           <!-- Topology SVG -->
           {#if elkNodes.length > 0}
             <div class="relative">
-              <!-- Zoom controls -->
-              <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur rounded-lg border border-gray-200 shadow-sm px-1 py-0.5">
-                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.max(0.3, topoZoom - 0.15)} title="缩小">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M5 12h14" /></svg>
-                </button>
-                <span class="text-[11px] text-gray-400 min-w-[36px] text-center">{Math.round(topoZoom * 100)}%</span>
-                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.min(3, topoZoom + 0.15)} title="放大">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14m-7-7h14" /></svg>
-                </button>
-                <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = 1} title="重置">
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
-                </button>
-              </div>
+              <ZoomControls bind:zoom={topoZoom} {t} />
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 65vh;"
                 onwheel={(e) => { e.preventDefault(); topoZoom = Math.min(3, Math.max(0.3, topoZoom + (e.deltaY > 0 ? -0.08 : 0.08))); }}>
@@ -2246,8 +2220,7 @@ let { t, onTabChange = () => {} } = $props();
         {/if}
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Spot Terminated Toast -->
 {#if spotTerminatedToast.show}
@@ -2302,45 +2275,42 @@ let { t, onTabChange = () => {} } = $props();
 {/if}
 
 <!-- Clone Dialog -->
-{#if cloneDialog.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelClone}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <div class="px-6 py-5">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-            <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">{t.cloneCase || '克隆场景'}</h3>
-            <p class="text-[13px] text-gray-500">{cloneDialog.sourceName}</p>
-          </div>
+<Modal show={cloneDialog.show} onclose={cancelClone}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+    <div class="px-6 py-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+          </svg>
         </div>
-        <label class="block text-[13px] font-medium text-gray-700 mb-1.5">{t.sceneName || '场景名称'}</label>
-        <input
-          type="text"
-          class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-          bind:value={cloneDialog.caseName}
-          onkeydown={(e) => { if (e.key === 'Enter' && cloneDialog.caseName.trim()) confirmClone(); }}
-          autofocus
-        />
+        <div>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.cloneCase || '克隆场景'}</h3>
+          <p class="text-[13px] text-gray-500">{cloneDialog.sourceName}</p>
+        </div>
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-          onclick={cancelClone}
-        >{t.cancel}</button>
-        <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          onclick={confirmClone}
-          disabled={!cloneDialog.caseName.trim()}
-        >{t.clone || '克隆'}</button>
-      </div>
+      <label class="block text-[13px] font-medium text-gray-700 mb-1.5">{t.sceneName || '场景名称'}</label>
+      <input
+        type="text"
+        class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+        bind:value={cloneDialog.caseName}
+        onkeydown={(e) => { if (e.key === 'Enter' && cloneDialog.caseName.trim()) confirmClone(); }}
+        autofocus
+      />
+    </div>
+    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+        onclick={cancelClone}
+      >{t.cancel}</button>
+      <button 
+        class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        onclick={confirmClone}
+        disabled={!cloneDialog.caseName.trim()}
+      >{t.clone || '克隆'}</button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Clone Loading Overlay -->
 {#if cloneLoading}

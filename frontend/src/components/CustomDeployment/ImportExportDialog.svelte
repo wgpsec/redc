@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ExportConfigTemplate, ImportConfigTemplate } from '../../../wailsjs/go/main/App.js';
   import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, show = false, mode = 'export', templateName = '', onClose, onImported } = $props();
   
@@ -148,10 +149,7 @@
   }
 </script>
 
-{#if show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick={handleCancel}>
-    <!-- svelte-ignore a11y_interactive_supports_focus -->
+<Modal show={show} onclose={handleCancel}>
     <div class="bg-white rounded-lg border border-gray-200 max-w-md w-full mx-4" onclick={(e) => e.stopPropagation()} onkeydown={handleKeydown} role="dialog" aria-modal="true">
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -162,7 +160,7 @@
           class="text-gray-400 hover:text-gray-600 transition-colors"
           onclick={handleCancel}
           disabled={isProcessing}
-          aria-label="关闭"
+          aria-label={t.close}
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -181,7 +179,7 @@
             <button 
               class="text-red-400 hover:text-red-600" 
               onclick={() => error = ''}
-              aria-label="关闭错误"
+              aria-label={t.closeError}
             >
               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -305,8 +303,7 @@
         </button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <style>
   /* Component-specific styles */

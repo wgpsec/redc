@@ -3,6 +3,7 @@
   import { StartSSHTerminal, StartSSHTerminalInstance, StartSSHTerminalDirect, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, GetSSHInfosForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import FileManager from '../Cases/FileManager.svelte';
+  import Modal from '../UI/Modal.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
 
   let { t, onTabChange } = $props();
@@ -577,7 +578,7 @@
               class="ml-1 w-4 h-4 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 cursor-pointer flex-shrink-0"
               role="button"
               tabindex="0"
-              aria-label="Close session"
+              aria-label={t.close}
               onclick={(e) => { e.stopPropagation(); closeSession(i); }}
               onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); closeSession(i); } }}
             >
@@ -896,13 +897,7 @@
 </div>
 
 <!-- New session dialog -->
-{#if showNewSessionDialog}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    onclick={(e) => { if (e.target === e.currentTarget) showNewSessionDialog = false; }}
-    onkeydown={(e) => { if (e.key === 'Escape') showNewSessionDialog = false; }}
-  >
+<Modal show={showNewSessionDialog} onclose={() => showNewSessionDialog = false}>
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-md p-5 shadow-2xl">
       <h3 class="text-[15px] font-semibold text-gray-900 mb-3">{t.sshNewSession || '新建会话'}</h3>
 
@@ -1147,8 +1142,7 @@
         </div>
       {/if}
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- File Manager Modal -->
 {#if showFileManagerModal && activeSession}
@@ -1156,13 +1150,7 @@
 {/if}
 
 <!-- Close All Confirmation -->
-{#if showCloseAllConfirm}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-    onclick={(e) => { if (e.target === e.currentTarget) showCloseAllConfirm = false; }}
-    onkeydown={(e) => { if (e.key === 'Escape') showCloseAllConfirm = false; }}
-  >
+<Modal show={showCloseAllConfirm} onclose={() => showCloseAllConfirm = false}>
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-xs p-5 shadow-2xl">
       <div class="flex items-center gap-3 mb-3">
         <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -1184,8 +1172,7 @@
         >{t.confirm || '确定'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <style>
   .ssh-terminal-container :global(.xterm) {

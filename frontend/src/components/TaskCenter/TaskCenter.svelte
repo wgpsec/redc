@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import Modal from '../UI/Modal.svelte';
   import { ListAllScheduledTasks, ListCases, ScheduleTaskFull, CancelScheduledTask } from '../../../wailsjs/go/main/App.js';
 
   let { t } = $props();
@@ -411,10 +412,8 @@
 </div>
 
 <!-- Create Task Modal -->
-{#if showCreateForm}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={(e) => { if (e.target === e.currentTarget) showCreateForm = false; }}>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onclick={(e) => e.stopPropagation()}>
+<Modal show={showCreateForm} onclose={() => showCreateForm = false} class="p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{t.taskCreate || '创建定时任务'}</h3>
         <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 cursor-pointer" onclick={() => showCreateForm = false}>
@@ -566,14 +565,11 @@
         </button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Cancel Confirmation Modal -->
-{#if cancelConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => cancelConfirm = { show: false, taskId: null, taskName: '' }}>
-    <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4" onclick={(e) => e.stopPropagation()}>
+<Modal show={cancelConfirm.show} onclose={() => cancelConfirm = { show: false, taskId: null, taskName: '' }}>
+    <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4">
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -592,14 +588,11 @@
         <button class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 cursor-pointer" onclick={confirmCancel}>{t.confirm || '确认'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Result Modal -->
-{#if resultModal.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={() => resultModal = { show: false, result: '', title: '' }}>
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
+<Modal show={resultModal.show} onclose={() => resultModal = { show: false, result: '', title: '' }} class="p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{resultModal.title}</h3>
         <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 cursor-pointer" onclick={() => resultModal = { show: false, result: '', title: '' }}>
@@ -610,5 +603,4 @@
         <pre class="text-[12px] font-mono text-gray-800 bg-gray-50 rounded-lg p-4 whitespace-pre-wrap break-all">{resultModal.result || '(empty)'}</pre>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

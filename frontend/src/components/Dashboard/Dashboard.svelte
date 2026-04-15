@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ListCases, GetResourceSummary, GetBalances, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, CheckAllUpdates, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, onTabChange = () => {} } = $props();
 
@@ -783,9 +784,7 @@
   </div>
 </div>
 
-{#if stopConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => stopConfirm = { show: false, caseId: null, caseName: '' }}>
+<Modal show={stopConfirm.show} onclose={() => stopConfirm = { show: false, caseId: null, caseName: '' }}>
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -812,5 +811,4 @@
         >{t.stop || '停止'}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

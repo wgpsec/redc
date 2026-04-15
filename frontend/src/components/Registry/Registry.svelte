@@ -1,6 +1,7 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
+  import Modal from '../UI/Modal.svelte';
   import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme, GetLanguage } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
@@ -509,7 +510,7 @@ let { t } = $props();
         <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
       {/if}
       <span class="flex-1 truncate">{registryNotice.message}</span>
-      <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={() => setRegistryNotice('', '')} aria-label="close">
+      <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={() => setRegistryNotice('', '')} aria-label={t.close}>
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>
@@ -521,7 +522,7 @@ let { t } = $props();
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
       <span class="text-[13px] text-red-700 flex-1">{registryError}</span>
-      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => registryError = ''} aria-label="close">
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => registryError = ''} aria-label={t.close}>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>
@@ -687,9 +688,7 @@ let { t } = $props();
 </div>
 
 <!-- Batch Pull Confirmation Modal -->
-{#if batchPullConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchPull}>
+<Modal show={batchPullConfirm.show} onclose={cancelBatchPull} class="overflow-visible">
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -718,13 +717,10 @@ let { t } = $props();
         >{t.pull}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
 <!-- Batch Update Confirmation Modal -->
-{#if batchUpdateConfirm.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchUpdate}>
+<Modal show={batchUpdateConfirm.show} onclose={cancelBatchUpdate} class="overflow-visible">
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -753,13 +749,9 @@ let { t } = $props();
         >{t.update}</button>
       </div>
     </div>
-  </div>
-{/if}
+</Modal>
 
-{#if readmeModal.show}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={closeReadmeModal} role="dialog" aria-modal="true" aria-labelledby="readme-modal-title" tabindex="-1">
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<Modal show={readmeModal.show} onclose={closeReadmeModal} class="overflow-visible">
     <div class="bg-white rounded-xl border border-gray-200 shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
@@ -788,5 +780,4 @@ let { t } = $props();
         {/if}
       </div>
     </div>
-  </div>
-{/if}
+</Modal>

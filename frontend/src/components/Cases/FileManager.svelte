@@ -9,6 +9,7 @@
     DownloadFile
   } from '../../../wailsjs/go/main/App.js';
   import { selectFile, selectDirectory } from '../../lib/file-dialog.js';
+  import Modal from '../UI/Modal.svelte';
 
   let { t, caseId, caseName, onClose } = $props();
 
@@ -193,18 +194,11 @@
       else onClose();
     }
   }
-
-  function handleBackdropClick(e) {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onclick={handleBackdropClick}>
+<Modal show={true} onclose={onClose} class="p-4">
   <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
@@ -222,7 +216,7 @@
       <button
         class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
         onclick={onClose}
-        aria-label="关闭"
+        aria-label={t.close}
       >
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -237,7 +231,7 @@
           class="px-3 py-1.5 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
           onclick={navigateUp}
           disabled={currentPath === '/'}
-          aria-label="返回上级目录"
+          aria-label={t.goBack}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -270,7 +264,7 @@
         <button
           class="px-3 py-1.5 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           onclick={loadFiles}
-          aria-label="刷新文件列表"
+          aria-label={t.refreshFileList}
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -286,7 +280,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         <span class="text-[12px] text-red-700 flex-1">{error}</span>
-        <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误">
+        <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label={t.closeError}>
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -427,102 +421,93 @@
       {/if}
     </div>
   </div>
-</div>
+</Modal>
 
 <!-- New Folder Dialog -->
-{#if showNewFolderDialog}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showNewFolderDialog = false}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
-      <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.newFolder || '新建文件夹'}</h3>
-      <!-- svelte-ignore a11y_autofocus -->
-      <input
-        type="text"
-        class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
-        placeholder={t.folderName || '文件夹名称'}
-        bind:value={newFolderName}
-        onkeydown={(e) => { if (e.key === 'Enter') handleCreateFolder(); }}
-        autofocus
-      />
-      <div class="flex items-center justify-end gap-2 mt-4">
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          onclick={() => { showNewFolderDialog = false; newFolderName = ''; }}
-        >
-          {t.cancel || '取消'}
-        </button>
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-          onclick={handleCreateFolder}
-          disabled={!newFolderName.trim()}
-        >
-          {t.create || '创建'}
-        </button>
-      </div>
+<Modal show={showNewFolderDialog} onclose={() => showNewFolderDialog = false} zIndex={60}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.newFolder || '新建文件夹'}</h3>
+    <!-- svelte-ignore a11y_autofocus -->
+    <input
+      type="text"
+      class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+      placeholder={t.folderName || '文件夹名称'}
+      bind:value={newFolderName}
+      onkeydown={(e) => { if (e.key === 'Enter') handleCreateFolder(); }}
+      autofocus
+    />
+    <div class="flex items-center justify-end gap-2 mt-4">
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        onclick={() => { showNewFolderDialog = false; newFolderName = ''; }}
+      >
+        {t.cancel || '取消'}
+      </button>
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+        onclick={handleCreateFolder}
+        disabled={!newFolderName.trim()}
+      >
+        {t.create || '创建'}
+      </button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Rename Dialog -->
-{#if showRenameDialog}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showRenameDialog = false}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
-      <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.rename || '重命名'}</h3>
-      <!-- svelte-ignore a11y_autofocus -->
-      <input
-        type="text"
-        class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-        placeholder={t.newName || '新名称'}
-        bind:value={renameNewName}
-        onkeydown={(e) => { if (e.key === 'Enter') handleRename(); }}
-        autofocus
-      />
-      <div class="flex items-center justify-end gap-2 mt-4">
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          onclick={() => { showRenameDialog = false; renameNewName = ''; renameTarget = null; }}
-        >
-          {t.cancel || '取消'}
-        </button>
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
-          onclick={handleRename}
-          disabled={!renameNewName.trim()}
-        >
-          {t.rename || '重命名'}
-        </button>
-      </div>
+<Modal show={showRenameDialog} onclose={() => showRenameDialog = false} zIndex={60}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <h3 class="text-[14px] font-semibold text-gray-900 mb-4">{t.rename || '重命名'}</h3>
+    <!-- svelte-ignore a11y_autofocus -->
+    <input
+      type="text"
+      class="w-full px-3 py-2 text-[13px] border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+      placeholder={t.newName || '新名称'}
+      bind:value={renameNewName}
+      onkeydown={(e) => { if (e.key === 'Enter') handleRename(); }}
+      autofocus
+    />
+    <div class="flex items-center justify-end gap-2 mt-4">
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        onclick={() => { showRenameDialog = false; renameNewName = ''; renameTarget = null; }}
+      >
+        {t.cancel || '取消'}
+      </button>
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
+        onclick={handleRename}
+        disabled={!renameNewName.trim()}
+      >
+        {t.rename || '重命名'}
+      </button>
     </div>
   </div>
-{/if}
+</Modal>
 
 <!-- Delete Confirm Dialog -->
-{#if showDeleteConfirm}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onclick={() => showDeleteConfirm = false}>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
-      <h3 class="text-[14px] font-semibold text-gray-900 mb-2">{t.confirmDelete || '确认删除'}</h3>
-      <p class="text-[12px] text-gray-600 mb-4">
-        {t.deleteConfirmMessage || '确定要删除'} <span class="font-medium text-gray-900">{deleteTarget?.name}</span> {t.questionMark || '吗？'}
-        {#if deleteTarget?.isDir}
-          <span class="text-red-600">{t.deleteDirectoryWarning || '（包括所有子文件和目录）'}</span>
-        {/if}
-      </p>
-      <div class="flex items-center justify-end gap-2">
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          onclick={() => { showDeleteConfirm = false; deleteTarget = null; }}
-        >
-          {t.cancel || '取消'}
-        </button>
-        <button
-          class="px-4 py-2 text-[12px] font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-          onclick={handleDelete}
-        >
-          {t.delete || '删除'}
-        </button>
-      </div>
+<Modal show={showDeleteConfirm} onclose={() => showDeleteConfirm = false} zIndex={60}>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5" onclick={(e) => e.stopPropagation()}>
+    <h3 class="text-[14px] font-semibold text-gray-900 mb-2">{t.confirmDelete || '确认删除'}</h3>
+    <p class="text-[12px] text-gray-600 mb-4">
+      {t.deleteConfirmMessage || '确定要删除'} <span class="font-medium text-gray-900">{deleteTarget?.name}</span> {t.questionMark || '吗？'}
+      {#if deleteTarget?.isDir}
+        <span class="text-red-600">{t.deleteDirectoryWarning || '（包括所有子文件和目录）'}</span>
+      {/if}
+    </p>
+    <div class="flex items-center justify-end gap-2">
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+        onclick={() => { showDeleteConfirm = false; deleteTarget = null; }}
+      >
+        {t.cancel || '取消'}
+      </button>
+      <button
+        class="px-4 py-2 text-[12px] font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+        onclick={handleDelete}
+      >
+        {t.delete || '删除'}
+      </button>
     </div>
   </div>
-{/if}
+</Modal>
