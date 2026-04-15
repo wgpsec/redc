@@ -418,6 +418,10 @@ export function GetTemplateFiles(arg1) {
   return window['go']['main']['App']['GetTemplateFiles'](arg1);
 }
 
+export function GetTemplatesDir() {
+  return window['go']['main']['App']['GetTemplatesDir']();
+}
+
 export function GetTemplateMetadata(arg1) {
   return window['go']['main']['App']['GetTemplateMetadata'](arg1);
 }

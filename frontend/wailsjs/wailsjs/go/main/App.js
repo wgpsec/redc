@@ -410,6 +410,10 @@ export function GetTemplateVariables(arg1) {
   return window['go']['main']['App']['GetTemplateVariables'](arg1);
 }
 
+export function GetTemplatesDir() {
+  return window['go']['main']['App']['GetTemplatesDir']();
+}
+
 export function GetTerraformMirrorConfig() {
   return window['go']['main']['App']['GetTerraformMirrorConfig']();
 }

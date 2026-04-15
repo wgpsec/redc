@@ -55,6 +55,11 @@ func (a *App) ListAllTemplates() ([]TemplateInfo, error) {
 	return result, nil
 }
 
+// GetTemplatesDir returns the local templates directory path
+func (a *App) GetTemplatesDir() string {
+	return redc.TemplateDir
+}
+
 func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, error) {
 	templatePath := filepath.Join(redc.TemplateDir, templateName)
 

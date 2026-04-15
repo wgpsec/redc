@@ -211,6 +211,8 @@ export function GetTemplateMetadata(arg1:string):Promise<mod.BaseTemplate>;
 
 export function GetTemplateVariables(arg1:string):Promise<Array<main.TemplateVariable>>;
 
+export function GetTemplatesDir():Promise<string>;
+
 export function GetTerraformMirrorConfig():Promise<main.TerraformMirrorConfig>;
 
 export function GetTotalRuntime():Promise<string>;

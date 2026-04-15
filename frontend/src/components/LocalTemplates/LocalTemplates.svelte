@@ -1,7 +1,7 @@
 <script>
 
   import { onMount } from 'svelte';
-  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates, CreateLocalTemplate, DeleteTemplateFile, ValidateTemplate } from '../../../wailsjs/go/main/App.js';
+  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates, CreateLocalTemplate, DeleteTemplateFile, ValidateTemplate, GetTemplatesDir } from '../../../wailsjs/go/main/App.js';
   import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
@@ -28,6 +28,7 @@
   // Delete confirmation modal state
   let deleteTemplateConfirm = $state({ show: false, name: '' });
   let deletingTemplate = $state({});
+  let templatesDir = $state('');
   
   // Batch operation state
   let selectedTemplates = $state(new Set());
@@ -539,6 +540,7 @@
    */
   onMount(() => {
     loadLocalTemplates();
+    GetTemplatesDir().then(d => templatesDir = d).catch(() => {});
   });
 
   /**
@@ -637,6 +639,12 @@
       {localTemplates.length} {t.templates || '模板'}
     </div>
   </div>
+  {#if templatesDir}
+    <div class="flex items-center gap-1.5 text-[10px] text-gray-400 -mt-2">
+      <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+      <span class="font-mono select-all">{templatesDir}</span>
+    </div>
+  {/if}
 
   {#if error}
     <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">

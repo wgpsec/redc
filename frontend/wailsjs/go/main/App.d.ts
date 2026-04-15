@@ -213,6 +213,8 @@ export function GetSpotMonitorEnabled():Promise<boolean>;
 
 export function GetTemplateFiles(arg1:string):Promise<Record<string, string>>;
 
+export function GetTemplatesDir():Promise<string>;
+
 export function GetTemplateMetadata(arg1:string):Promise<mod.BaseTemplate>;
 
 export function GetTemplateVariables(arg1:string):Promise<Array<main.TemplateVariable>>;
