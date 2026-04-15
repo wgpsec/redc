@@ -334,6 +334,27 @@ func (a *App) ExportChatLog(content string) error {
 	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
+// ExportConsoleLogs exports console log content to a file via native save dialog
+func (a *App) ExportConsoleLogs(content string) error {
+	filename := fmt.Sprintf("redc-console-%s.log", time.Now().Format("20060102-150405"))
+	filePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "导出控制台日志",
+		DefaultFilename: filename,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Log Files", Pattern: "*.log"},
+			{DisplayName: "Text Files", Pattern: "*.txt"},
+			{DisplayName: "All Files", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if filePath == "" {
+		return nil
+	}
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
 // runAgentLoop is the shared agentic loop used by AgentChatStream and DeployAgentChatStream
 func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, promptTemplate string, defaultMaxRounds int, timeout time.Duration) error {
 	profile, err := redc.GetActiveProfile()

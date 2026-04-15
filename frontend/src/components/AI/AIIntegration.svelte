@@ -261,13 +261,15 @@
           </div>
         </div>
       </div>
-      <button 
-        class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
-        onclick={handleStopMCP}
-        disabled={mcpLoading}
-      >
-        {mcpLoading ? t.stoppingServer : t.stopServer}
-      </button>
+      <div class="flex justify-end">
+        <button 
+          class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer"
+          onclick={handleStopMCP}
+          disabled={mcpLoading}
+        >
+          {mcpLoading ? t.stoppingServer : t.stopServer}
+        </button>
+      </div>
     {:else}
       <div class="flex items-center gap-3 mb-4">
         <div class="flex items-center gap-2 text-[12px] text-gray-500">

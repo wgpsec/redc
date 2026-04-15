@@ -210,6 +210,10 @@ export function ExportConfigTemplate(arg1, arg2) {
   return window['go']['main']['App']['ExportConfigTemplate'](arg1, arg2);
 }
 
+export function ExportConsoleLogs(arg1) {
+  return window['go']['main']['App']['ExportConsoleLogs'](arg1);
+}
+
 export function ExportTemplates(arg1) {
   return window['go']['main']['App']['ExportTemplates'](arg1);
 }

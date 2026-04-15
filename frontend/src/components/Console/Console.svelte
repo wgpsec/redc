@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { ExportConsoleLogs } from '../../../wailsjs/go/main/App.js';
   
   let { logs = $bindable([]), t = {} } = $props();
   
@@ -107,16 +108,14 @@
     setTimeout(() => { copiedIdx = -1; }, 1500);
   }
 
-  // Export all logs
-  function exportLogs() {
+  // Export all logs via native save dialog
+  async function exportLogs() {
     const text = logs.map(l => `[${l.time}] ${stripAnsi(l.message)}`).join('\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `redc-console-${new Date().toISOString().slice(0, 10)}.log`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      await ExportConsoleLogs(text);
+    } catch (e) {
+      console.error('Export failed:', e);
+    }
   }
 
   export function clearLogs() {
@@ -192,12 +191,12 @@
   >
     {#if filteredLogs.length === 0 && logs.length === 0}
       <!-- Empty state -->
-      <div class="flex flex-col items-center justify-center h-full text-gray-600 gap-3">
-        <svg class="w-10 h-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+      <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+        <svg class="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
         </svg>
         <div class="text-[12px]">$ {t.waitOutput}</div>
-        <div class="text-[10px] text-gray-700">{t.consoleHint || '部署、启动、停止等操作的日志将在此显示'}</div>
+        <div class="text-[10px] text-gray-500">{t.consoleHint || '部署、启动、停止等操作的日志将在此显示'}</div>
       </div>
     {:else if filteredLogs.length === 0 && logs.length > 0}
       <!-- Filter empty -->

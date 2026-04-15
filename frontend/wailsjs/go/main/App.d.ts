@@ -101,6 +101,8 @@ export function ExportAuditLogs():Promise<Array<any>>;
 
 export function ExportChatLog(arg1:string):Promise<void>;
 
+export function ExportConsoleLogs(arg1:string):Promise<void>;
+
 export function ExportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
 export function ExportTemplates(arg1:Array<string>):Promise<string>;
