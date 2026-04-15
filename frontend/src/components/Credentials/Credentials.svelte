@@ -714,8 +714,8 @@ let { t } = $props();
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each filteredProviders as provider}
         {@const configured = isProviderConfigured(provider)}
-        <div class="bg-white rounded-xl border overflow-hidden transition-colors {configured ? 'border-emerald-100' : 'border-gray-100 opacity-75 hover:opacity-100'}">
-          <div class="px-5 py-4 border-b {configured ? 'border-emerald-50 bg-emerald-50/30' : 'border-gray-100'} flex items-center justify-between">
+        <div class="bg-white rounded-xl border overflow-hidden transition-colors {configured ? 'border-gray-200 border-l-2 border-l-emerald-500' : 'border-gray-100 opacity-75 hover:opacity-100'}">
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="w-2 h-2 rounded-full flex-shrink-0 {configured ? 'bg-emerald-500' : 'bg-gray-300'}"></span>
               <h3 class="text-[14px] font-semibold text-gray-900">{t[provider.name] || provider.name}</h3>
@@ -741,7 +741,7 @@ let { t } = $props();
               </div>
             {:else}
               <button 
-                class="px-3 py-1 text-[12px] font-medium text-gray-500 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer"
+                class="px-3 py-1 text-[12px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-900 transition-colors cursor-pointer"
                 onclick={() => startEditProvider(provider)}
               >{t.edit}</button>
             {/if}
