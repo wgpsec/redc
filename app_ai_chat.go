@@ -145,6 +145,30 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 		aiMessages = append(aiMessages, ai.Message{Role: m.Role, Content: m.Content})
 	}
 
+	// Context window management: compact if exceeding budget
+	contextBudget := 108000
+	if aiConfig.ContextWindow > 0 {
+		contextBudget = aiConfig.ContextWindow * 9 / 10
+	}
+	if estimated := ai.EstimateTokens(aiMessages); estimated > contextBudget {
+		client := buildProviderManager(aiConfig).CurrentClient()
+		compactCtx, compactCancel := context.WithTimeout(context.Background(), 35*time.Second)
+		aiMessages = ai.CompactWithLLM(compactCtx, client, aiMessages, ai.CompactOptions{
+			KeepRecentRounds: 4,
+			ContextBudget:    contextBudget,
+			MaxSummaryTokens: 2000,
+		})
+		compactCancel()
+		newEstimated := ai.EstimateTokens(aiMessages)
+		gologger.Info().Msgf("chat: context compacted from ~%d to ~%d tokens", estimated, newEstimated)
+		a.emitEvent("ai-chat-compact", map[string]interface{}{
+			"conversationId": conversationId,
+			"before":         estimated,
+			"after":          newEstimated,
+			"budget":         contextBudget,
+		})
+	}
+
 	// Build provider manager with failover support
 	pm := buildProviderManager(aiConfig)
 
@@ -595,13 +619,29 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		// Smart context window management: LLM-powered compaction when exceeding budget
 		estimated := ai.EstimateTokens(aiMessages)
 		if estimated > contextBudget {
+			// Save full transcript before compaction for audit trail
+			if redc.RedcPath != "" {
+				transcriptDir := filepath.Join(redc.RedcPath, "transcripts")
+				os.MkdirAll(transcriptDir, 0755)
+				transcriptFile := filepath.Join(transcriptDir, fmt.Sprintf("%s-round%d.json", conversationId, round))
+				if err := ai.SaveTranscript(aiMessages, transcriptFile); err != nil {
+					gologger.Warning().Msgf("agent: failed to save transcript before compaction: %v", err)
+				}
+			}
 			compactOpts := ai.CompactOptions{
 				KeepRecentRounds: 4,
 				ContextBudget:    contextBudget,
 				MaxSummaryTokens: 2000,
 			}
 			aiMessages = ai.CompactWithLLM(ctx, client, aiMessages, compactOpts)
-			gologger.Info().Msgf("agent: context compacted from ~%d to ~%d tokens (budget: %d)", estimated, ai.EstimateTokens(aiMessages), contextBudget)
+			newEstimated := ai.EstimateTokens(aiMessages)
+			gologger.Info().Msgf("agent: context compacted from ~%d to ~%d tokens (budget: %d)", estimated, newEstimated, contextBudget)
+			a.emitEvent("ai-chat-compact", map[string]interface{}{
+				"conversationId": conversationId,
+				"before":         estimated,
+				"after":          newEstimated,
+				"budget":         contextBudget,
+			})
 		} else if round > 2 {
 			// Light compression for older tool results even when under budget
 			compressOldToolResults(aiMessages)
@@ -901,85 +941,13 @@ func compressOldToolResults(messages []ai.Message) {
 	for i := 0; i < len(messages); i++ {
 		if messages[i].Role == "tool" && compressed < skipCount {
 			content := messages[i].Content
-			if len(content) > maxCompressedLen {
-				messages[i].Content = content[:maxCompressedLen] + "... (compressed)"
+			runes := []rune(content)
+			if len(runes) > maxCompressedLen {
+				messages[i].Content = string(runes[:maxCompressedLen]) + "... (compressed)"
 			}
 			compressed++
 		}
 	}
-}
-
-// compactMessages performs aggressive compression when context exceeds budget.
-// Keeps: system prompt (first msg) + all user messages + last 3 rounds of full interactions.
-// Compresses: older assistant messages to first 200 chars, older tool results to 100 chars.
-func compactMessages(messages []ai.Message, budget int) []ai.Message {
-	if len(messages) <= 4 {
-		return messages
-	}
-
-	// Find boundary: keep last N tool+assistant messages at full length
-	const keepRecentFull = 6 // last ~3 rounds (assistant + tool pairs)
-
-	// Count non-system, non-user messages from the end
-	recentCount := 0
-	boundary := len(messages)
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Role == "assistant" || messages[i].Role == "tool" {
-			recentCount++
-			if recentCount >= keepRecentFull {
-				boundary = i
-				break
-			}
-		}
-	}
-
-	result := make([]ai.Message, 0, len(messages))
-	for i, m := range messages {
-		if i == 0 && m.Role == "system" {
-			result = append(result, m)
-			continue
-		}
-		if m.Role == "user" {
-			// Keep user messages full (they're usually short)
-			result = append(result, m)
-			continue
-		}
-		if i >= boundary {
-			// Recent messages: keep full
-			result = append(result, m)
-			continue
-		}
-		// Older messages: compress
-		compressed := m
-		switch m.Role {
-		case "assistant":
-			if len(m.Content) > 200 {
-				compressed.Content = m.Content[:200] + "... (compacted)"
-			}
-			// Strip tool_calls detail from old assistant messages
-			if len(m.ToolCalls) > 0 {
-				names := make([]string, len(m.ToolCalls))
-				for j, tc := range m.ToolCalls {
-					names[j] = tc.Function.Name
-				}
-				compressed.Content += fmt.Sprintf(" [called: %s]", strings.Join(names, ", "))
-			}
-		case "tool":
-			if len(m.Content) > 100 {
-				// For failed tools, keep more context
-				if strings.Contains(m.Content, "失败") || strings.Contains(m.Content, "error") || strings.Contains(m.Content, "Error") {
-					if len(m.Content) > 300 {
-						compressed.Content = m.Content[:300] + "... (compacted)"
-					}
-				} else {
-					compressed.Content = m.Content[:100] + "... (compacted)"
-				}
-			}
-		}
-		result = append(result, compressed)
-	}
-
-	return result
 }
 
 // parseToolArgs parses tool call arguments JSON, handling streaming edge cases

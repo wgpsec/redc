@@ -688,6 +688,23 @@ let { t } = $props();
             </div>
             <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
           </div>
+          <div>
+            <label for="aiContextWindow" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiContextWindow || '模型上下文窗口 (tokens)'}</label>
+            <div class="flex items-center gap-3">
+              <input 
+                id="aiContextWindow"
+                type="range"
+                min="0"
+                max="200000"
+                step="1000"
+                class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                bind:value={aiConfig.contextWindow}
+                oninput={(e) => { aiConfig.contextWindow = parseInt(e.target.value); }}
+              />
+              <span class="text-[12px] font-mono text-gray-700 w-16 text-center">{aiConfig.contextWindow ? (aiConfig.contextWindow / 1000).toFixed(0) + 'K' : '120K'}</span>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">{t.aiContextWindowHint || '模型支持的最大上下文长度，超出后自动压缩历史对话，0 为默认 120K'}</p>
+          </div>
           <div class="flex items-center justify-between py-2">
             <div>
               <label class="block text-[11px] font-medium text-gray-500">{t.enableAskUser || 'Agent 人机协作决策'}</label>

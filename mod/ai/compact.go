@@ -53,7 +53,7 @@ func CompactWithLLM(ctx context.Context, client *Client, messages []Message, opt
 	}
 
 	// Build a summarization prompt
-	summary, err := summarizeWithLLM(ctx, client, head)
+	summary, err := summarizeWithLLM(ctx, client, head, opts.MaxSummaryTokens)
 	if err != nil {
 		gologger.Warning().Msgf("ai: LLM compaction failed, falling back to string truncation: %v", err)
 		return fallbackCompact(messages, opts)
@@ -101,8 +101,8 @@ func splitMessages(messages []Message, keepRounds int) (system Message, head []M
 		}
 	}
 
-	// Ensure we don't orphan tool messages: if tailStart-1 is a user message, include it
-	if tailStart > 0 && rest[tailStart-1].Role == "user" {
+	// Ensure we don't orphan tool messages: include any preceding user message at boundary
+	for tailStart > 0 && rest[tailStart-1].Role == "user" {
 		tailStart--
 	}
 
@@ -112,10 +112,10 @@ func splitMessages(messages []Message, keepRounds int) (system Message, head []M
 }
 
 // summarizeWithLLM calls the AI to generate a concise summary of the conversation history.
-func summarizeWithLLM(ctx context.Context, client *Client, messages []Message) (string, error) {
+func summarizeWithLLM(ctx context.Context, client *Client, head []Message, maxTokens int) (string, error) {
 	// Build a transcript of the messages to summarize
 	var transcript strings.Builder
-	for _, m := range messages {
+	for _, m := range head {
 		switch m.Role {
 		case "user":
 			transcript.WriteString(fmt.Sprintf("[User]: %s\n\n", truncateForSummary(m.Content, 500)))
@@ -169,6 +169,12 @@ Provide ONLY the summary, no preamble.`
 		return "", fmt.Errorf("empty summary from LLM")
 	}
 
+	// Enforce max length: ~4 chars per token as rough estimate
+	if maxTokens > 0 {
+		maxChars := maxTokens * 4
+		summary = truncateRunes(summary, maxChars, "...")
+	}
+
 	return summary, nil
 }
 
@@ -208,8 +214,8 @@ func fallbackCompact(messages []Message, opts CompactOptions) []Message {
 		compressed := m
 		switch m.Role {
 		case "assistant":
-			if len(m.Content) > 200 {
-				compressed.Content = m.Content[:200] + "... (compacted)"
+			if len([]rune(m.Content)) > 200 {
+				compressed.Content = truncateRunes(m.Content, 200, "... (compacted)")
 			}
 			if len(m.ToolCalls) > 0 {
 				names := make([]string, len(m.ToolCalls))
@@ -219,8 +225,8 @@ func fallbackCompact(messages []Message, opts CompactOptions) []Message {
 				compressed.Content += fmt.Sprintf(" [called: %s]", strings.Join(names, ", "))
 			}
 		case "tool":
-			if len(m.Content) > 100 {
-				compressed.Content = m.Content[:100] + "... (compacted)"
+			if len([]rune(m.Content)) > 100 {
+				compressed.Content = truncateRunes(m.Content, 100, "... (compacted)")
 			}
 		}
 		result = append(result, compressed)
@@ -229,10 +235,20 @@ func fallbackCompact(messages []Message, opts CompactOptions) []Message {
 }
 
 func truncateForSummary(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max] + "..."
+	return string(runes[:max]) + "..."
+}
+
+// truncateRunes truncates a string to max runes (not bytes), appending suffix if truncated.
+func truncateRunes(s string, max int, suffix string) string {
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max]) + suffix
 }
 
 // SaveTranscript saves the full message history as JSON for audit trail before compaction.

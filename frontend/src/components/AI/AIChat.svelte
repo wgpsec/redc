@@ -346,6 +346,24 @@
       }
     });
 
+    EventsOn('ai-chat-compact', (data) => {
+      if (data.conversationId === currentConversationId) {
+        const beforeK = Math.round(data.before / 1000);
+        const afterK = Math.round(data.after / 1000);
+        const budgetK = Math.round(data.budget / 1000);
+        const msg = (t('aiChatCompactNotice') || '上下文已压缩：{before}K → {after}K tokens（预算 {budget}K）')
+          .replace('{before}', beforeK).replace('{after}', afterK).replace('{budget}', budgetK);
+        messages = [...messages, {
+          id: 'compact-' + Date.now(),
+          role: 'system-notice',
+          content: `🗜️ ${msg}`,
+          timestamp: Date.now()
+        }];
+        toast.info(msg);
+        scrollToBottom();
+      }
+    });
+
     // Check for pending terminal text on initial mount
     checkPendingTerminalText();
     checkPendingErrorAnalysis();
@@ -358,6 +376,7 @@
     EventsOff('ai-chat-chunk');
     EventsOff('ai-chat-complete');
     EventsOff('ai-chat-failover');
+    EventsOff('ai-chat-compact');
     EventsOff('ai-agent-tool-call');
     EventsOff('ai-agent-tool-result');
     EventsOff('ai-agent-ask-user');
@@ -918,7 +937,14 @@
       <!-- Messages -->
       <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer} onclick={handleContentClick}>
         {#each messages as msg (msg.id)}
-          {#if msg.role === 'user'}
+          {#if msg.role === 'system-notice'}
+            <!-- System notice (compaction, etc.) -->
+            <div class="flex justify-center">
+              <div class="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100">
+                <p class="text-[11px] text-blue-600">{msg.content}</p>
+              </div>
+            </div>
+          {:else if msg.role === 'user'}
             <!-- User message -->
             <div class="flex justify-end">
               <div class="max-w-[75%]">
