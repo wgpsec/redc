@@ -39,7 +39,8 @@ type HookChain struct {
 // NewHookChain creates a HookChain with the standard built-in hooks.
 func NewHookChain() *HookChain {
 	hc := &HookChain{}
-	hc.preHooks = append(hc.preHooks, DangerousOpHook, CostAwareHook)
+	hc.preHooks = append(hc.preHooks, DangerousOpHook)
+	hc.postHooks = append(hc.postHooks, CostAnnotationPostHook)
 	return hc
 }
 

@@ -520,7 +520,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 
 	// Initialize safety hooks
 	hooks := ai.NewHookChain()
-	hooks.AddPostHook(ai.CostAnnotationPostHook)
 	// Dynamic timeout: base timeout + extra per round (each round may involve API call + tool execution)
 	dynamicTimeout := timeout + time.Duration(maxRounds)*30*time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), dynamicTimeout)
@@ -791,13 +790,20 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				if hookResult.Action == ai.HookConfirm {
 					// Use ask_user mechanism for confirmation
 					confirmResult, _ := a.handleAskUser(map[string]interface{}{
-						"question":      hookResult.Message,
-						"choices":       []interface{}{"Yes, proceed", "No, cancel"},
-						"allowFreeform": false,
+						"question":       hookResult.Message,
+						"choices":        []interface{}{"Yes, proceed", "No, cancel"},
+						"allow_freeform": false,
 					}, conversationId, ctx)
 					if !strings.Contains(strings.ToLower(confirmResult), "yes") &&
 						!strings.Contains(strings.ToLower(confirmResult), "proceed") {
 						resultContent := "Operation cancelled by user."
+						a.emitEvent("ai-agent-tool-result", map[string]interface{}{
+							"conversationId": conversationId,
+							"toolCallId":     tc.ID,
+							"toolName":       tc.Function.Name,
+							"success":        false,
+							"content":        resultContent,
+						})
 						aiMessages = append(aiMessages, ai.Message{
 							Role: "tool", Content: resultContent, ToolCallID: tc.ID, Name: tc.Function.Name,
 						})
