@@ -1,11 +1,11 @@
 <p align="center">
-  <a href="https://github.com/wgpsec/redc">
-    <img src="./img/banner.jpg" width="100%" alt="redc">
-  </a>
   <p align="center">
     Red Team Infrastructure Multi-Cloud Automated Deployment Tool
     <br />
     <br />
+  <a href="https://github.com/wgpsec/redc">
+    <img src="./img/gui-dashboard.png" width="100%" alt="redc">
+  </a>
 <a href="https://github.com/wgpsec/redc/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/wgpsec/redc"/></a>
 <a href="https://github.com/wgpsec/redc/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/wgpsec/redc"/></a>
 <a href="https://github.com/wgpsec/redc/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a>
@@ -56,7 +56,7 @@ Redc is not just a machine provisioning tool, but an automated cloud resource sc
 
 The redc GUI provides a comprehensive graphical management interface covering the entire workflow from deployment to operations.
 
-### 📊 Dashboard
+### Dashboard
 
 - Scenario statistics (total/running/stopped/error)
 - Network diagnostics (Terraform endpoint connectivity)
@@ -64,13 +64,11 @@ The redc GUI provides a comprehensive graphical management interface covering th
 - Recent AI conversations, recent tasks, MCP status
 - Quick navigation links
 
-![gui](./img/gui_en.png)
-
 **Pre-configured Scenarios**
 
 ![gui2](./img/gui2.png)
 
-### 🤖 AI Chat
+### AI Chat
 
 Multi-turn conversational AI assistant with 7 modes:
 
@@ -114,7 +112,7 @@ Supports streaming output, tool call visualization, ask_user human-in-the-loop d
 
 ![vulhub3](./img/vulhub3.png)
 
-### 💻 SSH Terminal
+### SSH Terminal
 
 Built-in multi-session SSH terminal manager:
 
@@ -129,7 +127,7 @@ Built-in multi-session SSH terminal manager:
 
 ![ssh2](./img/ssh2.png)
 
-### 🛒 Software Store
+### Software Store
 
 One-stop tool installation platform based on [f8x](https://github.com/ffffffff0x/f8x):
 
@@ -142,7 +140,7 @@ One-stop tool installation platform based on [f8x](https://github.com/ffffffff0x
 
 ![f8x](./img/f8x.png)
 
-### ⏰ Task Center
+### Task Center
 
 Scheduled task management:
 
@@ -153,11 +151,11 @@ Scheduled task management:
 
 ![cron](./img/cron.png)
 
-### 🧠 Agent Memory
+### Agent Memory
 
 AI Agent automatically remembers operational experience and user preferences, persisted across conversations. Manageable via the Agent Memory page.
 
-### 🌐 Web Service
+### Web Service
 
 Built-in HTTP API service for remote management:
 
@@ -167,7 +165,7 @@ Built-in HTTP API service for remote management:
 
 ![web](./img/web.png)
 
-### 🔌 Plugin System
+### Plugin System
 
 Supports scenario lifecycle hook plugins that automatically execute custom logic on scenario start/stop.
 
