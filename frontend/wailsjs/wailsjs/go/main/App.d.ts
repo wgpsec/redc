@@ -185,6 +185,8 @@ export function GetPluginsDir():Promise<string>;
 
 export function GetPredictedMonthlyCost():Promise<string>;
 
+export function GetProfileFallbackProviders(arg1:string):Promise<Array<mod.FallbackProvider>>;
+
 export function GetProviderRegions(arg1:string):Promise<Array<mod.Region>>;
 
 export function GetProvidersConfig(arg1:string):Promise<main.ProvidersConfigInfo>;
@@ -311,6 +313,8 @@ export function MCPStopCustomDeployment(arg1:string):Promise<void>;
 
 export function MCPSwitchProject(arg1:string):Promise<void>;
 
+export function OrchestratorStream(arg1:string,arg2:main.OrchestratorConfig,arg3:Array<main.AIChatMessage>):Promise<void>;
+
 export function PullTemplate(arg1:string,arg2:boolean):Promise<void>;
 
 export function RecommendTemplates(arg1:string):Promise<Array<main.TemplateRecommendation>>;
@@ -427,7 +431,9 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean,arg9:Array<number>):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean,arg9:number):Promise<void>;
+
+export function UpdateProfileFallbackProviders(arg1:string,arg2:Array<mod.FallbackProvider>):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

@@ -336,20 +336,56 @@ func (a *App) DeleteProfile(profileID string) error {
 	return redc.DeleteProfile(profileID)
 }
 
-func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, enableMemory bool, contextWindow ...int) error {
-	aiConfig := &redc.AIConfig{
-		Provider:      provider,
-		APIKey:        apiKey,
-		BaseURL:       baseUrl,
-		Model:         model,
-		MaxToolRounds: maxToolRounds,
-		EnableAskUser: &enableAskUser,
-		EnableMemory:  &enableMemory,
+func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, enableMemory bool, contextWindow int) error {
+	// Read existing config to preserve fallback providers
+	existingProfile, _ := redc.GetActiveProfile()
+	var existingFallbacks []redc.FallbackProvider
+	if existingProfile.AIConfig != nil {
+		existingFallbacks = existingProfile.AIConfig.FallbackProviders
 	}
-	if len(contextWindow) > 0 && contextWindow[0] > 0 {
-		aiConfig.ContextWindow = contextWindow[0]
+
+	aiConfig := &redc.AIConfig{
+		Provider:          provider,
+		APIKey:            apiKey,
+		BaseURL:           baseUrl,
+		Model:             model,
+		MaxToolRounds:     maxToolRounds,
+		EnableAskUser:     &enableAskUser,
+		EnableMemory:      &enableMemory,
+		FallbackProviders: existingFallbacks,
+	}
+	if contextWindow > 0 {
+		aiConfig.ContextWindow = contextWindow
 	}
 	return redc.UpdateProfileAIConfig(profileID, aiConfig)
+}
+
+// UpdateProfileFallbackProviders updates the fallback AI providers for a profile.
+func (a *App) UpdateProfileFallbackProviders(profileID string, fallbacks []redc.FallbackProvider) error {
+	profile, err := redc.GetActiveProfile()
+	if err != nil {
+		return err
+	}
+	if profile.ID != profileID {
+		return fmt.Errorf("profile %s is not active", profileID)
+	}
+	if profile.AIConfig == nil {
+		profile.AIConfig = &redc.AIConfig{}
+	}
+	profile.AIConfig.FallbackProviders = fallbacks
+	return redc.UpdateProfileAIConfig(profileID, profile.AIConfig)
+}
+
+// GetProfileFallbackProviders returns the fallback providers configured for a profile.
+func (a *App) GetProfileFallbackProviders(profileID string) ([]redc.FallbackProvider, error) {
+	profile, err := redc.GetActiveProfile()
+	if err != nil {
+		return nil, err
+	}
+	if profile.AIConfig == nil || len(profile.AIConfig.FallbackProviders) == 0 {
+		return []redc.FallbackProvider{}, nil
+	}
+	return profile.AIConfig.FallbackProviders, nil
 }
 
 func (a *App) ListProjects() ([]ProjectInfo, error) {

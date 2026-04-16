@@ -358,6 +358,10 @@ export function GetPredictedMonthlyCost() {
   return window['go']['main']['App']['GetPredictedMonthlyCost']();
 }
 
+export function GetProfileFallbackProviders(arg1) {
+  return window['go']['main']['App']['GetProfileFallbackProviders'](arg1);
+}
+
 export function GetProviderRegions(arg1) {
   return window['go']['main']['App']['GetProviderRegions'](arg1);
 }
@@ -610,6 +614,10 @@ export function MCPSwitchProject(arg1) {
   return window['go']['main']['App']['MCPSwitchProject'](arg1);
 }
 
+export function OrchestratorStream(arg1, arg2, arg3) {
+  return window['go']['main']['App']['OrchestratorStream'](arg1, arg2, arg3);
+}
+
 export function PullTemplate(arg1, arg2) {
   return window['go']['main']['App']['PullTemplate'](arg1, arg2);
 }
@@ -844,6 +852,10 @@ export function UpdateProfile(arg1, arg2, arg3, arg4) {
 
 export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
   return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+
+export function UpdateProfileFallbackProviders(arg1, arg2) {
+  return window['go']['main']['App']['UpdateProfileFallbackProviders'](arg1, arg2);
 }
 
 export function UploadFile(arg1, arg2, arg3) {

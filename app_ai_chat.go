@@ -145,18 +145,47 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 		aiMessages = append(aiMessages, ai.Message{Role: m.Role, Content: m.Content})
 	}
 
-	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
+	// Build provider manager with failover support
+	pm := buildProviderManager(aiConfig)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	err = client.ChatStream(ctx, aiMessages, func(chunk string) error {
-		a.emitEvent( "ai-chat-chunk", map[string]string{
-			"conversationId": conversationId,
-			"chunk":          chunk,
+	// Try with failover: retry on transient/permanent errors by switching providers
+	maxAttempts := pm.Count() + 1
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		client := pm.CurrentClient()
+		err = client.ChatStream(ctx, aiMessages, func(chunk string) error {
+			a.emitEvent("ai-chat-chunk", map[string]string{
+				"conversationId": conversationId,
+				"chunk":          chunk,
+			})
+			return nil
 		})
-		return nil
-	})
+
+		if err == nil {
+			break
+		}
+
+		// Try failover on recoverable errors
+		if ai.ShouldFailover(err.Error()) && pm.Failover(err.Error()) {
+			newProvider := pm.Current()
+			gologger.Info().Msgf("ai-chat: failover to %s after error: %s", newProvider.Name, err.Error())
+			// Notify frontend via both event and inline chunk
+			a.emitEvent("ai-chat-failover", map[string]string{
+				"conversationId": conversationId,
+				"provider":       newProvider.Name,
+				"model":          newProvider.Model,
+				"error":          err.Error(),
+			})
+			a.emitEvent("ai-chat-chunk", map[string]string{
+				"conversationId": conversationId,
+				"chunk":          fmt.Sprintf("\n\n> ⚠️ **Provider Failover**: %s → %s (%s)\n\n", "primary", newProvider.Name, newProvider.Model),
+			})
+			continue
+		}
+		break // non-recoverable or no more providers
+	}
 
 	if err != nil {
 		a.emitEvent( "ai-chat-complete", map[string]interface{}{
@@ -463,7 +492,35 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		aiMessages = append(aiMessages, ai.Message{Role: m.Role, Content: m.Content})
 	}
 
-	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
+	// Build provider manager with failover support
+	pm := buildProviderManager(aiConfig)
+	client := pm.CurrentClient()
+
+	// Inject skills suggestions into system prompt based on user query context
+	if len(messages) > 0 {
+		lastUserMsg := ""
+		for i := len(messages) - 1; i >= 0; i-- {
+			if messages[i].Role == "user" {
+				lastUserMsg = messages[i].Content
+				break
+			}
+		}
+		if lastUserMsg != "" {
+			skillsDir := ""
+			if redc.RedcPath != "" {
+				skillsDir = redc.RedcPath + "/skills"
+			}
+			engine := ai.NewSkillsEngine(skillsDir)
+			suggestions := engine.Suggest(lastUserMsg, 3)
+			if skillsBlock := ai.FormatSuggestions(suggestions); skillsBlock != "" {
+				aiMessages[0].Content += skillsBlock
+			}
+		}
+	}
+
+	// Initialize safety hooks
+	hooks := ai.NewHookChain()
+	hooks.AddPostHook(ai.CostAnnotationPostHook)
 	// Dynamic timeout: base timeout + extra per round (each round may involve API call + tool execution)
 	dynamicTimeout := timeout + time.Duration(maxRounds)*30*time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), dynamicTimeout)
@@ -536,10 +593,15 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
-		// Smart context window management: estimate tokens and compact if needed
+		// Smart context window management: LLM-powered compaction when exceeding budget
 		estimated := ai.EstimateTokens(aiMessages)
 		if estimated > contextBudget {
-			aiMessages = compactMessages(aiMessages, contextBudget)
+			compactOpts := ai.CompactOptions{
+				KeepRecentRounds: 4,
+				ContextBudget:    contextBudget,
+				MaxSummaryTokens: 2000,
+			}
+			aiMessages = ai.CompactWithLLM(ctx, client, aiMessages, compactOpts)
 			gologger.Info().Msgf("agent: context compacted from ~%d to ~%d tokens (budget: %d)", estimated, ai.EstimateTokens(aiMessages), contextBudget)
 		} else if round > 2 {
 			// Light compression for older tool results even when under budget
@@ -574,6 +636,23 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			return nil
 		})
 		if err != nil {
+			// Try provider failover on API errors
+			if ai.ShouldFailover(err.Error()) && pm.Failover(err.Error()) {
+				client = pm.CurrentClient()
+				newProvider := pm.Current()
+				gologger.Info().Msgf("agent: failover to %s after error: %s", newProvider.Name, err.Error())
+				a.emitEvent("ai-chat-failover", map[string]string{
+					"conversationId": conversationId,
+					"provider":       newProvider.Name,
+					"model":          newProvider.Model,
+					"error":          err.Error(),
+				})
+				a.emitEvent("ai-chat-chunk", map[string]string{
+					"conversationId": conversationId,
+					"chunk":          fmt.Sprintf("\n\n> ⚠️ **Provider Failover**: %s → %s (%s)\n\n", "primary", newProvider.Name, newProvider.Model),
+				})
+				continue // Retry this round with new provider
+			}
 			saveCheckpoint(round)
 			if ctx.Err() != nil {
 				msg := "\n\n⏹️ 操作已被用户停止。"
@@ -693,6 +772,39 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			for _, tc := range resp.ToolCalls {
 				args := parseToolArgs(tc)
 
+				// Run safety pre-hooks
+				hookResult := hooks.RunPreHooks(tc.Function.Name, args)
+				if hookResult.Action == ai.HookBlock {
+					resultContent := fmt.Sprintf("⛔ Blocked by safety hook: %s", hookResult.Message)
+					a.emitEvent("ai-agent-tool-result", map[string]interface{}{
+						"conversationId": conversationId,
+						"toolCallId":     tc.ID,
+						"toolName":       tc.Function.Name,
+						"success":        false,
+						"content":        resultContent,
+					})
+					aiMessages = append(aiMessages, ai.Message{
+						Role: "tool", Content: resultContent, ToolCallID: tc.ID, Name: tc.Function.Name,
+					})
+					continue
+				}
+				if hookResult.Action == ai.HookConfirm {
+					// Use ask_user mechanism for confirmation
+					confirmResult, _ := a.handleAskUser(map[string]interface{}{
+						"question":      hookResult.Message,
+						"choices":       []interface{}{"Yes, proceed", "No, cancel"},
+						"allowFreeform": false,
+					}, conversationId, ctx)
+					if !strings.Contains(strings.ToLower(confirmResult), "yes") &&
+						!strings.Contains(strings.ToLower(confirmResult), "proceed") {
+						resultContent := "Operation cancelled by user."
+						aiMessages = append(aiMessages, ai.Message{
+							Role: "tool", Content: resultContent, ToolCallID: tc.ID, Name: tc.Function.Name,
+						})
+						continue
+					}
+				}
+
 				a.emitEvent("ai-agent-tool-call", map[string]interface{}{
 					"conversationId": conversationId,
 					"toolCallId":     tc.ID,
@@ -701,6 +813,9 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				})
 
 				resultContent, success := a.executeSingleTool(tc, args, mcpServer, conversationId, ctx)
+
+				// Run post-hooks (annotations)
+				resultContent = hooks.RunPostHooks(tc.Function.Name, args, resultContent, success)
 
 				// Truncate large tool results to prevent context window overflow
 				const maxToolResultLen = 8000

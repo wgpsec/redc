@@ -413,7 +413,11 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean,arg9:number):Promise<void>;
+
+export function UpdateProfileFallbackProviders(arg1:string,arg2:Array<{name:string,provider:string,apiKey:string,baseUrl:string,model:string}>):Promise<void>;
+
+export function GetProfileFallbackProviders(arg1:string):Promise<Array<{name:string,provider:string,apiKey:string,baseUrl:string,model:string}>>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

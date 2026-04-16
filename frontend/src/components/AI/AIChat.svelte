@@ -339,6 +339,13 @@
       }
     });
 
+    EventsOn('ai-chat-failover', (data) => {
+      if (data.conversationId === currentConversationId) {
+        const msg = t('aiChatFailoverNotice').replace('{provider}', data.provider).replace('{model}', data.model);
+        toast.warning(msg);
+      }
+    });
+
     // Check for pending terminal text on initial mount
     checkPendingTerminalText();
     checkPendingErrorAnalysis();
@@ -350,6 +357,7 @@
   onDestroy(() => {
     EventsOff('ai-chat-chunk');
     EventsOff('ai-chat-complete');
+    EventsOff('ai-chat-failover');
     EventsOff('ai-agent-tool-call');
     EventsOff('ai-agent-tool-result');
     EventsOff('ai-agent-ask-user');

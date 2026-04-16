@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	redc "red-cloud/mod"
+	"red-cloud/mod/ai"
 	"red-cloud/mod/gologger"
 	"red-cloud/mod/plugin"
 	"red-cloud/utils/sshutil"
@@ -709,6 +710,36 @@ func (s *MCPServer) getTools() []Tool {
 		},
 	})
 
+	// Skills knowledge base tools
+	tools = append(tools, Tool{
+		Name:        "list_skills",
+		Description: "List available IaC knowledge base skills. Optionally filter by keyword.",
+		InputSchema: ToolSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"keyword": {
+					Type:        "string",
+					Description: "Optional keyword to filter skills (searches name, description, tags)",
+				},
+			},
+		},
+	})
+
+	tools = append(tools, Tool{
+		Name:        "read_skill",
+		Description: "Read the full content of a knowledge base skill by ID",
+		InputSchema: ToolSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"id": {
+					Type:        "string",
+					Description: "Skill ID (e.g., 'terraform-best-practices', 'aws-security-hardening')",
+				},
+			},
+			Required: []string{"id"},
+		},
+	})
+
 	return tools
 }
 
@@ -1127,6 +1158,17 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 		return ToolResult{
 			Content: []ContentItem{{Type: "text", Text: "Plan updated."}},
 		}, nil
+
+	case "list_skills":
+		keyword, _ := args["keyword"].(string)
+		return s.toolListSkills(keyword)
+
+	case "read_skill":
+		id, ok := args["id"].(string)
+		if !ok || id == "" {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'id' parameter")
+		}
+		return s.toolReadSkill(id)
 
 	default:
 		return ToolResult{}, fmt.Errorf("unknown tool: %s", name)
@@ -2054,6 +2096,47 @@ func (s *MCPServer) toolValidateConfig(provider string, region string, instanceT
 			Type: "text",
 			Text: result,
 		}},
+	}, nil
+}
+
+// --- Skills Knowledge Base Tools ---
+
+func (s *MCPServer) toolListSkills(keyword string) (ToolResult, error) {
+	skillsDir := filepath.Join(redc.RedcPath, "skills")
+	engine := ai.NewSkillsEngine(skillsDir)
+	skills := engine.List(keyword)
+
+	if len(skills) == 0 {
+		return ToolResult{
+			Content: []ContentItem{{Type: "text", Text: "No skills found."}},
+		}, nil
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Available skills (%d):\n\n", len(skills)))
+	for _, s := range skills {
+		tags := ""
+		if len(s.Tags) > 0 {
+			tags = " [" + strings.Join(s.Tags, ", ") + "]"
+		}
+		sb.WriteString(fmt.Sprintf("- **%s** (`%s`)%s\n  %s\n", s.Name, s.ID, tags, s.Description))
+	}
+
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: sb.String()}},
+	}, nil
+}
+
+func (s *MCPServer) toolReadSkill(id string) (ToolResult, error) {
+	skillsDir := filepath.Join(redc.RedcPath, "skills")
+	engine := ai.NewSkillsEngine(skillsDir)
+	skill, err := engine.Read(id)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("skill not found: %s", id)
+	}
+
+	return ToolResult{
+		Content: []ContentItem{{Type: "text", Text: skill.Content}},
 	}, nil
 }
 

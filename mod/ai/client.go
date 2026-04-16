@@ -128,6 +128,14 @@ type ToolStreamCallback func(chunk string) error
 // ChatWithToolsStream sends a streaming chat request with tool definitions.
 // Content chunks are sent to the callback in real-time. Returns the full response (content + tool_calls).
 func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, tools []ToolDefinition, callback ToolStreamCallback) (*ToolCallResponse, error) {
+	if c.Provider == "anthropic" {
+		return c.chatWithToolsStreamAnthropic(ctx, messages, tools, callback)
+	}
+	return c.chatWithToolsStreamOpenAI(ctx, messages, tools, callback)
+}
+
+// chatWithToolsStreamOpenAI handles OpenAI-compatible streaming with tool calls.
+func (c *Client) chatWithToolsStreamOpenAI(ctx context.Context, messages []Message, tools []ToolDefinition, callback ToolStreamCallback) (*ToolCallResponse, error) {
 	reqBody := map[string]interface{}{
 		"model":       c.Model,
 		"messages":    messages,
@@ -263,6 +271,234 @@ func (c *Client) ChatWithToolsStream(ctx context.Context, messages []Message, to
 				tc.Function.Arguments = "{}"
 			}
 			toolCalls = append(toolCalls, *tc)
+		}
+	}
+
+	return &ToolCallResponse{
+		Content:   contentBuilder.String(),
+		ToolCalls: toolCalls,
+		Usage:     usage,
+	}, nil
+}
+
+// chatWithToolsStreamAnthropic handles Anthropic-compatible streaming with tool calls.
+// Converts OpenAI-format messages/tools to Anthropic format, then converts the response back.
+func (c *Client) chatWithToolsStreamAnthropic(ctx context.Context, messages []Message, tools []ToolDefinition, callback ToolStreamCallback) (*ToolCallResponse, error) {
+	// Extract system message and convert messages to Anthropic format
+	var systemMsg string
+	var anthropicMsgs []interface{}
+
+	for _, msg := range messages {
+		if msg.Role == "system" {
+			systemMsg = msg.Content
+			continue
+		}
+
+		if msg.Role == "assistant" && len(msg.ToolCalls) > 0 {
+			// Assistant message with tool calls → content blocks
+			var content []interface{}
+			if msg.Content != "" {
+				content = append(content, map[string]interface{}{
+					"type": "text",
+					"text": msg.Content,
+				})
+			}
+			for _, tc := range msg.ToolCalls {
+				var input interface{}
+				if err := json.Unmarshal([]byte(tc.Function.Arguments), &input); err != nil {
+					input = map[string]interface{}{}
+				}
+				content = append(content, map[string]interface{}{
+					"type":  "tool_use",
+					"id":    tc.ID,
+					"name":  tc.Function.Name,
+					"input": input,
+				})
+			}
+			anthropicMsgs = append(anthropicMsgs, map[string]interface{}{
+				"role":    "assistant",
+				"content": content,
+			})
+			continue
+		}
+
+		if msg.Role == "tool" {
+			// Tool result → user message with tool_result content block
+			anthropicMsgs = append(anthropicMsgs, map[string]interface{}{
+				"role": "user",
+				"content": []interface{}{
+					map[string]interface{}{
+						"type":       "tool_result",
+						"tool_use_id": msg.ToolCallID,
+						"content":    msg.Content,
+					},
+				},
+			})
+			continue
+		}
+
+		// Regular user/assistant message
+		anthropicMsgs = append(anthropicMsgs, map[string]interface{}{
+			"role":    msg.Role,
+			"content": msg.Content,
+		})
+	}
+
+	// Convert tool definitions to Anthropic format
+	var anthropicTools []interface{}
+	for _, t := range tools {
+		anthropicTools = append(anthropicTools, map[string]interface{}{
+			"name":         t.Function.Name,
+			"description":  t.Function.Description,
+			"input_schema": t.Function.Parameters,
+		})
+	}
+
+	reqBody := map[string]interface{}{
+		"model":      c.Model,
+		"messages":   anthropicMsgs,
+		"tools":      anthropicTools,
+		"max_tokens": 8192,
+		"stream":     true,
+	}
+	if systemMsg != "" {
+		reqBody["system"] = systemMsg
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/v1/messages", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", c.APIKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var contentBuilder strings.Builder
+	var toolCalls []ToolCall
+	var usage TokenUsage
+
+	// Track current content block for tool_use accumulation
+	type toolUseBlock struct {
+		ID        string
+		Name      string
+		InputJSON strings.Builder
+	}
+	var currentToolUse *toolUseBlock
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to read stream: %w", err)
+		}
+
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+		data := bytes.TrimPrefix(line, []byte("data: "))
+
+		var event struct {
+			Type         string `json:"type"`
+			Index        int    `json:"index"`
+			ContentBlock *struct {
+				Type  string `json:"type"`
+				ID    string `json:"id"`
+				Name  string `json:"name"`
+				Text  string `json:"text"`
+			} `json:"content_block"`
+			Delta *struct {
+				Type        string `json:"type"`
+				Text        string `json:"text"`
+				PartialJSON string `json:"partial_json"`
+			} `json:"delta"`
+			Message *struct {
+				Usage *struct {
+					InputTokens  int `json:"input_tokens"`
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
+			} `json:"message"`
+			Usage *struct {
+				InputTokens  int `json:"input_tokens"`
+				OutputTokens int `json:"output_tokens"`
+			} `json:"usage"`
+		}
+
+		if err := json.Unmarshal(data, &event); err != nil {
+			continue
+		}
+
+		switch event.Type {
+		case "message_start":
+			if event.Message != nil && event.Message.Usage != nil {
+				usage.PromptTokens = event.Message.Usage.InputTokens
+			}
+
+		case "content_block_start":
+			if event.ContentBlock != nil && event.ContentBlock.Type == "tool_use" {
+				currentToolUse = &toolUseBlock{
+					ID:   event.ContentBlock.ID,
+					Name: event.ContentBlock.Name,
+				}
+			}
+
+		case "content_block_delta":
+			if event.Delta != nil {
+				if event.Delta.Type == "text_delta" && event.Delta.Text != "" {
+					contentBuilder.WriteString(event.Delta.Text)
+					if callback != nil {
+						_ = callback(event.Delta.Text)
+					}
+				}
+				if event.Delta.Type == "input_json_delta" && currentToolUse != nil {
+					currentToolUse.InputJSON.WriteString(event.Delta.PartialJSON)
+				}
+			}
+
+		case "content_block_stop":
+			if currentToolUse != nil {
+				args := currentToolUse.InputJSON.String()
+				if args == "" {
+					args = "{}"
+				}
+				toolCalls = append(toolCalls, ToolCall{
+					ID:   currentToolUse.ID,
+					Type: "function",
+					Function: ToolFunction{
+						Name:      currentToolUse.Name,
+						Arguments: args,
+					},
+				})
+				currentToolUse = nil
+			}
+
+		case "message_delta":
+			if event.Usage != nil {
+				usage.CompletionTokens = event.Usage.OutputTokens
+				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+			}
 		}
 	}
 

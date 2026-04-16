@@ -2,7 +2,7 @@
 
   import { onMount } from 'svelte';
   import Modal from '../UI/Modal.svelte';
-  import { GetProvidersConfig, SaveProvidersConfig, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, UpdateProfileAIConfig } from '../../../wailsjs/go/main/App.js';
+  import { GetProvidersConfig, SaveProvidersConfig, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, UpdateProfileAIConfig, UpdateProfileFallbackProviders, GetProfileFallbackProviders } from '../../../wailsjs/go/main/App.js';
 
   // Credentials state
 let { t } = $props();
@@ -34,11 +34,18 @@ let { t } = $props();
     model: '',
     maxToolRounds: 0,
     enableAskUser: true,
-    enableMemory: true
+    enableMemory: true,
+    contextWindow: 0
   });
   let aiConfigSaving = $state(false);
   let aiConfigSaved = $state(false);
   let showApiKey = $state(false);
+
+  // Fallback providers state
+  let fallbackProviders = $state([]);
+  let fallbackSaving = $state(false);
+  let fallbackSaved = $state(false);
+  let showFallbackApiKey = $state({});
 
   // Provider presets
   const aiProviderPresets = {
@@ -93,7 +100,8 @@ let { t } = $props();
             model: active.aiConfig.model || aiProviderPresets[active.aiConfig.provider || 'openai'].defaultModel,
             maxToolRounds: active.aiConfig.maxToolRounds || 0,
             enableAskUser: active.aiConfig.enableAskUser !== false,
-            enableMemory: active.aiConfig.enableMemory !== false
+            enableMemory: active.aiConfig.enableMemory !== false,
+            contextWindow: active.aiConfig.contextWindow || 0
           };
         } else {
           const preset = aiProviderPresets['openai'];
@@ -104,10 +112,18 @@ let { t } = $props();
             model: preset.defaultModel,
             maxToolRounds: 0,
             enableAskUser: true,
-            enableMemory: true
+            enableMemory: true,
+            contextWindow: 0
           };
         }
         customConfigPath = profileForm.configPath;
+        // Load fallback providers
+        try {
+          const fbs = await GetProfileFallbackProviders(activeProfileId);
+          fallbackProviders = (fbs || []).map(fb => ({...fb}));
+        } catch {
+          fallbackProviders = [];
+        }
       }
     } catch (e) {
       profileError = e.message || String(e);
@@ -210,13 +226,38 @@ let { t } = $props();
     aiConfigSaving = true;
     aiConfigSaved = false;
     try {
-      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0, aiConfig.enableAskUser !== false, aiConfig.enableMemory !== false);
+      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0, aiConfig.enableAskUser !== false, aiConfig.enableMemory !== false, aiConfig.contextWindow || 0);
       aiConfigSaved = true;
       setTimeout(() => { aiConfigSaved = false; }, 2000);
     } catch (e) {
       error = e.message || String(e);
     } finally {
       aiConfigSaving = false;
+    }
+  }
+
+  function addFallbackProvider() {
+    fallbackProviders = [...fallbackProviders, { name: '', provider: 'openai', apiKey: '', baseUrl: '', model: '' }];
+  }
+
+  function removeFallbackProvider(index) {
+    fallbackProviders = fallbackProviders.filter((_, i) => i !== index);
+  }
+
+  async function handleSaveFallbackProviders() {
+    if (!activeProfileId) return;
+    fallbackSaving = true;
+    fallbackSaved = false;
+    try {
+      // Filter out empty entries
+      const validFallbacks = fallbackProviders.filter(fb => fb.apiKey && fb.baseUrl && fb.model);
+      await UpdateProfileFallbackProviders(activeProfileId, validFallbacks);
+      fallbackSaved = true;
+      setTimeout(() => { fallbackSaved = false; }, 2000);
+    } catch (e) {
+      error = e.message || String(e);
+    } finally {
+      fallbackSaving = false;
     }
   }
 
@@ -683,6 +724,118 @@ let { t } = $props();
           </div>
         </div>
       </div>
+
+      <!-- Fallback Providers Section -->
+      <div class="border-t border-gray-100 pt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h4 class="text-[12px] font-medium text-gray-700">{t.fallbackProviders || '备用 Provider（自动故障转移）'}</h4>
+            <p class="text-[10px] text-gray-500 mt-0.5">{t.fallbackProviderHint || '当主 Provider 出现错误时，自动切换到备用 Provider 继续工作'}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            {#if fallbackSaved}
+              <span class="text-[11px] text-emerald-600 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                {t.saved || 'Saved'}
+              </span>
+            {/if}
+            {#if fallbackProviders.length > 0}
+              <button
+                class="px-2.5 py-1 text-[11px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                onclick={handleSaveFallbackProviders}
+                disabled={fallbackSaving || !activeProfileId}
+              >
+                {fallbackSaving ? (t.saving || 'Saving...') : (t.saveFallbackProviders || '保存备用 Provider')}
+              </button>
+            {/if}
+            <button
+              class="px-2.5 py-1 text-[11px] font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+              onclick={addFallbackProvider}
+              disabled={!activeProfileId}
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+              {t.addFallbackProvider || '添加'}
+            </button>
+          </div>
+        </div>
+
+        {#if fallbackProviders.length === 0}
+          <div class="text-center py-4">
+            <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+            <p class="text-[11px] text-gray-400">{t.noFallbackProviders || '未配置备用 Provider，主 Provider 故障时将无法自动切换'}</p>
+          </div>
+        {:else}
+          <div class="space-y-3">
+            {#each fallbackProviders as fb, idx}
+              <div class="bg-gray-50 rounded-lg p-3 relative group">
+                <button
+                  class="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                  onclick={() => removeFallbackProvider(idx)}
+                  title={t.removeFallbackProvider || '移除'}
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-[10px] font-medium text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">#{idx + 1}</span>
+                  <span class="text-[11px] font-medium text-gray-600">{fb.name || `Fallback ${idx + 1}`}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] text-gray-400 mb-0.5">{t.fallbackProviderName || '名称'}</label>
+                    <input type="text" placeholder="e.g. backup-deepseek"
+                      class="w-full h-7 px-2 text-[11px] bg-white border-0 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 font-mono"
+                      bind:value={fb.name} />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-400 mb-0.5">{t.fallbackProviderType || 'Provider 类型'}</label>
+                    <select class="w-full h-7 px-2 text-[11px] bg-white border-0 rounded text-gray-900 focus:ring-1 focus:ring-gray-400"
+                      bind:value={fb.provider}>
+                      {#each Object.entries(aiProviderPresets) as [key, preset]}
+                        <option value={key}>{t[key + 'Compatible'] || preset.name}</option>
+                      {/each}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-400 mb-0.5">{t.fallbackProviderModel || '模型'}</label>
+                    <input type="text" placeholder={aiProviderPresets[fb.provider]?.placeholder || 'model name'}
+                      class="w-full h-7 px-2 text-[11px] bg-white border-0 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 font-mono"
+                      bind:value={fb.model} />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-gray-400 mb-0.5">{t.fallbackProviderBaseUrl || 'Base URL'}</label>
+                    <input type="text" placeholder={aiProviderPresets[fb.provider]?.baseUrl || ''}
+                      class="w-full h-7 px-2 text-[11px] bg-white border-0 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 font-mono"
+                      bind:value={fb.baseUrl} />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-[10px] text-gray-400 mb-0.5">{t.fallbackProviderApiKey || 'API Key'}</label>
+                    <div class="relative">
+                      <input type={showFallbackApiKey[idx] ? 'text' : 'password'} placeholder="sk-..."
+                        class="w-full h-7 px-2 pr-7 text-[11px] bg-white border-0 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-gray-400 font-mono"
+                        bind:value={fb.apiKey} />
+                      <button type="button"
+                        class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onclick={() => { showFallbackApiKey[idx] = !showFallbackApiKey[idx]; showFallbackApiKey = {...showFallbackApiKey}; }}>
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          {#if showFallbackApiKey[idx]}
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                          {:else}
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          {/if}
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
       {#if !activeProfileId}
         <p class="text-[11px] text-amber-600 mt-3">{t.aiConfigProfileHint || 'Please select a profile first to configure AI settings'}</p>
       {/if}

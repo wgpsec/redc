@@ -32,6 +32,17 @@ type AIConfig struct {
 	ContextWindow int    `json:"contextWindow,omitempty"` // model context window size in tokens (default 120000)
 	EnableAskUser *bool  `json:"enableAskUser,omitempty"`
 	EnableMemory  *bool  `json:"enableMemory,omitempty"`
+	// FallbackProviders are backup AI providers used when the primary fails
+	FallbackProviders []FallbackProvider `json:"fallbackProviders,omitempty"`
+}
+
+// FallbackProvider represents a backup AI provider for failover
+type FallbackProvider struct {
+	Name     string `json:"name"`
+	Provider string `json:"provider"`
+	APIKey   string `json:"apiKey"`
+	BaseURL  string `json:"baseUrl"`
+	Model    string `json:"model"`
 }
 
 type profilePayload struct {
