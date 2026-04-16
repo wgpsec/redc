@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile } from '../../../wailsjs/go/main/App.js';
+  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill } from '../../../wailsjs/go/main/App.js';
+  import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
@@ -8,6 +9,7 @@
   let mcpLoading = $state(false);
   let error = $state('');
   let successMessage = $state('');
+  let subTab = $state('overview');
 
   // AI Configuration state (loaded from Profile)
   let aiConfig = $state({
@@ -46,6 +48,7 @@
   onMount(() => {
     loadMCPStatus();
     loadAIConfig();
+    loadSkills();
   });
 
   async function loadMCPStatus() {
@@ -124,6 +127,101 @@
     return preset.name;
   }
 
+  // Skills Knowledge Base state
+  let skills = $state([]);
+  let skillsLoading = $state(false);
+  let skillsSearch = $state('');
+  let selectedSkill = $state(null);
+  let selectedSkillLoading = $state(false);
+  let showNewSkillForm = $state(false);
+  let newSkillId = $state('');
+  let newSkillContent = $state('');
+  let savingSkill = $state(false);
+
+  // Skills market state
+  let registrySkills = $state([]);
+  let registryLoading = $state(false);
+  let registryError = $state('');
+  let installingSkillId = $state('');
+
+  async function loadSkills() {
+    skillsLoading = true;
+    try {
+      skills = await ListSkills(skillsSearch) || [];
+    } catch (e) {
+      console.error('Failed to load skills:', e);
+      skills = [];
+    } finally {
+      skillsLoading = false;
+    }
+  }
+
+  async function viewSkill(id) {
+    selectedSkillLoading = true;
+    try {
+      selectedSkill = await GetSkill(id);
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      selectedSkillLoading = false;
+    }
+  }
+
+  async function handleSaveCustomSkill() {
+    if (!newSkillId.trim() || !newSkillContent.trim()) return;
+    savingSkill = true;
+    try {
+      await SaveCustomSkill(newSkillId.trim(), newSkillContent);
+      toast.success(t.skillSaved || 'Skill saved');
+      showNewSkillForm = false;
+      newSkillId = '';
+      newSkillContent = '';
+      await loadSkills();
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      savingSkill = false;
+    }
+  }
+
+  async function handleDeleteSkill(id) {
+    try {
+      await DeleteCustomSkill(id);
+      toast.success(t.skillDeleted || 'Skill deleted');
+      if (selectedSkill && selectedSkill.id === id) selectedSkill = null;
+      await loadSkills();
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
+  async function loadRegistry() {
+    registryLoading = true;
+    registryError = '';
+    try {
+      registrySkills = await FetchSkillsRegistry() || [];
+    } catch (e) {
+      registryError = String(e);
+      registrySkills = [];
+    } finally {
+      registryLoading = false;
+    }
+  }
+
+  async function handleInstallSkill(skill) {
+    installingSkillId = skill.id;
+    try {
+      await InstallSkill(skill.id, skill.url);
+      toast.success((t.skillInstalled || 'Skill installed: ') + skill.name);
+      // Refresh both local and registry lists
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      installingSkillId = '';
+    }
+  }
+
 </script>
 
 <div class="space-y-4 sm:space-y-5">
@@ -152,6 +250,25 @@
     </div>
   {/if}
 
+  <!-- Segmented Control -->
+  <div class="flex items-center gap-3">
+    <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+      <button
+        onclick={() => subTab = 'overview'}
+        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {subTab === 'overview' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+      >{t.aiOverview || '概览'}</button>
+      <button
+        onclick={() => { subTab = 'skills'; loadSkills(); }}
+        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {subTab === 'skills' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+      >{t.skillsKnowledgeBase || 'Skills 知识库'}</button>
+      <button
+        onclick={() => { subTab = 'market'; loadRegistry(); }}
+        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {subTab === 'market' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+      >{t.skillsMarket || 'Skills 市场'}</button>
+    </div>
+  </div>
+
+  {#if subTab === 'overview'}
   <!-- Top row: AI Config status + AI Chat entry -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <!-- AI Configuration Status (compact) -->
@@ -319,4 +436,221 @@
       {/each}
     </div>
   </div>
+  {/if}
+
+  {#if subTab === 'skills'}
+  <!-- Skills Knowledge Base -->
+  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsKnowledgeBase || 'Skills 知识库'}</h3>
+        <span class="text-[11px] text-gray-400">{skills.length} {t.skillItems || 'items'}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          onclick={() => { showNewSkillForm = !showNewSkillForm; selectedSkill = null; }}
+          class="h-7 px-2.5 bg-gray-900 text-white text-[11px] font-medium rounded-lg hover:bg-gray-800 transition-colors cursor-pointer inline-flex items-center gap-1"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          {t.skillAdd || '添加'}
+        </button>
+      </div>
+    </div>
+
+    <p class="text-[12px] text-gray-500 mb-3">{t.skillsDesc || 'Skills 为 AI Agent 提供领域知识，Agent 模式下会根据对话内容自动匹配相关 Skill 注入上下文。'}</p>
+
+    <!-- Search -->
+    <div class="mb-3">
+      <input
+        type="text"
+        placeholder={t.skillSearch || '搜索 Skills...'}
+        class="w-full h-8 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        bind:value={skillsSearch}
+        oninput={() => loadSkills()}
+      />
+    </div>
+
+    <!-- Skills list -->
+    {#if skillsLoading}
+      <div class="flex items-center justify-center py-6">
+        <svg class="w-5 h-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+      </div>
+    {:else if skills.length === 0}
+      <p class="text-center text-[12px] text-gray-400 py-4">{t.skillsEmpty || '暂无 Skills'}</p>
+    {:else}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
+        {#each skills as skill}
+          <div
+            role="button" tabindex="0"
+            onclick={() => viewSkill(skill.id)}
+            onkeydown={(e) => { if (e.key === 'Enter') viewSkill(skill.id); }}
+            class="text-left bg-gray-50 hover:bg-gray-100 rounded-lg p-3 transition-colors cursor-pointer border {selectedSkill && selectedSkill.id === skill.id ? 'border-gray-900' : 'border-transparent'}"
+          >
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[12px] font-medium text-gray-900 truncate">{skill.name}</span>
+              <button
+                onclick={(e) => { e.stopPropagation(); handleDeleteSkill(skill.id); }}
+                class="text-gray-400 hover:text-red-500 cursor-pointer p-0.5"
+                title={t.delete || '删除'}
+              >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+              </button>
+            </div>
+            <p class="text-[11px] text-gray-500 line-clamp-2">{skill.description}</p>
+            {#if skill.tags && skill.tags.length > 0}
+              <div class="flex flex-wrap gap-1 mt-1.5">
+                {#each skill.tags.slice(0, 4) as tag}
+                  <span class="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded">{tag}</span>
+                {/each}
+                {#if skill.tags.length > 4}
+                  <span class="text-[10px] text-gray-400">+{skill.tags.length - 4}</span>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <!-- Skill detail view -->
+    {#if selectedSkillLoading}
+      <div class="flex items-center justify-center py-4">
+        <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+      </div>
+    {:else if selectedSkill}
+      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-[12px] font-semibold text-gray-900">{selectedSkill.name}</h4>
+          <button onclick={() => selectedSkill = null} class="text-gray-400 hover:text-gray-600 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-mono bg-white rounded p-3 max-h-64 overflow-y-auto border border-gray-100">{selectedSkill.content}</pre>
+      </div>
+    {/if}
+
+    <!-- New skill form -->
+    {#if showNewSkillForm}
+      <div class="bg-gray-50 rounded-lg p-3 sm:p-4 mt-3">
+        <h4 class="text-[12px] font-semibold text-gray-900 mb-3">{t.skillAddNew || '添加自定义 Skill'}</h4>
+        <div class="space-y-3">
+          <div>
+            <label class="text-[11px] text-gray-500 block mb-1">ID ({t.skillIdHint || '英文标识符，如 my-skill'})</label>
+            <input
+              type="text"
+              placeholder="my-custom-skill"
+              class="w-full h-8 px-3 text-[12px] bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
+              bind:value={newSkillId}
+            />
+          </div>
+          <div>
+            <label class="text-[11px] text-gray-500 block mb-1">{t.skillContent || '内容'} (Markdown, {t.skillFrontmatterHint || '首行可用 YAML frontmatter 定义 name/description/tags'})</label>
+            <textarea
+              rows="10"
+              placeholder={"---\nname: My Skill\ndescription: Description of the skill\ntags: tag1, tag2\n---\n# Skill Content\n\nYour knowledge base content here..."}
+              class="w-full px-3 py-2 text-[12px] bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono resize-y"
+              bind:value={newSkillContent}
+            ></textarea>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              onclick={handleSaveCustomSkill}
+              disabled={savingSkill || !newSkillId.trim() || !newSkillContent.trim()}
+              class="h-8 px-4 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {savingSkill ? '...' : (t.save || '保存')}
+            </button>
+            <button
+              onclick={() => { showNewSkillForm = false; newSkillId = ''; newSkillContent = ''; }}
+              class="h-8 px-4 bg-gray-100 text-gray-600 text-[12px] font-medium rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+            >
+              {t.cancel || '取消'}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
+  </div>
+  {/if}
+
+  {#if subTab === 'market'}
+  <!-- Skills Market -->
+  <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" />
+        </svg>
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsMarket || 'Skills 市场'}</h3>
+      </div>
+      <button
+        onclick={loadRegistry}
+        class="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
+        title={t.refresh || '刷新'}
+      >
+        <svg class="w-4 h-4 {registryLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+      </button>
+    </div>
+
+    <p class="text-[12px] text-gray-500 mb-4">{t.skillsMarketDesc || '从远程仓库下载社区和官方维护的 Skills 知识库，下载后可在 AI Agent 模式中使用。'}</p>
+
+    {#if registryError}
+      <div class="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg mb-3">
+        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+        <span class="text-[12px] text-red-700 flex-1">{registryError}</span>
+      </div>
+    {/if}
+
+    {#if registryLoading}
+      <div class="flex items-center justify-center py-8">
+        <svg class="w-5 h-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+      </div>
+    {:else if registrySkills.length === 0 && !registryError}
+      <p class="text-center text-[12px] text-gray-400 py-6">{t.skillsMarketEmpty || '暂无可用 Skills'}</p>
+    {:else}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {#each registrySkills as skill}
+          <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[12px] font-medium text-gray-900 truncate">{skill.name}</span>
+              {#if skill.installed}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-medium rounded-full">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                  {t.installed || '已安装'}
+                </span>
+              {:else}
+                <button
+                  onclick={() => handleInstallSkill(skill)}
+                  disabled={installingSkillId === skill.id}
+                  class="h-6 px-2 bg-gray-900 text-white text-[10px] font-medium rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1"
+                >
+                  {#if installingSkillId === skill.id}
+                    <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                  {:else}
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                  {/if}
+                  {installingSkillId === skill.id ? '...' : (t.install || '安装')}
+                </button>
+              {/if}
+            </div>
+            <p class="text-[11px] text-gray-500 line-clamp-2 mb-1.5">{skill.description}</p>
+            {#if skill.tags && skill.tags.length > 0}
+              <div class="flex flex-wrap gap-1">
+                {#each skill.tags.slice(0, 4) as tag}
+                  <span class="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded">{tag}</span>
+                {/each}
+                {#if skill.tags.length > 4}
+                  <span class="text-[10px] text-gray-400">+{skill.tags.length - 4}</span>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+  {/if}
 </div>

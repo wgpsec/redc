@@ -59,13 +59,17 @@ In the GUI's AI Settings, users can add fallback providers:
 
 ## 2. Skills Knowledge Base
 
-**File:** `mod/ai/skills.go`
+**Files:** `mod/ai/skills.go`, `mod/ai/skill_registry.go`, `app_ai_skills.go`
 
 ### Overview
 
 A knowledge base system that provides IaC best practices and cloud-specific guidance to the AI agent. Skills are automatically recommended based on the user's query context and can be loaded on-demand via MCP tools.
 
-### Built-in Skills (5)
+Skills are distributed through a remote registry (like plugins and templates) hosted at `redc.wgpsec.org/skills/skill-registry.json`. Users can browse, install, and delete skills from the GUI.
+
+### Skills Registry
+
+Skills are managed via a registry model (no hardcoded built-ins):
 
 | ID | Name | Tags |
 |----|------|------|
@@ -75,9 +79,26 @@ A knowledge base system that provides IaC best practices and cloud-specific guid
 | `troubleshooting-guide` | Deployment Troubleshooting | troubleshoot, error, debug, terraform |
 | `cost-optimization` | Cloud Cost Optimization | cost, optimization, pricing, spot |
 
+### Architecture
+
+```
+redc-template repo        GitHub Actions CI           redc-gui
+ skills/                    → Build ZIP per skill      GUI "Skills 市场" tab
+   terraform-best-practices/  → Generate registry JSON    → FetchSkillsRegistry()
+     SKILL.md                  → Deploy to gh-pages         → InstallSkill(id, url)
+   aws-security-hardening/                                   → Downloads ZIP → ~/redc/skills/
+     SKILL.md
+```
+
+### GUI Tabs (AI Integration page)
+
+1. **概览** — AI config status, chat entry, MCP server
+2. **Skills 知识库** — Locally installed skills, search, view content, add/delete custom skills
+3. **Skills 市场** — Browse remote registry, install skills with one click
+
 ### Custom Skills
 
-Users can add custom skills by creating directories under `~/redc/skills/`:
+Users can add custom skills by creating directories under `~/redc/skills/` or via the GUI:
 
 ```
 ~/redc/skills/
@@ -271,10 +292,12 @@ app.OrchestratorStream(conversationId, OrchestratorConfig{
 | File | Lines | Purpose |
 |------|-------|---------|
 | `mod/ai/provider.go` | ~225 | Provider failover + retry |
-| `mod/ai/skills.go` | ~280 | Skills knowledge base engine |
+| `mod/ai/skills.go` | ~260 | Skills knowledge base engine |
+| `mod/ai/skill_registry.go` | ~160 | Skills remote registry + install |
 | `mod/ai/hooks.go` | ~165 | Safety hook chain |
 | `mod/ai/compact.go` | ~225 | LLM context compaction |
 | `app_ai_orchestrator.go` | ~480 | Multi-round orchestrator |
+| `app_ai_skills.go` | ~110 | Skills CRUD + registry + install APIs |
 
 ## Modified Files
 
@@ -283,3 +306,4 @@ app.OrchestratorStream(conversationId, OrchestratorConfig{
 | `mod/profile.go` | Added `FallbackProviders` to `AIConfig`, `FallbackProvider` struct |
 | `mod/mcp/mcp.go` | Added `list_skills`, `read_skill` tools + implementations |
 | `app_ai_chat.go` | Integrated ProviderManager, skills suggestions, hooks, LLM compaction |
+| `frontend/src/components/AI/AIIntegration.svelte` | Skills Market tab, registry install UI |

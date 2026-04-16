@@ -3,6 +3,7 @@
 import {main} from '../models';
 import {mod} from '../models';
 import {plugin} from '../models';
+import {ai} from '../models';
 import {cost} from '../models';
 import {sshutil} from '../models';
 import {time} from '../models';
@@ -81,6 +82,8 @@ export function DeleteConfigTemplate(arg1:string):Promise<void>;
 
 export function DeleteCustomDeployment(arg1:string):Promise<void>;
 
+export function DeleteCustomSkill(arg1:string):Promise<void>;
+
 export function DeleteProfile(arg1:string):Promise<void>;
 
 export function DeleteRemoteFile(arg1:string,arg2:string):Promise<void>;
@@ -118,6 +121,8 @@ export function ExportTemplates(arg1:Array<string>):Promise<string>;
 export function FetchPluginRegistry():Promise<Array<plugin.RegistryPlugin>>;
 
 export function FetchRegistryTemplates(arg1:string):Promise<Array<main.RegistryTemplate>>;
+
+export function FetchSkillsRegistry():Promise<Array<ai.RegistrySkill>>;
 
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
@@ -203,6 +208,8 @@ export function GetScheduledTask(arg1:string):Promise<mod.ScheduledTask>;
 
 export function GetShowWelcomeDialog():Promise<boolean>;
 
+export function GetSkill(arg1:string):Promise<ai.Skill>;
+
 export function GetSpotAutoRecoverEnabled():Promise<boolean>;
 
 export function GetSpotMonitorEnabled():Promise<boolean>;
@@ -231,6 +238,8 @@ export function ImportTemplates(arg1:string):Promise<Array<string>>;
 
 export function InstallPlugin(arg1:string):Promise<void>;
 
+export function InstallSkill(arg1:string,arg2:string):Promise<void>;
+
 export function ListAllScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 
 export function ListAllTemplates():Promise<Array<main.TemplateInfo>>;
@@ -256,6 +265,8 @@ export function ListProjects():Promise<Array<main.ProjectInfo>>;
 export function ListRemoteFiles(arg1:string,arg2:string):Promise<Array<sshutil.FileInfo>>;
 
 export function ListScheduledTasks():Promise<Array<mod.ScheduledTask>>;
+
+export function ListSkills(arg1:string):Promise<Array<ai.SkillIndex>>;
 
 export function ListTemplates():Promise<Array<main.TemplateInfo>>;
 
@@ -336,6 +347,8 @@ export function ResumeAgentStream(arg1:string):Promise<void>;
 export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function SaveConfigTemplate(arg1:string,arg2:mod.DeploymentConfig):Promise<void>;
+
+export function SaveCustomSkill(arg1:string,arg2:string):Promise<void>;
 
 export function SavePluginConfig(arg1:string,arg2:string):Promise<void>;
 

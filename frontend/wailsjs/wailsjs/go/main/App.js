@@ -150,6 +150,10 @@ export function DeleteCustomDeployment(arg1) {
   return window['go']['main']['App']['DeleteCustomDeployment'](arg1);
 }
 
+export function DeleteCustomSkill(arg1) {
+  return window['go']['main']['App']['DeleteCustomSkill'](arg1);
+}
+
 export function DeleteProfile(arg1) {
   return window['go']['main']['App']['DeleteProfile'](arg1);
 }
@@ -224,6 +228,10 @@ export function FetchPluginRegistry() {
 
 export function FetchRegistryTemplates(arg1) {
   return window['go']['main']['App']['FetchRegistryTemplates'](arg1);
+}
+
+export function FetchSkillsRegistry() {
+  return window['go']['main']['App']['FetchSkillsRegistry']();
 }
 
 export function FetchTemplateReadme(arg1, arg2) {
@@ -394,6 +402,10 @@ export function GetShowWelcomeDialog() {
   return window['go']['main']['App']['GetShowWelcomeDialog']();
 }
 
+export function GetSkill(arg1) {
+  return window['go']['main']['App']['GetSkill'](arg1);
+}
+
 export function GetSpotAutoRecoverEnabled() {
   return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
 }
@@ -450,6 +462,10 @@ export function InstallPlugin(arg1) {
   return window['go']['main']['App']['InstallPlugin'](arg1);
 }
 
+export function InstallSkill(arg1, arg2) {
+  return window['go']['main']['App']['InstallSkill'](arg1, arg2);
+}
+
 export function ListAllScheduledTasks() {
   return window['go']['main']['App']['ListAllScheduledTasks']();
 }
@@ -500,6 +516,10 @@ export function ListRemoteFiles(arg1, arg2) {
 
 export function ListScheduledTasks() {
   return window['go']['main']['App']['ListScheduledTasks']();
+}
+
+export function ListSkills(arg1) {
+  return window['go']['main']['App']['ListSkills'](arg1);
 }
 
 export function ListTemplates() {
@@ -660,6 +680,10 @@ export function RunF8xInstall(arg1, arg2) {
 
 export function SaveConfigTemplate(arg1, arg2) {
   return window['go']['main']['App']['SaveConfigTemplate'](arg1, arg2);
+}
+
+export function SaveCustomSkill(arg1, arg2) {
+  return window['go']['main']['App']['SaveCustomSkill'](arg1, arg2);
 }
 
 export function SavePluginConfig(arg1, arg2) {

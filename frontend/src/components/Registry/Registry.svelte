@@ -5,6 +5,7 @@
   import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
+  import { toast } from '../../lib/toast.js';
 
   // Registry state
 let { t, lang } = $props();
@@ -227,8 +228,10 @@ let { t, lang } = $props();
       justPulled[templateName] = true;
       justPulled = justPulled;
       setTimeout(() => { delete justPulled[templateName]; justPulled = justPulled; }, 2000);
+      toast.success(`${t.pullSuccess}: ${templateName}`);
       setRegistryNotice('success', `${t.pullSuccess}: ${templateName}`);
     } catch (e) {
+      toast.error(`${t.pullFailed}: ${templateName}`);
       setRegistryNotice('error', `${t.pullFailed}: ${templateName}`);
     } finally {
       pullingTemplates[templateName] = false;

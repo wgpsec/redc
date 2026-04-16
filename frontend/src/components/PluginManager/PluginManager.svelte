@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { ListPlugins, InstallPlugin, UninstallPlugin, EnablePlugin, DisablePlugin, UpdatePlugin, GetPluginConfig, SavePluginConfig, FetchPluginRegistry, GetPluginsDir } from '../../../wailsjs/go/main/App.js';
   import { compareVersions } from '../../utils/version.js';
+  import { toast } from '../../lib/toast.js';
   import Modal from '../UI/Modal.svelte';
 
   let { t, lang } = $props();
@@ -55,6 +56,7 @@
     error = '';
     try {
       await InstallPlugin(installSource.trim());
+      toast.success(t.pluginInstallSuccess || '插件安装成功');
       installSource = '';
       await loadPlugins();
     } catch (e) {
@@ -80,6 +82,7 @@
     actionLoading = p.name + '-update';
     try {
       await UpdatePlugin(p.name);
+      toast.success((t.pluginUpdateSuccess || '插件已更新: ') + p.name);
       await loadPlugins();
     } catch (e) {
       error = e?.message || String(e);
@@ -161,6 +164,7 @@
     error = '';
     try {
       await InstallPlugin(url);
+      toast.success(t.pluginInstallSuccess || '插件安装成功');
       await loadPlugins();
       await loadRegistry();
     } catch (e) {
@@ -175,6 +179,7 @@
     error = '';
     try {
       await UpdatePlugin(name);
+      toast.success((t.pluginUpdateSuccess || '插件已更新: ') + name);
       await loadPlugins();
       await loadRegistry();
     } catch (e) {

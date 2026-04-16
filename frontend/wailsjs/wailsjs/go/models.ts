@@ -1,3 +1,70 @@
+export namespace ai {
+	
+	export class RegistrySkill {
+	    id: string;
+	    name: string;
+	    description: string;
+	    tags: string[];
+	    url: string;
+	    sha256?: string;
+	    installed?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RegistrySkill(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.tags = source["tags"];
+	        this.url = source["url"];
+	        this.sha256 = source["sha256"];
+	        this.installed = source["installed"];
+	    }
+	}
+	export class Skill {
+	    id: string;
+	    name: string;
+	    description: string;
+	    tags: string[];
+	    content?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Skill(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.tags = source["tags"];
+	        this.content = source["content"];
+	    }
+	}
+	export class SkillIndex {
+	    id: string;
+	    name: string;
+	    description: string;
+	    tags: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SkillIndex(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.tags = source["tags"];
+	    }
+	}
+
+}
+
 export namespace cost {
 	
 	export class ProviderCostSummary {
