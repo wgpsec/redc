@@ -5,7 +5,7 @@
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
-  let { t, onTabChange = () => {}, visible = true } = $props();
+  let { t, lang, onTabChange = () => {}, visible = true } = $props();
 
   // Configure marked
   marked.setOptions({ breaks: true, gfm: true });
@@ -680,7 +680,7 @@
 
   // Quick prompt suggestions per mode
   function getQuickPrompts(m) {
-    const prompts = {
+    const promptsZh = {
       free: [
         { label: '红队基础设施规划', text: '帮我规划一个完整的红队基础设施方案，包括 C2、重定向器和钓鱼平台' },
         { label: '云服务商对比', text: '对比各个云服务商在红队基础设施方面的优缺点' },
@@ -714,6 +714,41 @@
         { label: '成本优化建议', text: '如何优化我的云资源使用以降低成本？' },
       ],
     };
+    const promptsEn = {
+      free: [
+        { label: 'Red Team Infra Planning', text: 'Help me plan a complete red team infrastructure including C2, redirectors and phishing platform' },
+        { label: 'Cloud Provider Comparison', text: 'Compare cloud providers for red team infrastructure in terms of pros and cons' },
+        { label: 'Security Hardening', text: 'How to harden deployed red team infrastructure for better security?' },
+      ],
+      agent: [
+        { label: 'Deploy nginx server', text: 'Help me deploy an nginx server' },
+        { label: 'List running scenes', text: 'List all currently running scenes and their status' },
+        { label: 'Batch manage scenes', text: 'Help me check the status of all scenes' },
+      ],
+      deploy: [
+        { label: 'Deploy Clash proxy', text: 'Help me deploy a Clash proxy service' },
+        { label: 'Deploy Nginx reverse proxy', text: 'Help me deploy an Nginx reverse proxy server' },
+        { label: 'Deploy with custom script', text: 'Help me deploy a server with a custom initialization script' },
+      ],
+      errorAnalysis: [
+        { label: 'Analyze Terraform error', text: 'Please help me analyze this Terraform deployment error' },
+        { label: 'SSH connection issue', text: 'Cannot connect via SSH after deployment, help me troubleshoot' },
+      ],
+      generate: [
+        { label: 'Generate AWS EC2 template', text: 'Help me generate a Terraform template for an AWS EC2 instance' },
+        { label: 'Generate Aliyun ECS template', text: 'Help me generate an Aliyun ECS instance template with security group config' },
+        { label: 'Generate multi-cloud template', text: 'Help me generate a multi-cloud orchestration template for both AWS and Aliyun' },
+      ],
+      recommend: [
+        { label: 'Recommend C2 scenario', text: 'Recommend a C2 infrastructure deployment plan suitable for long-term operations' },
+        { label: 'Recommend low-cost plan', text: 'Recommend the most cost-effective red team infrastructure deployment plan' },
+      ],
+      cost: [
+        { label: 'Analyze current costs', text: 'Analyze the costs of all my currently running scenes' },
+        { label: 'Cost optimization tips', text: 'How to optimize my cloud resource usage to reduce costs?' },
+      ],
+    };
+    const prompts = lang === 'en' ? promptsEn : promptsZh;
     return prompts[m] || prompts.free;
   }
 

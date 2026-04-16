@@ -4,7 +4,7 @@
   import { compareVersions } from '../../utils/version.js';
   import Modal from '../UI/Modal.svelte';
 
-  let { t } = $props();
+  let { t, lang } = $props();
 
   let plugins = $state([]);
   let registryPlugins = $state([]);
@@ -28,13 +28,13 @@
   const filteredPlugins = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return plugins;
-    return plugins.filter(p => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.tags?.some(t => t.toLowerCase().includes(q)));
+    return plugins.filter(p => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.description_en?.toLowerCase().includes(q) || p.tags?.some(t => t.toLowerCase().includes(q)));
   });
 
   const filteredRegistry = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return registryPlugins;
-    return registryPlugins.filter(p => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.tags?.some(t => t.toLowerCase().includes(q)));
+    return registryPlugins.filter(p => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.description_en?.toLowerCase().includes(q) || p.tags?.some(t => t.toLowerCase().includes(q)));
   });
 
   async function loadPlugins() {
@@ -313,7 +313,7 @@
                     <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{p.category}</span>
                   {/if}
                 </div>
-                <div class="text-[11px] text-gray-500 mt-0.5 truncate pl-3.5">{p.description}</div>
+                <div class="text-[11px] text-gray-500 mt-0.5 truncate pl-3.5">{lang === 'en' ? (p.description_en || p.description) : p.description}</div>
                 {#if p.tags?.length}
                   <div class="flex gap-1 mt-1 flex-wrap pl-3.5">
                     {#each p.tags as tag}
@@ -402,7 +402,7 @@
                     <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{rp.category}</span>
                   {/if}
                 </div>
-                <div class="text-[11px] text-gray-500 mt-0.5">{rp.description}</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">{lang === 'en' ? (rp.description_en || rp.description) : rp.description}</div>
                 {#if rp.author}
                   <div class="text-[11px] text-gray-400 mt-0.5">by {rp.author}</div>
                 {/if}

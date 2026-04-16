@@ -374,7 +374,7 @@
 
       <!-- AIChat rendered outside {#key} to persist event listeners and state across tab switches -->
       <div class="-m-6 h-[calc(100%+3rem)]" style:display={activeTab === 'aiChat' && !isLoading ? 'block' : 'none'}>
-        <AIChat {t} onTabChange={(tab) => activeTab = tab} visible={activeTab === 'aiChat' && !isLoading} />
+        <AIChat {t} {lang} onTabChange={(tab) => activeTab = tab} visible={activeTab === 'aiChat' && !isLoading} />
       </div>
 
       {#if isLoading}
@@ -410,7 +410,7 @@
               <HTTPServer {t} />
 
             {:else if activeTab === 'registry'}
-              <Registry {t} />
+              <Registry {t} {lang} />
 
             {:else if activeTab === 'ai'}
               <AIIntegration {t} onTabChange={(tab) => activeTab = tab} />
@@ -425,7 +425,7 @@
               <Credentials {t} />
 
             {:else if activeTab === 'localTemplates'}
-              <LocalTemplates {t} />
+              <LocalTemplates {t} {lang} />
 
             {:else if activeTab === 'customDeployment'}
               <CustomDeployment {t} onTabChange={(tab) => activeTab = tab} />
@@ -434,7 +434,7 @@
               <TaskCenter {t} />
 
             {:else if activeTab === 'pluginManager'}
-              <PluginManager {t} />
+              <PluginManager {t} {lang} />
 
             {:else if activeTab === 'agentMemory'}
               <AgentMemory {t} />

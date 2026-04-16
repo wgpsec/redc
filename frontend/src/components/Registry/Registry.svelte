@@ -2,12 +2,12 @@
 
   import { onMount, onDestroy } from 'svelte';
   import Modal from '../UI/Modal.svelte';
-  import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme, GetLanguage } from '../../../wailsjs/go/main/App.js';
+  import { FetchRegistryTemplates, PullTemplate, ListTemplates, FetchTemplateReadme } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
 
   // Registry state
-let { t } = $props();
+let { t, lang } = $props();
   let registryTemplates = $state([]);
   let registryLoading = $state(false);
   let registryError = $state('');
@@ -141,6 +141,7 @@ let { t } = $props();
       return t.name.toLowerCase().includes(q) ||
         (t.author && t.author.toLowerCase().includes(q)) ||
         (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.description_en && t.description_en.toLowerCase().includes(q)) ||
         (t.tags && t.tags.some(tag => tag.toLowerCase().includes(q)));
     })
     .sort((a, b) => {
@@ -238,7 +239,6 @@ let { t } = $props();
   async function handleShowReadme(templateName) {
     readmeModal = { show: true, content: '', html: '', loading: true, templateName };
     try {
-      const lang = await GetLanguage();
       const content = await FetchTemplateReadme(templateName, lang || 'zh');
       const html = parseMarkdown(content);
       readmeModal = { ...readmeModal, content, html, loading: false };
@@ -607,7 +607,7 @@ let { t } = $props();
               </div>
               
               {#if tmpl.description}
-                <p class="text-[11px] text-gray-500 mb-2 line-clamp-2">{tmpl.description}</p>
+                <p class="text-[11px] text-gray-500 mb-2 line-clamp-2">{lang === 'en' ? (tmpl.description_en || tmpl.description) : tmpl.description}</p>
               {/if}
               
               {#if tmpl.tags && tmpl.tags.length > 0}

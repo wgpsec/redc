@@ -16,7 +16,7 @@
   let templateTab = $state('all');
   
   // Local templates list and loading state
-  let { t } = $props();
+  let { t, lang } = $props();
   let localTemplates = $state([]);
   let localTemplatesLoading = $state(false);
   let localTemplatesSearch = $state('');
@@ -320,6 +320,7 @@
         const search = localTemplatesSearch.toLowerCase();
         return t.name.toLowerCase().includes(search) ||
           (t.description && t.description.toLowerCase().includes(search)) ||
+          (t.description_en && t.description_en.toLowerCase().includes(search)) ||
           (t.module && t.module.toLowerCase().includes(search)) ||
           (t.plugins && t.plugins.toLowerCase().includes(search));
       }
@@ -756,7 +757,7 @@
                 {/if}
               </td>
               <td class="px-3 py-3 hidden xl:table-cell">
-                <span class="text-[11px] text-gray-500 truncate max-w-[280px] inline-block" title={tmpl.description}>{tmpl.description || '-'}</span>
+                <span class="text-[11px] text-gray-500 truncate max-w-[280px] inline-block" title={lang === 'en' ? (tmpl.description_en || tmpl.description) : tmpl.description}>{lang === 'en' ? (tmpl.description_en || tmpl.description) : tmpl.description || '-'}</span>
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
@@ -965,7 +966,7 @@
           {#if localTemplateDetail.description}
             <div>
               <div class="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">{t.description}</div>
-              <p class="text-[13px] text-gray-700">{localTemplateDetail.description}</p>
+              <p class="text-[13px] text-gray-700">{lang === 'en' ? (localTemplateDetail.description_en || localTemplateDetail.description) : localTemplateDetail.description}</p>
             </div>
           {/if}
           <div class="grid grid-cols-2 gap-4">

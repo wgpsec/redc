@@ -448,12 +448,13 @@ type ProjectInfo struct {
 
 // TemplateInfo represents template information for frontend display
 type TemplateInfo struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Version     string `json:"version"`
-	User        string `json:"user"`
-	Module      string `json:"module"`
-	Plugins     string `json:"plugins"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	DescriptionEN string `json:"description_en"`
+	Version       string `json:"version"`
+	User          string `json:"user"`
+	Module        string `json:"module"`
+	Plugins       string `json:"plugins"`
 }
 
 // ResourceSummary represents aggregated resource counts by type
@@ -512,15 +513,16 @@ type TemplateVariable struct {
 }
 
 type RegistryTemplate struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Author      string   `json:"author"`
-	Latest      string   `json:"latest"`
-	Versions    []string `json:"versions"`
-	UpdatedAt   string   `json:"updatedAt"`
-	Tags        []string `json:"tags"`
-	Installed   bool     `json:"installed"`
-	LocalVer    string   `json:"localVersion"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	DescriptionEN string   `json:"description_en"`
+	Author        string   `json:"author"`
+	Latest        string   `json:"latest"`
+	Versions      []string `json:"versions"`
+	UpdatedAt     string   `json:"updatedAt"`
+	Tags          []string `json:"tags"`
+	Installed     bool     `json:"installed"`
+	LocalVer      string   `json:"localVersion"`
 }
 
 // remoteTemplateInfo matches a single template in the registry
@@ -535,11 +537,12 @@ type remoteTemplateInfo struct {
 		UpdatedAt string `json:"updated_at"`
 	} `json:"versions"`
 	Metadata struct {
-		Name        string   `json:"name"`
-		Author      string   `json:"author"`
-		Description string   `json:"description"`
-		Readme      string   `json:"readme"`
-		Tags        []string `json:"tags,omitempty"`
+		Name          string   `json:"name"`
+		Author        string   `json:"author"`
+		Description   string   `json:"description"`
+		DescriptionEN string   `json:"description_en"`
+		Readme        string   `json:"readme"`
+		Tags          []string `json:"tags,omitempty"`
 	} `json:"metadata"`
 }
 

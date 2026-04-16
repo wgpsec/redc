@@ -44,15 +44,16 @@ const (
 
 // RedcTmpl 对应本地 case.json 的结构
 type RedcTmpl struct {
-	Name         string       `json:"name"`
-	Description  string       `json:"description"`
-	User         string       `json:"user"`
-	Version      string       `json:"version"`
-	RedcModule   string       `json:"redc_module"`
-	RedcPlugins  string       `json:"redc_plugins"`
-	TemplateType TemplateType `json:"template"`
-	Tags         []string     `json:"tags,omitempty"`
-	Path         string       `json:"-"`
+	Name          string       `json:"name"`
+	Description   string       `json:"description"`
+	DescriptionEN string       `json:"description_en"`
+	User          string       `json:"user"`
+	Version       string       `json:"version"`
+	RedcModule    string       `json:"redc_module"`
+	RedcPlugins   string       `json:"redc_plugins"`
+	TemplateType  TemplateType `json:"template"`
+	Tags          []string     `json:"tags,omitempty"`
+	Path          string       `json:"-"`
 }
 
 // PullOptions 配置项
@@ -85,11 +86,12 @@ type TemplateItem struct {
 
 // TemplateMetadata 元数据信息
 type TemplateMetadata struct {
-	Name        string   `json:"name"`
-	Author      string   `json:"author"`
-	Description string   `json:"description"`
-	Readme      string   `json:"readme"`
-	Tags        []string `json:"tags,omitempty"`
+	Name          string   `json:"name"`
+	Author        string   `json:"author"`
+	Description   string   `json:"description"`
+	DescriptionEN string   `json:"description_en"`
+	Readme        string   `json:"readme"`
+	Tags          []string `json:"tags,omitempty"`
 }
 
 // TemplateVersion 具体版本信息

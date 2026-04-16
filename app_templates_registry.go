@@ -25,12 +25,13 @@ func (a *App) ListTemplates() ([]TemplateInfo, error) {
 	result := make([]TemplateInfo, 0, len(templates))
 	for _, t := range templates {
 		result = append(result, TemplateInfo{
-			Name:        t.Name,
-			Description: t.Description,
-			Version:     t.Version,
-			User:        t.User,
-			Module:      t.RedcModule,
-			Plugins:     t.RedcPlugins,
+			Name:          t.Name,
+			Description:   t.Description,
+			DescriptionEN: t.DescriptionEN,
+			Version:       t.Version,
+			User:          t.User,
+			Module:        t.RedcModule,
+			Plugins:       t.RedcPlugins,
 		})
 	}
 	return result, nil
@@ -44,12 +45,13 @@ func (a *App) ListAllTemplates() ([]TemplateInfo, error) {
 	result := make([]TemplateInfo, 0, len(templates))
 	for _, t := range templates {
 		result = append(result, TemplateInfo{
-			Name:        t.Name,
-			Description: t.Description,
-			Version:     t.Version,
-			User:        t.User,
-			Module:      t.RedcModule,
-			Plugins:     t.RedcPlugins,
+			Name:          t.Name,
+			Description:   t.Description,
+			DescriptionEN: t.DescriptionEN,
+			Version:       t.Version,
+			User:          t.User,
+			Module:        t.RedcModule,
+			Plugins:       t.RedcPlugins,
 		})
 	}
 	return result, nil
@@ -251,9 +253,10 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 		}
 
 		result = append(result, RegistryTemplate{
-			Name:        name,
-			Description: t.Metadata.Description,
-			Author:      t.Metadata.Author,
+			Name:          name,
+			Description:   t.Metadata.Description,
+			DescriptionEN: t.Metadata.DescriptionEN,
+			Author:        t.Metadata.Author,
 			Latest:      t.Latest,
 			Versions:    versions,
 			UpdatedAt:   updatedAt,

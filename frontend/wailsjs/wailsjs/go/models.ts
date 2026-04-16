@@ -683,6 +683,7 @@ export namespace main {
 	export class RegistryTemplate {
 	    name: string;
 	    description: string;
+	    description_en: string;
 	    author: string;
 	    latest: string;
 	    versions: string[];
@@ -699,6 +700,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.description = source["description"];
+	        this.description_en = source["description_en"];
 	        this.author = source["author"];
 	        this.latest = source["latest"];
 	        this.versions = source["versions"];
@@ -725,6 +727,7 @@ export namespace main {
 	export class TemplateInfo {
 	    name: string;
 	    description: string;
+	    description_en: string;
 	    version: string;
 	    user: string;
 	    module: string;
@@ -738,6 +741,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.description = source["description"];
+	        this.description_en = source["description_en"];
 	        this.version = source["version"];
 	        this.user = source["user"];
 	        this.module = source["module"];
