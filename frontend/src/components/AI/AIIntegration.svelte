@@ -262,7 +262,7 @@
       <button
         onclick={() => { subTab = 'skills'; loadSkills(); }}
         class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {subTab === 'skills' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
-      >{t.skillsKnowledgeBase || 'Skills 知识库'}</button>
+      >{t.skillsKnowledgeBase || 'Skills 技能库'}</button>
       <button
         onclick={() => { subTab = 'market'; loadRegistry(); }}
         class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {subTab === 'market' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
@@ -448,7 +448,7 @@
         <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
         </svg>
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsKnowledgeBase || 'Skills 知识库'}</h3>
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsKnowledgeBase || 'Skills 技能库'}</h3>
         <span class="text-[11px] text-gray-400">{skills.length} {t.skillItems || 'items'}</span>
       </div>
       <div class="flex items-center gap-2">
@@ -604,7 +604,7 @@
       </button>
     </div>
 
-    <p class="text-[12px] text-gray-500 mb-4">{t.skillsMarketDesc || '从远程仓库下载社区和官方维护的 Skills 知识库，下载后可在 AI Agent 模式中使用。'}</p>
+    <p class="text-[12px] text-gray-500 mb-4">{t.skillsMarketDesc || '从远程仓库下载社区和官方维护的 Skills 技能库，下载后可在 AI Agent 模式中使用。'}</p>
 
     {#if registryError}
       <div class="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg mb-3">
