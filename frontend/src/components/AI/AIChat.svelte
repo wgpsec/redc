@@ -454,11 +454,10 @@
     if (messagesContainer) {
       requestAnimationFrame(() => {
         if (!messagesContainer) return;
-        // Only auto-scroll if user is near bottom (within 150px) or forced
         const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
         const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
         if (force || isNearBottom) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          messagesContainer.scrollTo({ top: scrollHeight, behavior: 'smooth' });
         }
       });
     }
