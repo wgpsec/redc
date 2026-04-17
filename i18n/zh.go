@@ -356,6 +356,7 @@ var zhMessages = map[string]string{
 	"app_template_validate_start":    "开始验证模板: %s",
 	"app_template_validate_success":  "模板验证通过: %s",
 	"app_template_validate_failed":   "模板验证失败: %s",
+	"app_template_import_invalid":    "导入的模板格式无效（缺少 case.json 或 JSON 格式错误）: %s\n参考文档: %s",
 	"app_mcp_started":           "MCP 服务器已启动 - 模式: %s, 地址: %s",
 	"app_cron_created":          "已创建定时任务: %s 将在 %s %s",
 	"app_cron_cancelled":        "已取消定时任务: %s",

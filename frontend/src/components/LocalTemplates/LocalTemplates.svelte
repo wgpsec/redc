@@ -410,7 +410,7 @@
       setTimeout(() => { exportMessage = ''; }, 5000);
     } catch (e) {
       console.error('Import failed:', e);
-      exportMessage = '导入失败: ' + String(e);
+      exportMessage = (t.importFailed || '导入失败') + ': ' + String(e);
     } finally {
       importing = false;
     }

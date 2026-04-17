@@ -15,6 +15,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/projectdiscovery/gologger"
 )
 
 func (a *App) ListTemplates() ([]TemplateInfo, error) {
@@ -561,7 +563,39 @@ func (a *App) ImportTemplates(zipPath string) ([]string, error) {
 		}
 	}
 
-	return imported, nil
+	// Validate each imported template: must have case.json with valid RedcTmpl structure
+	var valid []string
+	var invalid []string
+	for _, tplName := range imported {
+		tplDir := filepath.Join(redc.TemplateDir, tplName)
+		casePath := filepath.Join(tplDir, redc.TmplCaseFile)
+		data, err := os.ReadFile(casePath)
+		if err != nil {
+			invalid = append(invalid, tplName)
+			os.RemoveAll(tplDir)
+			continue
+		}
+		var tmpl redc.RedcTmpl
+		if err := json.Unmarshal(data, &tmpl); err != nil {
+			invalid = append(invalid, tplName)
+			os.RemoveAll(tplDir)
+			continue
+		}
+		valid = append(valid, tplName)
+	}
+
+	if len(valid) == 0 && len(invalid) > 0 {
+		docURL := "https://github.com/wgpsec/redc-template/blob/master/WRITING_TEMPLATES_CN.md"
+		if i18n.GetLang() == "en" {
+			docURL = "https://github.com/wgpsec/redc-template/blob/master/WRITING_TEMPLATES_EN.md"
+		}
+		return nil, fmt.Errorf(i18n.Tf("app_template_import_invalid", strings.Join(invalid, ", "), docURL))
+	}
+	if len(invalid) > 0 {
+		gologger.Warning().Msgf("import: skipped invalid templates: %s", strings.Join(invalid, ", "))
+	}
+
+	return valid, nil
 }
 
 func (a *App) CopyFileTo(sourcePath string, destPath string) error {

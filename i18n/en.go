@@ -356,6 +356,7 @@ var enMessages = map[string]string{
 	"app_template_validate_start":    "Validating template: %s",
 	"app_template_validate_success":  "Template validation passed: %s",
 	"app_template_validate_failed":   "Template validation failed: %s",
+	"app_template_import_invalid":    "Imported templates have invalid format (missing case.json or invalid JSON): %s\nReference: %s",
 	"app_mcp_started":           "MCP server started - mode: %s, address: %s",
 	"app_cron_created":          "Scheduled task created: %s at %s %s",
 	"app_cron_cancelled":        "Scheduled task cancelled: %s",
