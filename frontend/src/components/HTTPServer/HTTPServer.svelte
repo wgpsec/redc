@@ -189,7 +189,7 @@
     PullTemplate: '拉取模板', RemoveTemplate: '删除模板', CreateLocalTemplate: '创建模板',
     InstallPlugin: '安装插件', UninstallPlugin: '卸载插件',
     AddHTTPServerUser: '添加用户', RemoveHTTPServerUser: '删除用户', UpdateHTTPServerUser: '更新用户',
-    ClearAuditLogs: '清空审计日志', ClearAgentMemories: '清空记忆',
+    ClearAuditLogs: '清空审计日志',
     SaveProvidersConfig: '保存凭据', SetActiveProfile: '切换 Profile',
     SwitchProject: '切换项目', ScheduleTask: '创建定时', CancelScheduledTask: '取消定时',
     AIChatStream: 'AI 对话', SmartAgentChatStream: 'Agent 对话', OrchestratorStream: '多轮编排',

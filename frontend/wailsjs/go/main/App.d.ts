@@ -61,13 +61,9 @@ export function CreateProfile(arg1:string,arg2:string,arg3:string):Promise<mod.P
 
 export function CreateProject(arg1:string):Promise<void>;
 
-export function ClearAgentMemories():Promise<void>;
-
 export function ClearAuditLogs():Promise<void>;
 
 export function CreateRemoteDirectory(arg1:string,arg2:string):Promise<void>;
-
-export function DeleteAgentMemory(arg1:number):Promise<void>;
 
 export function DeleteConfigTemplate(arg1:string):Promise<void>;
 
@@ -118,8 +114,6 @@ export function FetchSkillsRegistry():Promise<Array<ai.RegistrySkill>>;
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
-
-export function GetAgentMemories():Promise<Array<any>>;
 
 export function GetAuditLogs(arg1:number,arg2:number,arg3:string,arg4:string):Promise<any>;
 
@@ -402,8 +396,6 @@ export function StartSSHTerminalDirect(arg1:string,arg2:number,arg3:string,arg4:
 export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg4:number):Promise<string>;
 
 export function StopAgentStream(arg1:string):Promise<void>;
-
-export function ResumeAgentStream(arg1:string):Promise<void>;
 
 export function SubmitAskUserResponse(arg1:string,arg2:string):Promise<void>;
 

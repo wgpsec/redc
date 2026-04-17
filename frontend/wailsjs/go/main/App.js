@@ -110,20 +110,12 @@ export function CreateProject(arg1) {
   return window['go']['main']['App']['CreateProject'](arg1);
 }
 
-export function ClearAgentMemories() {
-  return window['go']['main']['App']['ClearAgentMemories']();
-}
-
 export function ClearAuditLogs() {
   return window['go']['main']['App']['ClearAuditLogs']();
 }
 
 export function CreateRemoteDirectory(arg1, arg2) {
   return window['go']['main']['App']['CreateRemoteDirectory'](arg1, arg2);
-}
-
-export function DeleteAgentMemory(arg1) {
-  return window['go']['main']['App']['DeleteAgentMemory'](arg1);
 }
 
 export function DeleteConfigTemplate(arg1) {
@@ -228,10 +220,6 @@ export function FetchTemplateReadme(arg1, arg2) {
 
 export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
-}
-
-export function GetAgentMemories() {
-  return window['go']['main']['App']['GetAgentMemories']();
 }
 
 export function GetAuditLogs(arg1, arg2, arg3, arg4) {
@@ -796,10 +784,6 @@ export function StartSSHTerminalInstance(arg1, arg2, arg3, arg4) {
 
 export function StopAgentStream(arg1) {
   return window['go']['main']['App']['StopAgentStream'](arg1);
-}
-
-export function ResumeAgentStream(arg1) {
-  return window['go']['main']['App']['ResumeAgentStream'](arg1);
 }
 
 export function SubmitAskUserResponse(arg1, arg2) {

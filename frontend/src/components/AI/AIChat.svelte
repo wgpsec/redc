@@ -4,6 +4,9 @@
   import { AIChatStream, SmartAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
+  import ChatMessage from './ChatMessage.svelte';
+  import ChatInput from './ChatInput.svelte';
+  import ToolCallCard from './ToolCallCard.svelte';
 
   let { t, lang, onTabChange = () => {}, visible = true } = $props();
 
@@ -925,163 +928,7 @@
       <!-- Messages -->
       <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer} onclick={handleContentClick}>
         {#each messages as msg (msg.id)}
-          {#if msg.role === 'system-notice'}
-            <!-- System notice (compaction, etc.) -->
-            <div class="flex justify-center">
-              <div class="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 flex items-center gap-1.5">
-                <svg class="w-3 h-3 text-blue-500 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 2v12M12 2v12M1 5l3-3M1 11l3 3M15 5l-3-3M15 11l-3 3M4 8h8"/>
-                </svg>
-                <p class="text-[11px] text-blue-600">{msg.content}</p>
-              </div>
-            </div>
-          {:else if msg.role === 'user'}
-            <!-- User message -->
-            <div class="flex justify-end">
-              <div class="max-w-[75%]">
-                <div class="px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
-                  <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                </div>
-                {#if msg.timestamp}
-                  <div class="text-[10px] text-gray-300 mt-1 text-right pr-1">{formatTime(msg.timestamp)}</div>
-                {/if}
-              </div>
-            </div>
-          {:else}
-            <!-- Assistant message with markdown -->
-            <div class="flex justify-start">
-              <div class="max-w-[85%]">
-                <div class="flex items-start gap-2.5">
-                  <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <!-- Saved plan card (agent mode history) -->
-                    {#if msg.plan && msg.plan.steps && msg.plan.steps.length > 0}
-                      <div class="mb-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div class="flex items-center gap-1.5 mb-1.5">
-                          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
-                          <span class="text-[11px] font-semibold text-blue-800">{msg.plan.title || t.agentPlanTitle || '执行计划'}</span>
-                          <span class="text-[10px] text-blue-500 ml-auto font-mono">{msg.plan.steps.filter(s => s.status === 'done').length}/{msg.plan.steps.length}</span>
-                        </div>
-                        <div class="space-y-0.5">
-                          {#each msg.plan.steps as step, i}
-                            <div class="text-[10px] {step.status === 'done' ? 'text-gray-400' : step.status === 'failed' ? 'text-red-500' : 'text-gray-600'}">
-                              {#if step.status === 'done'}<svg class="inline w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>{:else if step.status === 'failed'}<svg class="inline w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>{:else if step.status === 'skipped'}<svg class="inline w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z" /></svg>{:else}<svg class="inline w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>{/if} {i + 1}. {step.name || step.content}
-                            </div>
-                          {/each}
-                        </div>
-                      </div>
-                    {/if}
-                    <!-- Saved tool call cards (agent mode history) -->
-                    {#if msg.toolCalls && msg.toolCalls.length > 0}
-                      <div class="mb-2 space-y-1.5">
-                        {#each msg.toolCalls as tc}
-                          {#if tc.toolName === 'ask_user'}
-                            <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-300'}">
-                              <span class="mt-0.5">
-                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              </span>
-                              <div class="flex-1 min-w-0">
-                                <div class="text-[12px] font-medium text-gray-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
-                                {#if tc.toolArgs?.question}
-                                  <div class="text-[12px] text-gray-600 mt-0.5">{tc.toolArgs.question}</div>
-                                {/if}
-                                {#if tc.content}
-                                  <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
-                                {/if}
-                              </div>
-                            </div>
-                          {:else if tc.toolName === 'update_plan'}
-                            <!-- update_plan: compact card, plan details shown in plan card above -->
-                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-blue-50 border-blue-200">
-                              <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
-                              <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
-                              {#if tc.toolArgs?.title}
-                                <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>
-                              {/if}
-                              {#if tc.toolArgs?.steps}
-                                <span class="text-[10px] text-blue-400 ml-auto font-mono">{tc.toolArgs.steps.filter(s => s.status === 'done').length}/{tc.toolArgs.steps.length}</span>
-                              {/if}
-                            </div>
-                          {:else}
-                          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
-                            <span class="mt-0.5">
-                              {#if tc.status === 'success'}
-                                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              {:else if tc.status === 'error'}
-                                <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              {:else}
-                                <svg class="w-3.5 h-3.5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                              {/if}
-                            </span>
-                            <div class="flex-1 min-w-0">
-                              <div class="text-[12px] font-medium text-gray-700">
-                                <svg class="w-3 h-3 inline -mt-0.5 mr-0.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l2.88-2.88a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-5.1 5.1a1.5 1.5 0 01-2.12 0z" /></svg>
-                                {getToolDisplayName(tc.toolName)}</div>
-                              {#if tc.toolArgs && Object.keys(tc.toolArgs).length > 0}
-                                <div class="text-[11px] text-gray-500 font-mono truncate">{formatToolArgs(tc.toolArgs)}</div>
-                              {/if}
-                              {#if tc.content}
-                                <details class="mt-1">
-                                  <summary class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600">{t.agentViewResult || '查看结果'}</summary>
-                                  <pre class="mt-1 text-[11px] text-gray-600 bg-white rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{tc.content}</pre>
-                                </details>
-                              {/if}
-                            </div>
-                          </div>
-                          {/if}
-                        {/each}
-                      </div>
-                    {/if}
-                    <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
-                      <div class="md-content text-[13px] text-gray-900 leading-relaxed">
-                        {@html renderMarkdown(msg.content)}
-                      </div>
-                    </div>
-                    <!-- Action buttons -->
-                    {#if msg.content}
-                      <div class="flex items-center gap-1 mt-1.5 ml-1">
-                        <button
-                          class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
-                          onclick={() => handleCopyContent(msg.content)}
-                        >
-                          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                          </svg>
-                          {t.aiChatCopyContent || '复制'}
-                        </button>
-                        {#if msg.content && (msg.content.includes('main.tf') || msg.content.includes('case.json') || msg.content.includes('```hcl'))}
-                          <button
-                            class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            onclick={() => handleSaveTemplate(msg.content)}
-                          >
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                            {t.aiChatSaveTemplate || '保存模板'}
-                          </button>
-                        {/if}
-                      </div>
-                    {/if}
-                    {#if msg.timestamp}
-                      <div class="flex items-center gap-2 mt-1 ml-1">
-                        <span class="text-[10px] text-gray-300">{formatTime(msg.timestamp)}</span>
-                        {#if msg.usage && msg.usage.total_tokens > 0}
-                          <span class="text-[10px] text-gray-300">·</span>
-                          <span class="text-[10px] text-gray-300" title={`${t.tokenInput} ${msg.usage.prompt_tokens} + ${t.tokenOutput} ${msg.usage.completion_tokens} = ${t.tokenTotal} ${msg.usage.total_tokens} tokens`}>
-                            <svg class="inline w-3 h-3 text-gray-400 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg> {msg.usage.prompt_tokens.toLocaleString()} → {msg.usage.completion_tokens.toLocaleString()} ({msg.usage.total_tokens.toLocaleString()} tokens)
-                          </span>
-                        {/if}
-                      </div>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-          {/if}
+          <ChatMessage {msg} {t} {renderMarkdown} {formatTime} {getToolDisplayName} {formatToolArgs} onCopy={handleCopyContent} onSaveTemplate={handleSaveTemplate} />
         {/each}
 
         <!-- Quick prompt suggestions for empty conversations -->
@@ -1115,64 +962,7 @@
                   {#if agentToolCalls.length > 0}
                     <div class="mb-2 space-y-1.5">
                       {#each agentToolCalls as tc (tc.id)}
-                        {#if tc.toolName === 'ask_user'}
-                          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-300'}">
-                            <span class="mt-0.5">
-                              {#if tc.status === 'calling'}
-                                <svg class="w-3.5 h-3.5 animate-pulse text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              {:else}
-                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              {/if}
-                            </span>
-                            <div class="flex-1 min-w-0">
-                              <div class="text-[12px] font-medium text-gray-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
-                              {#if tc.toolArgs?.question}
-                                <div class="text-[12px] text-gray-600 mt-0.5">{tc.toolArgs.question}</div>
-                              {/if}
-                              {#if tc.content}
-                                <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
-                              {/if}
-                            </div>
-                          </div>
-                        {:else if tc.toolName === 'update_plan'}
-                          <!-- update_plan: compact card, plan details shown in plan card above -->
-                          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border {tc.status === 'success' ? 'bg-blue-50 border-blue-200' : tc.status === 'calling' ? 'bg-blue-50 border-blue-300' : 'bg-red-50 border-red-200'}">
-                            <span class="text-xs">{#if tc.status === 'calling'}<svg class="inline w-3 h-3 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>{:else}<svg class="inline w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>{/if}</span>
-                            <span class="text-[11px] text-blue-700">{getToolDisplayName(tc.toolName)}</span>
-                            {#if tc.toolArgs?.title}
-                              <span class="text-[11px] text-blue-500">— {tc.toolArgs.title}</span>
-                            {/if}
-                            {#if tc.toolArgs?.steps}
-                              <span class="text-[10px] text-blue-400 ml-auto font-mono">{tc.toolArgs.steps.filter(s => s.status === 'done').length}/{tc.toolArgs.steps.length}</span>
-                            {/if}
-                          </div>
-                        {:else}
-                        <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}">
-                          <span class="mt-0.5">
-                            {#if tc.status === 'calling'}
-                              <svg class="w-3.5 h-3.5 animate-spin text-amber-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                            {:else if tc.status === 'success'}
-                              <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            {:else}
-                              <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            {/if}
-                          </span>
-                          <div class="flex-1 min-w-0">
-                            <div class="text-[12px] font-medium text-gray-700">
-                              <svg class="w-3 h-3 inline -mt-0.5 mr-0.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l2.88-2.88a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-5.1 5.1a1.5 1.5 0 01-2.12 0z" /></svg>
-                              {getToolDisplayName(tc.toolName)}</div>
-                            {#if tc.toolArgs && Object.keys(tc.toolArgs).length > 0}
-                              <div class="text-[11px] text-gray-500 font-mono truncate">{formatToolArgs(tc.toolArgs)}</div>
-                            {/if}
-                            {#if tc.content}
-                              <details class="mt-1">
-                                <summary class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600">{t.agentViewResult || '查看结果'}</summary>
-                                <pre class="mt-1 text-[11px] text-gray-600 bg-white rounded p-2 max-h-32 overflow-auto whitespace-pre-wrap">{tc.content}</pre>
-                              </details>
-                            {/if}
-                          </div>
-                        </div>
-                        {/if}
+                        <ToolCallCard {tc} {t} live={true} {getToolDisplayName} {formatToolArgs} />
                       {/each}
                     </div>
                   {/if}
@@ -1316,51 +1106,7 @@
       {/if}
 
       <!-- Input area -->
-      <div class="flex-shrink-0 border-t border-gray-100 pt-3 pb-1 px-0.5">
-        <div class="flex items-end gap-2">
-          <textarea
-            class="flex-1 px-4 py-2.5 text-[13px] bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
-            rows="2"
-            placeholder={t.aiChatPlaceholder || '输入消息... Ctrl/Cmd+Enter 发送'}
-            bind:value={inputText}
-            onkeydown={(e) => {
-              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            disabled={isStreaming}
-          ></textarea>
-          <button
-            class="px-4 h-10 bg-gray-900 text-white text-[12px] font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer flex-shrink-0"
-            onclick={sendMessage}
-            disabled={isStreaming || !inputText.trim()}
-          >
-            {#if isStreaming}
-              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            {:else}
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
-            {/if}
-            {t.aiChatSend || '发送'}
-          </button>
-          {#if isStreaming && (mode === 'agent' || mode === 'orchestrator')}
-            <button
-              class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
-              onclick={stopAgent}
-            >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <rect x="6" y="6" width="12" height="12" rx="1" />
-              </svg>
-              {t.aiChatStop || '停止'}
-            </button>
-          {/if}
-        </div>
-      </div>
+      <ChatInput {t} bind:inputText {isStreaming} {mode} onSend={sendMessage} onStop={stopAgent} />
     </div>
   </div>
 </div>

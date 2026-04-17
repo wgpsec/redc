@@ -1,6 +1,7 @@
 <script>
-  import { onMount } from 'svelte';
-  import { ListCases, GetResourceSummary, GetBalances, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, CheckAllUpdates, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
+  import { onMount, onDestroy } from 'svelte';
+  import { ListCases, GetResourceSummary, GetBalances, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, CheckAllUpdates, StartCase, StopCase, GetSpotMonitorEnabled } from '../../../wailsjs/go/main/App.js';
+  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import Modal from '../UI/Modal.svelte';
 
@@ -66,6 +67,10 @@
   // MCP status
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
 
+  // Spot Monitor status
+  let spotMonitorEnabled = $state(false);
+  let spotAlerts = $state([]);
+
   // Quick stats with real data — clickable navigation targets
   let quickStats = $derived([
     { label: t.scheduledTasks || '定时任务', value: String(scheduledTaskCount), icon: 'clock', tab: 'taskCenter' },
@@ -81,6 +86,33 @@
     loadRecentConversations();
     await loadRecentTasks();
     await loadMCPStatus();
+    await loadSpotMonitorStatus();
+
+    // Listen for spot monitor events
+    EventsOn('spot-terminated', (data) => {
+      const existing = spotAlerts.findIndex(a => a.caseId === data.caseId);
+      const alert = { caseId: data.caseId, caseName: data.caseName, downIPs: data.downIPs || [], status: 'terminated', time: Date.now() };
+      if (existing >= 0) {
+        spotAlerts[existing] = alert;
+      } else {
+        spotAlerts = [...spotAlerts, alert];
+      }
+    });
+    EventsOn('spot-recovering', (data) => {
+      const existing = spotAlerts.findIndex(a => a.caseId === data.caseId);
+      if (existing >= 0) spotAlerts[existing] = { ...spotAlerts[existing], status: 'recovering' };
+    });
+    EventsOn('spot-recovered', (data) => {
+      spotAlerts = spotAlerts.filter(a => a.caseId !== data.caseId);
+    });
+    EventsOn('spot-recover-failed', (data) => {
+      const existing = spotAlerts.findIndex(a => a.caseId === data.caseId);
+      if (existing >= 0) spotAlerts[existing] = { ...spotAlerts[existing], status: 'failed', error: data.error };
+    });
+  });
+
+  onDestroy(() => {
+    EventsOff('spot-terminated', 'spot-recovering', 'spot-recovered', 'spot-recover-failed');
   });
   
   async function loadDashboardData() {
@@ -127,6 +159,14 @@
     }
   }
   
+  async function loadSpotMonitorStatus() {
+    try {
+      spotMonitorEnabled = await GetSpotMonitorEnabled();
+    } catch (e) {
+      spotMonitorEnabled = false;
+    }
+  }
+
   async function queryBalances() {
     balancesLoading = true;
     balances = [];
@@ -640,6 +680,53 @@
           {/if}
         </div>
       </div>
+
+      <!-- Spot Monitor Status -->
+      {#if spotMonitorEnabled}
+        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.spotMonitor || 'Spot 实例监控'}</h3>
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="text-[10px] text-emerald-600">{t.monitoring || '监控中'}</span>
+            </div>
+          </div>
+          <div class="px-4 py-3">
+            {#if spotAlerts.length === 0}
+              <div class="flex items-center gap-2 text-[12px] text-gray-400">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+                {t.spotAllNormal || '所有实例运行正常'}
+              </div>
+            {:else}
+              <div class="space-y-2">
+                {#each spotAlerts as alert}
+                  <div class="flex items-center justify-between px-2.5 py-2 rounded-lg {alert.status === 'terminated' ? 'bg-red-50 border border-red-100' : alert.status === 'recovering' ? 'bg-amber-50 border border-amber-100' : 'bg-red-50 border border-red-100'}">
+                    <div class="flex items-center gap-2 min-w-0">
+                      {#if alert.status === 'recovering'}
+                        <div class="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin flex-shrink-0"></div>
+                      {:else}
+                        <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" /></svg>
+                      {/if}
+                      <div class="min-w-0">
+                        <div class="text-[11px] font-medium truncate {alert.status === 'recovering' ? 'text-amber-800' : 'text-red-800'}">{alert.caseName}</div>
+                        <div class="text-[10px] {alert.status === 'recovering' ? 'text-amber-600' : 'text-red-600'}">
+                          {#if alert.status === 'terminated'}
+                            {t.spotTerminated || '实例被回收'} · {alert.downIPs?.length || 0} IP
+                          {:else if alert.status === 'recovering'}
+                            {t.spotRecovering || '正在恢复...'}
+                          {:else}
+                            {t.spotRecoverFailed || '恢复失败'}{alert.error ? `: ${alert.error}` : ''}
+                          {/if}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
 
       <!-- Quick Links -->
       <div class="bg-white rounded-xl border border-gray-100 p-4 flex-1">

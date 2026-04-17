@@ -9,7 +9,7 @@
   import Compose from './components/Compose/Compose.svelte';
   import AIIntegration from './components/AI/AIIntegration.svelte';
   import AIChat from './components/AI/AIChat.svelte';
-  import SpecialModules from './components/SpecialModules/SpecialModules.svelte';
+  import UserdataScripts from './components/UserdataScripts/UserdataScripts.svelte';
   import Registry from './components/Registry/Registry.svelte';
   import Credentials from './components/Credentials/Credentials.svelte';
   import LocalTemplates from './components/LocalTemplates/LocalTemplates.svelte';
@@ -415,7 +415,7 @@
               <AIIntegration {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'userdataScripts'}
-              <SpecialModules {t} onTabChange={(tab) => activeTab = tab} />
+              <UserdataScripts {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'softwareStore'}
               <SoftwareStore {t} onTabChange={(tab) => activeTab = tab} />
