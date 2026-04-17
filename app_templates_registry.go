@@ -281,7 +281,8 @@ func (a *App) FetchTemplateReadme(templateName string, lang string) (string, err
 	var lastErr error
 	for _, readmeFile := range readmeFiles {
 		readmeURL := fmt.Sprintf("https://raw.githubusercontent.com/wgpsec/redc-template/master/%s/%s", templateName, readmeFile)
-		resp, err := http.Get(readmeURL)
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Get(readmeURL)
 		if err != nil {
 			lastErr = err
 			continue
