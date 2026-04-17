@@ -237,6 +237,12 @@ export function InstallPlugin(arg1:string):Promise<void>;
 
 export function InstallSkill(arg1:string,arg2:string):Promise<void>;
 
+export function UpdateSkill(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function InstallAllSkills():Promise<number>;
+
+export function UpdateAllSkills():Promise<number>;
+
 export function ListAllScheduledTasks():Promise<Array<mod.ScheduledTask>>;
 
 export function ListAllTemplates():Promise<Array<main.TemplateInfo>>;

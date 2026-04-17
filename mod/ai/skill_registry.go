@@ -2,6 +2,8 @@ package ai
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,6 +32,7 @@ type RegistrySkill struct {
 	URL         string   `json:"url"`
 	SHA256      string   `json:"sha256,omitempty"`
 	Installed   bool     `json:"installed,omitempty"`
+	HasUpdate   bool     `json:"hasUpdate,omitempty"`
 }
 
 // FetchSkillRegistry fetches the skill registry from the remote URL.
@@ -64,6 +67,11 @@ func FetchSkillRegistry(registryURL string) (*SkillRegistryIndex, error) {
 
 // InstallSkill downloads a skill zip from URL and extracts to skillsDir/<id>/.
 func InstallSkill(skillsDir, id, downloadURL string) error {
+	return installSkillWithHash(skillsDir, id, downloadURL, "")
+}
+
+// InstallSkillWithHash downloads a skill and saves the registry SHA256 for future update checks.
+func installSkillWithHash(skillsDir, id, downloadURL, remoteSHA256 string) error {
 	if err := os.MkdirAll(skillsDir, 0755); err != nil {
 		return fmt.Errorf("create skills dir: %w", err)
 	}
@@ -85,7 +93,7 @@ func InstallSkill(skillsDir, id, downloadURL string) error {
 		return fmt.Errorf("download returned %d", resp.StatusCode)
 	}
 
-	// Save to temp file
+	// Save to temp file and compute SHA256
 	tmpFile, err := os.CreateTemp("", "redc-skill-*.zip")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -93,11 +101,14 @@ func InstallSkill(skillsDir, id, downloadURL string) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+	hasher := sha256.New()
+	writer := io.MultiWriter(tmpFile, hasher)
+	if _, err := io.Copy(writer, resp.Body); err != nil {
 		tmpFile.Close()
 		return fmt.Errorf("save skill zip: %w", err)
 	}
 	tmpFile.Close()
+	computedHash := hex.EncodeToString(hasher.Sum(nil))
 
 	// Extract zip
 	if err := extractZip(tmpPath, destDir); err != nil {
@@ -111,7 +122,32 @@ func InstallSkill(skillsDir, id, downloadURL string) error {
 		return fmt.Errorf("invalid skill: missing SKILL.md")
 	}
 
+	// Save SHA256 for update detection
+	hashToSave := remoteSHA256
+	if hashToSave == "" {
+		hashToSave = computedHash
+	}
+	os.WriteFile(filepath.Join(destDir, ".sha256"), []byte(hashToSave), 0644)
+
 	return nil
+}
+
+// UpdateSkill removes an existing skill and re-downloads it from the registry.
+func UpdateSkill(skillsDir, id, downloadURL, remoteSHA256 string) error {
+	destDir := filepath.Join(skillsDir, id)
+	if _, err := os.Stat(destDir); err == nil {
+		os.RemoveAll(destDir)
+	}
+	return installSkillWithHash(skillsDir, id, downloadURL, remoteSHA256)
+}
+
+// ReadLocalSkillHash reads the stored .sha256 file for an installed skill.
+func ReadLocalSkillHash(skillsDir, id string) string {
+	data, err := os.ReadFile(filepath.Join(skillsDir, id, ".sha256"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
 }
 
 func extractZip(zipPath, destDir string) error {

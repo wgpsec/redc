@@ -466,6 +466,18 @@ export function InstallSkill(arg1, arg2) {
   return window['go']['main']['App']['InstallSkill'](arg1, arg2);
 }
 
+export function UpdateSkill(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3);
+}
+
+export function InstallAllSkills() {
+  return window['go']['main']['App']['InstallAllSkills']();
+}
+
+export function UpdateAllSkills() {
+  return window['go']['main']['App']['UpdateAllSkills']();
+}
+
 export function ListAllScheduledTasks() {
   return window['go']['main']['App']['ListAllScheduledTasks']();
 }

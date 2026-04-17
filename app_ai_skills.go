@@ -79,24 +79,25 @@ func (a *App) FetchSkillsRegistry() ([]ai.RegistrySkill, error) {
 		return nil, err
 	}
 
-	// Mark installed skills
-	installed := make(map[string]bool)
 	dir := a.skillsDir()
-	if dir != "" {
-		entries, _ := os.ReadDir(dir)
-		for _, e := range entries {
-			if e.IsDir() {
-				skillMD := filepath.Join(dir, e.Name(), "SKILL.md")
-				if _, err := os.Stat(skillMD); err == nil {
-					installed[e.Name()] = true
+	for i := range index.Skills {
+		skill := &index.Skills[i]
+		if dir == "" {
+			continue
+		}
+		skillMD := filepath.Join(dir, skill.ID, "SKILL.md")
+		if _, err := os.Stat(skillMD); err == nil {
+			skill.Installed = true
+			// Compare SHA256 to detect updates
+			if skill.SHA256 != "" {
+				localHash := ai.ReadLocalSkillHash(dir, skill.ID)
+				if localHash != "" && localHash != skill.SHA256 {
+					skill.HasUpdate = true
+				} else if localHash == "" {
+					// Legacy install without hash — treat as updatable
+					skill.HasUpdate = true
 				}
 			}
-		}
-	}
-
-	for i := range index.Skills {
-		if installed[index.Skills[i].ID] {
-			index.Skills[i].Installed = true
 		}
 	}
 
@@ -110,4 +111,84 @@ func (a *App) InstallSkill(id, downloadURL string) error {
 		return fmt.Errorf("skills directory not available")
 	}
 	return ai.InstallSkill(dir, id, downloadURL)
+}
+
+// UpdateSkill re-downloads and reinstalls a skill from the registry.
+func (a *App) UpdateSkill(id, downloadURL, sha256Hash string) error {
+	dir := a.skillsDir()
+	if dir == "" {
+		return fmt.Errorf("skills directory not available")
+	}
+	return ai.UpdateSkill(dir, id, downloadURL, sha256Hash)
+}
+
+// InstallAllSkills installs all uninstalled skills from the registry.
+func (a *App) InstallAllSkills() (int, error) {
+	dir := a.skillsDir()
+	if dir == "" {
+		return 0, fmt.Errorf("skills directory not available")
+	}
+
+	index, err := ai.FetchSkillRegistry("")
+	if err != nil {
+		return 0, err
+	}
+
+	installed := 0
+	var errs []string
+	for _, skill := range index.Skills {
+		destDir := filepath.Join(dir, skill.ID)
+		if _, err := os.Stat(filepath.Join(destDir, "SKILL.md")); err == nil {
+			continue
+		}
+		if err := ai.InstallSkill(dir, skill.ID, skill.URL); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", skill.ID, err))
+		} else {
+			installed++
+		}
+	}
+
+	if len(errs) > 0 {
+		return installed, fmt.Errorf("%s", strings.Join(errs, "; "))
+	}
+	return installed, nil
+}
+
+// UpdateAllSkills updates all installed skills that have a new version in the registry.
+func (a *App) UpdateAllSkills() (int, error) {
+	dir := a.skillsDir()
+	if dir == "" {
+		return 0, fmt.Errorf("skills directory not available")
+	}
+
+	index, err := ai.FetchSkillRegistry("")
+	if err != nil {
+		return 0, err
+	}
+
+	updated := 0
+	var errs []string
+	for _, skill := range index.Skills {
+		destDir := filepath.Join(dir, skill.ID)
+		if _, err := os.Stat(filepath.Join(destDir, "SKILL.md")); os.IsNotExist(err) {
+			continue
+		}
+		// Skip if hash matches (already up to date)
+		if skill.SHA256 != "" {
+			localHash := ai.ReadLocalSkillHash(dir, skill.ID)
+			if localHash == skill.SHA256 {
+				continue
+			}
+		}
+		if err := ai.UpdateSkill(dir, skill.ID, skill.URL, skill.SHA256); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", skill.ID, err))
+		} else {
+			updated++
+		}
+	}
+
+	if len(errs) > 0 {
+		return updated, fmt.Errorf("%s", strings.Join(errs, "; "))
+	}
+	return updated, nil
 }

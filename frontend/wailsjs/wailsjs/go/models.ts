@@ -8,6 +8,7 @@ export namespace ai {
 	    url: string;
 	    sha256?: string;
 	    installed?: boolean;
+	    hasUpdate?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new RegistrySkill(source);
@@ -22,6 +23,7 @@ export namespace ai {
 	        this.url = source["url"];
 	        this.sha256 = source["sha256"];
 	        this.installed = source["installed"];
+	        this.hasUpdate = source["hasUpdate"];
 	    }
 	}
 	export class Skill {

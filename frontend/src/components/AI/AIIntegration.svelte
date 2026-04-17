@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill, GetSkillsDir } from '../../../wailsjs/go/main/App.js';
+  import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill, UpdateSkill, InstallAllSkills, UpdateAllSkills, GetSkillsDir } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
@@ -215,12 +215,65 @@
     try {
       await InstallSkill(skill.id, skill.url);
       toast.success((t.skillInstalled || 'Skill installed: ') + skill.name);
-      // Refresh both local and registry lists
       await Promise.all([loadSkills(), loadRegistry()]);
     } catch (e) {
       toast.error(String(e));
     } finally {
       installingSkillId = '';
+    }
+  }
+
+  async function handleUpdateSkill(skill) {
+    installingSkillId = skill.id;
+    try {
+      await UpdateSkill(skill.id, skill.url, skill.sha256 || '');
+      toast.success((t.skillUpdated || 'Skill updated: ') + skill.name);
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      installingSkillId = '';
+    }
+  }
+
+  let batchInstalling = $state(false);
+  let batchUpdating = $state(false);
+
+  async function handleInstallAll() {
+    const uninstalled = registrySkills.filter(s => !s.installed);
+    if (uninstalled.length === 0) {
+      toast.info(t.noSkillsToInstall || 'All skills already installed');
+      return;
+    }
+    batchInstalling = true;
+    try {
+      const count = await InstallAllSkills();
+      toast.success((t.installAllSuccess || 'Installed %d skills').replace('%d', count));
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } catch (e) {
+      toast.error(String(e));
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } finally {
+      batchInstalling = false;
+    }
+  }
+
+  async function handleUpdateAll() {
+    const updatable = registrySkills.filter(s => s.installed && s.hasUpdate);
+    if (updatable.length === 0) {
+      toast.info(t.noSkillsToUpdate || 'No skills to update');
+      return;
+    }
+    batchUpdating = true;
+    try {
+      const count = await UpdateAllSkills();
+      toast.success((t.updateAllSuccess || 'Updated %d skills').replace('%d', count));
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } catch (e) {
+      toast.error(String(e));
+      await Promise.all([loadSkills(), loadRegistry()]);
+    } finally {
+      batchUpdating = false;
     }
   }
 
@@ -595,13 +648,39 @@
         </svg>
         <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsMarket || 'Skills 市场'}</h3>
       </div>
-      <button
-        onclick={loadRegistry}
-        class="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
-        title={t.refresh || '刷新'}
-      >
-        <svg class="w-4 h-4 {registryLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          onclick={handleInstallAll}
+          disabled={batchInstalling || batchUpdating || registryLoading}
+          class="h-7 px-3 bg-gray-900 text-white text-[11px] font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+        >
+          {#if batchInstalling}
+            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          {:else}
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          {/if}
+          {t.installAll || '一键安装'}
+        </button>
+        <button
+          onclick={handleUpdateAll}
+          disabled={batchInstalling || batchUpdating || registryLoading}
+          class="h-7 px-3 bg-blue-600 text-white text-[11px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+        >
+          {#if batchUpdating}
+            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          {:else}
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+          {/if}
+          {t.updateAll || '一键更新'}
+        </button>
+        <button
+          onclick={loadRegistry}
+          class="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
+          title={t.refresh || '刷新'}
+        >
+          <svg class="w-4 h-4 {registryLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+        </button>
+      </div>
     </div>
 
     <p class="text-[12px] text-gray-500 mb-4">{t.skillsMarketDesc || '从远程仓库下载社区和官方维护的 Skills 技能库，下载后可在 AI Agent 模式中使用。'}</p>
@@ -626,10 +705,26 @@
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-[12px] font-medium text-gray-900 truncate">{skill.name}</span>
               {#if skill.installed}
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-medium rounded-full">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                  {t.installed || '已安装'}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-medium rounded-full">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                    {t.installed || '已安装'}
+                  </span>
+                  {#if skill.hasUpdate}
+                    <button
+                      onclick={() => handleUpdateSkill(skill)}
+                      disabled={installingSkillId === skill.id}
+                      class="h-5 px-1.5 text-blue-600 bg-blue-50 text-[10px] font-medium rounded hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-0.5"
+                    >
+                      {#if installingSkillId === skill.id}
+                        <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                      {:else}
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
+                      {/if}
+                      {t.update || '更新'}
+                    </button>
+                  {/if}
+                </div>
               {:else}
                 <button
                   onclick={() => handleInstallSkill(skill)}

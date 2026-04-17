@@ -450,6 +450,10 @@ export function ImportTemplates(arg1) {
   return window['go']['main']['App']['ImportTemplates'](arg1);
 }
 
+export function InstallAllSkills() {
+  return window['go']['main']['App']['InstallAllSkills']();
+}
+
 export function InstallPlugin(arg1) {
   return window['go']['main']['App']['InstallPlugin'](arg1);
 }
@@ -850,6 +854,10 @@ export function UninstallPlugin(arg1) {
   return window['go']['main']['App']['UninstallPlugin'](arg1);
 }
 
+export function UpdateAllSkills() {
+  return window['go']['main']['App']['UpdateAllSkills']();
+}
+
 export function UpdateHTTPServerUser(arg1, arg2, arg3) {
   return window['go']['main']['App']['UpdateHTTPServerUser'](arg1, arg2, arg3);
 }
@@ -868,6 +876,10 @@ export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, 
 
 export function UpdateProfileFallbackProviders(arg1, arg2) {
   return window['go']['main']['App']['UpdateProfileFallbackProviders'](arg1, arg2);
+}
+
+export function UpdateSkill(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateSkill'](arg1, arg2, arg3);
 }
 
 export function UploadFile(arg1, arg2, arg3) {

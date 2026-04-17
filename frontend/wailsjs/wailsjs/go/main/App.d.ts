@@ -232,6 +232,8 @@ export function ImportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
 export function ImportTemplates(arg1:string):Promise<Array<string>>;
 
+export function InstallAllSkills():Promise<number>;
+
 export function InstallPlugin(arg1:string):Promise<void>;
 
 export function InstallSkill(arg1:string,arg2:string):Promise<void>;
@@ -432,6 +434,8 @@ export function TroubleshootAgentChatStream(arg1:string,arg2:Array<main.AIChatMe
 
 export function UninstallPlugin(arg1:string):Promise<void>;
 
+export function UpdateAllSkills():Promise<number>;
+
 export function UpdateHTTPServerUser(arg1:string,arg2:string,arg3:boolean):Promise<mod.HTTPUser>;
 
 export function UpdatePlugin(arg1:string):Promise<void>;
@@ -441,6 +445,8 @@ export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):P
 export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:number):Promise<void>;
 
 export function UpdateProfileFallbackProviders(arg1:string,arg2:Array<mod.FallbackProvider>):Promise<void>;
+
+export function UpdateSkill(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 
