@@ -617,7 +617,10 @@ let { t } = $props();
             class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={aiConfig.model}
           />
-          <p class="text-[10px] text-gray-500 mt-1">{t.aiModelHint || '支持任意兼容的模型名称'}</p>
+          <p class="text-[10px] text-gray-400 mt-1">
+            <svg class="inline w-3 h-3 text-amber-400 -mt-0.5 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+            {t.aiModelHint || 'Agent 和编排模式依赖工具调用，建议选择推理能力强的模型（如 Claude Sonnet/Opus、GPT 等）'}
+          </p>
         </div>
         <div class="md:col-span-2">
           <label for="aiApiKey" class="block text-[11px] font-medium text-gray-500 mb-1">
