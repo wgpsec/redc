@@ -246,11 +246,7 @@
     const labels = {
       'free': t.aiChatFreeChat || '自由对话',
       'agent': t.aiChatAgent || 'Agent',
-      'deploy': t.aiChatDeploy || '部署',
-      'errorAnalysis': t.aiChatErrorAnalysis || '错误分析',
-      'generate': t.aiChatGenTemplate || '模板生成',
-      'recommend': t.aiChatRecommend || '推荐',
-      'cost': t.aiChatCostOpt || '成本优化'
+      'orchestrator': t.aiChatOrchestrator || '多轮编排',
     };
     return labels[modeId] || modeId;
   }

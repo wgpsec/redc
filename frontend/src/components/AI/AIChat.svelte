@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SmartAgentChatStream, TroubleshootAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, SmartAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
@@ -54,16 +54,11 @@
   const modes = [
     { id: 'free', labelKey: 'aiChatFreeChat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
     { id: 'agent', labelKey: 'aiChatAgent', icon: 'M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l5.3-5.3a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-7.18 7.18a1.5 1.5 0 01-2.12 0zM3.75 21h16.5' },
-    { id: 'deploy', labelKey: 'aiChatDeploy', icon: 'M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z' },
     { id: 'orchestrator', labelKey: 'aiChatOrchestrator', icon: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75' },
-    { id: 'errorAnalysis', labelKey: 'aiChatErrorAnalysis', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' },
-    { id: 'generate', labelKey: 'aiChatGenTemplate', icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5' },
-    { id: 'recommend', labelKey: 'aiChatRecommend', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
-    { id: 'cost', labelKey: 'aiChatCostOpt', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
   ];
 
-  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', deploy: 'aiChatDeploy', orchestrator: 'aiChatOrchestrator', errorAnalysis: 'aiChatErrorAnalysis', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
-  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', deploy: 'aiChatWelcomeDeploy', orchestrator: 'aiChatWelcomeOrchestrator', errorAnalysis: 'aiChatWelcomeErrorAnalysis', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
+  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', orchestrator: 'aiChatOrchestrator' };
+  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', orchestrator: 'aiChatWelcomeOrchestrator' };
 
   function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -513,10 +508,10 @@
       if (raw) {
         localStorage.removeItem('ai-chat-pending-error');
         const data = JSON.parse(raw);
-        // Create new conversation in errorAnalysis mode
-        mode = 'errorAnalysis';
+        // Create new conversation in agent mode for error analysis
+        mode = 'agent';
         activeConvId = generateId();
-        messages = [getWelcomeMessage('errorAnalysis')];
+        messages = [getWelcomeMessage('agent')];
         streamingContent = '';
         isStreaming = false;
         error = '';
@@ -607,10 +602,8 @@
         await OrchestratorStream(convId, { maxRounds: 5, objective: text, autoApprove: false }, chatMessages);
       } else if (mode === 'agent') {
         await SmartAgentChatStream(convId, chatMessages);
-      } else if (mode === 'deploy') {
-        await DeployAgentChatStream(convId, chatMessages);
       } else {
-        await AIChatStream(convId, mode, chatMessages);
+        await AIChatStream(convId, 'free', chatMessages);
       }
     } catch (e) {
       // Preserve partial streaming content on error
@@ -783,29 +776,13 @@
       agent: [
         { label: '部署 nginx 服务器', text: '帮我部署一个 nginx 服务器' },
         { label: '查看当前场景', text: '列出所有当前运行中的场景和状态' },
-        { label: '批量管理场景', text: '帮我检查所有场景的运行状态' },
-      ],
-      deploy: [
-        { label: '部署 Clash 代理', text: '帮我部署一个 Clash 代理服务' },
-        { label: '部署 Nginx 反代', text: '帮我部署一个 Nginx 反向代理服务器' },
-        { label: '部署自定义脚本', text: '帮我部署一个带有自定义初始化脚本的服务器' },
-      ],
-      errorAnalysis: [
-        { label: '分析 Terraform 错误', text: '请帮我分析这个 Terraform 部署错误' },
-        { label: '网络连接问题', text: '场景部署后无法通过 SSH 连接，请帮我排查原因' },
-      ],
-      generate: [
         { label: '生成 AWS EC2 模板', text: '帮我生成一个 AWS EC2 实例的 Terraform 模板' },
-        { label: '生成阿里云 ECS 模板', text: '帮我生成一个阿里云 ECS 实例模板，带安全组配置' },
-        { label: '生成多云编排模板', text: '帮我生成一个同时在 AWS 和阿里云部署的多云编排模板' },
-      ],
-      recommend: [
+        { label: '分析当前成本', text: '分析我当前所有运行中场景的成本，并给出优化建议' },
         { label: '推荐 C2 场景', text: '推荐适合长期渗透的 C2 基础设施部署方案' },
-        { label: '推荐低成本方案', text: '推荐成本最低的红队基础设施部署方案' },
       ],
-      cost: [
-        { label: '分析当前成本', text: '分析我当前所有运行中场景的成本' },
-        { label: '成本优化建议', text: '如何优化我的云资源使用以降低成本？' },
+      orchestrator: [
+        { label: '搭建高可用集群', text: '在 AWS 上搭建一个高可用 Web 服务集群' },
+        { label: '安全审计', text: '对所有运行中的场景进行安全审计并生成报告' },
       ],
     };
     const promptsEn = {
@@ -817,29 +794,13 @@
       agent: [
         { label: 'Deploy nginx server', text: 'Help me deploy an nginx server' },
         { label: 'List running scenes', text: 'List all currently running scenes and their status' },
-        { label: 'Batch manage scenes', text: 'Help me check the status of all scenes' },
-      ],
-      deploy: [
-        { label: 'Deploy Clash proxy', text: 'Help me deploy a Clash proxy service' },
-        { label: 'Deploy Nginx reverse proxy', text: 'Help me deploy an Nginx reverse proxy server' },
-        { label: 'Deploy with custom script', text: 'Help me deploy a server with a custom initialization script' },
-      ],
-      errorAnalysis: [
-        { label: 'Analyze Terraform error', text: 'Please help me analyze this Terraform deployment error' },
-        { label: 'SSH connection issue', text: 'Cannot connect via SSH after deployment, help me troubleshoot' },
-      ],
-      generate: [
         { label: 'Generate AWS EC2 template', text: 'Help me generate a Terraform template for an AWS EC2 instance' },
-        { label: 'Generate Aliyun ECS template', text: 'Help me generate an Aliyun ECS instance template with security group config' },
-        { label: 'Generate multi-cloud template', text: 'Help me generate a multi-cloud orchestration template for both AWS and Aliyun' },
-      ],
-      recommend: [
+        { label: 'Analyze current costs', text: 'Analyze the costs of all my running scenes and suggest optimizations' },
         { label: 'Recommend C2 scenario', text: 'Recommend a C2 infrastructure deployment plan suitable for long-term operations' },
-        { label: 'Recommend low-cost plan', text: 'Recommend the most cost-effective red team infrastructure deployment plan' },
       ],
-      cost: [
-        { label: 'Analyze current costs', text: 'Analyze the costs of all my currently running scenes' },
-        { label: 'Cost optimization tips', text: 'How to optimize my cloud resource usage to reduce costs?' },
+      orchestrator: [
+        { label: 'Set up HA cluster', text: 'Set up a highly available web cluster on AWS' },
+        { label: 'Security audit', text: 'Audit all running scenarios for security and generate a report' },
       ],
     };
     const prompts = lang === 'en' ? promptsEn : promptsZh;
@@ -1132,7 +1093,7 @@
                           </svg>
                           {t.aiChatCopyContent || '复制'}
                         </button>
-                        {#if msg.mode === 'generate'}
+                        {#if msg.content && (msg.content.includes('main.tf') || msg.content.includes('case.json') || msg.content.includes('```hcl'))}
                           <button
                             class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             onclick={() => handleSaveTemplate(msg.content)}
@@ -1427,7 +1388,7 @@
             {/if}
             {t.aiChatSend || '发送'}
           </button>
-          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'errorAnalysis' || mode === 'orchestrator')}
+          {#if isStreaming && (mode === 'agent' || mode === 'orchestrator')}
             <button
               class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
               onclick={stopAgent}

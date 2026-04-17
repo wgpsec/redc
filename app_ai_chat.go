@@ -241,7 +241,8 @@ func (a *App) TroubleshootAgentChatStream(conversationId string, messages []AICh
 	return a.runAgentLoop(conversationId, messages, ai.TroubleshootAgentSystemPrompt, 30, 10*time.Minute)
 }
 
-// SmartAgentChatStream auto-classifies user intent and routes to the best specialized agent
+// SmartAgentChatStream auto-classifies user intent and routes to the best specialized agent.
+// For generate/recommend/cost intents, it injects contextual data into messages before routing to AgentChatStream.
 func (a *App) SmartAgentChatStream(conversationId string, messages []AIChatMessage) error {
 	intent := a.classifyIntent(messages)
 	switch intent {
@@ -249,6 +250,39 @@ func (a *App) SmartAgentChatStream(conversationId string, messages []AIChatMessa
 		return a.DeployAgentChatStream(conversationId, messages)
 	case "troubleshoot":
 		return a.TroubleshootAgentChatStream(conversationId, messages)
+	case "generate":
+		// Inject hint into system context so Agent knows to generate a template
+		if len(messages) > 0 {
+			lastIdx := len(messages) - 1
+			messages[lastIdx].Content = "[用户意图: 生成 RedC 场景模板]\n\n" + messages[lastIdx].Content +
+				"\n\n请先调用 list_templates 和 search_templates 了解已有模板结构，然后为用户生成完整的 RedC 模板文件（case.json + main.tf + variables.tf + outputs.tf + versions.tf）。"
+		}
+		return a.AgentChatStream(conversationId, messages)
+	case "recommend":
+		// Inject available templates context
+		localTemplates, _ := redc.ListLocalTemplates()
+		if len(localTemplates) > 0 {
+			templateList := make([]string, 0, len(localTemplates))
+			for _, t := range localTemplates {
+				templateList = append(templateList, fmt.Sprintf("- %s: %s", t.Name, t.Description))
+			}
+			if len(messages) > 0 {
+				lastIdx := len(messages) - 1
+				messages[lastIdx].Content = "[用户意图: 推荐场景模板]\n\n" + messages[lastIdx].Content +
+					"\n\n以下是用户本地已有的模板列表，请优先从中推荐，也可调用 search_templates 搜索更多：\n" +
+					strings.Join(templateList, "\n")
+			}
+		}
+		return a.AgentChatStream(conversationId, messages)
+	case "cost":
+		// Inject running cases cost context
+		casesInfo, runningCount := a.gatherRunningCasesInfo()
+		if runningCount > 0 && len(messages) > 0 {
+			lastIdx := len(messages) - 1
+			messages[lastIdx].Content = fmt.Sprintf("[用户意图: 成本优化分析]\n\n%s\n\n当前有 %d 个运行中的场景：\n%s\n\n请分析上述场景并提供成本优化建议。也可调用 list_cases 获取最新数据。",
+				messages[lastIdx].Content, runningCount, casesInfo)
+		}
+		return a.AgentChatStream(conversationId, messages)
 	default:
 		return a.AgentChatStream(conversationId, messages)
 	}
@@ -300,6 +334,12 @@ func (a *App) classifyIntent(messages []AIChatMessage) string {
 		return "deploy"
 	case strings.Contains(result, "troubleshoot"):
 		return "troubleshoot"
+	case strings.Contains(result, "generate"):
+		return "generate"
+	case strings.Contains(result, "recommend"):
+		return "recommend"
+	case strings.Contains(result, "cost"):
+		return "cost"
 	default:
 		return "ops"
 	}
