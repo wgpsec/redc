@@ -477,8 +477,8 @@ var enMessages = map[string]string{
 	"app_ai_recommend_failed":     "AI recommendation failed: %v",
 	"app_ai_analysis_failed":      "AI analysis failed: %v",
 	"app_ai_cost_analysis_failed": "AI cost analysis failed: %v",
-
-	// SSH/终端相关
+	"app_ai_user_stopped":         "Operation stopped by user.",
+	"app_ai_timeout":              "Operation timed out (executed %d rounds). To allow more time, adjust the max tool call rounds in AI settings.",
 	"app_ssh_config_failed":      "Failed to get SSH config: %v",
 	"app_ssh_session_failed":     "Failed to create SSH session: %v",
 	"app_ssh_upload_failed":      "Upload failed: %v - %s",

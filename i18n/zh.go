@@ -477,8 +477,8 @@ var zhMessages = map[string]string{
 	"app_ai_recommend_failed":     "AI 推荐失败: %v",
 	"app_ai_analysis_failed":      "AI 分析失败: %v",
 	"app_ai_cost_analysis_failed": "AI 成本分析失败: %v",
-
-	// SSH/终端相关
+	"app_ai_user_stopped":         "操作已被用户停止。",
+	"app_ai_timeout":              "操作超时（已执行 %d 轮）。如需更长时间，请在 AI 配置中调整最大工具调用轮次。",
 	"app_ssh_config_failed":      "获取 SSH 配置失败: %v",
 	"app_ssh_session_failed":     "创建 SSH 会话失败: %v",
 	"app_ssh_upload_failed":      "上传失败: %v - %s",

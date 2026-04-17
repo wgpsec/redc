@@ -34,7 +34,7 @@
       {/if}
       {t.aiChatSend || '发送'}
     </button>
-    {#if isStreaming && (mode === 'agent' || mode === 'orchestrator')}
+    {#if isStreaming}
       <button
         class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
         onclick={onStop}

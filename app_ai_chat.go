@@ -96,6 +96,16 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	// Register cancel so StopAgentStream can abort free chat too
+	agentCancelMap.Lock()
+	agentCancelMap.m[conversationId] = cancel
+	agentCancelMap.Unlock()
+	defer func() {
+		agentCancelMap.Lock()
+		delete(agentCancelMap.m, conversationId)
+		agentCancelMap.Unlock()
+	}()
+
 	// Try with failover: retry on transient/permanent errors by switching providers
 	maxAttempts := pm.Count() + 1
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -133,6 +143,18 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 	}
 
 	if err != nil {
+		// User-initiated stop: context was cancelled via StopAgentStream
+		if ctx.Err() == context.Canceled {
+			a.emitEvent("ai-chat-chunk", map[string]string{
+				"conversationId": conversationId,
+				"chunk":          "\n\n⏹️ " + i18n.T("app_ai_user_stopped"),
+			})
+			a.emitEvent("ai-chat-complete", map[string]interface{}{
+				"conversationId": conversationId,
+				"success":        true,
+			})
+			return nil
+		}
 		a.emitEvent( "ai-chat-complete", map[string]interface{}{
 			"conversationId": conversationId,
 			"success":        false,
@@ -528,9 +550,9 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 
 		// Check if cancelled before each round
 		if ctx.Err() != nil {
-			msg := "\n\n⏹️ 操作已被用户停止。"
+			msg := "\n\n⏹️ " + i18n.T("app_ai_user_stopped")
 			if ctx.Err() == context.DeadlineExceeded {
-				msg = fmt.Sprintf("\n\n⏱️ 操作超时（已执行 %d 轮）。如需更长时间，请在 AI 配置中调整最大工具调用轮次。", round)
+				msg = "\n\n⏱️ " + i18n.Tf("app_ai_timeout", round)
 			}
 			a.emitEvent("ai-chat-chunk", map[string]string{
 				"conversationId": conversationId,
@@ -571,9 +593,9 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				continue // Retry this round with new provider
 			}
 			if ctx.Err() != nil {
-				msg := "\n\n⏹️ 操作已被用户停止。"
+				msg := "\n\n⏹️ " + i18n.T("app_ai_user_stopped")
 				if ctx.Err() == context.DeadlineExceeded {
-					msg = fmt.Sprintf("\n\n⏱️ 操作超时（已执行 %d 轮）。如需更长时间，请在 AI 配置中调整最大工具调用轮次。", round)
+					msg = "\n\n⏱️ " + i18n.Tf("app_ai_timeout", round)
 				}
 				a.emitEvent("ai-chat-chunk", map[string]string{
 					"conversationId": conversationId,
