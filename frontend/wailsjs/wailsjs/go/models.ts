@@ -1087,7 +1087,6 @@ export namespace mod {
 	    maxToolRounds?: number;
 	    contextWindow?: number;
 	    enableAskUser?: boolean;
-	    enableMemory?: boolean;
 	    fallbackProviders?: FallbackProvider[];
 	
 	    static createFrom(source: any = {}) {
@@ -1103,7 +1102,6 @@ export namespace mod {
 	        this.maxToolRounds = source["maxToolRounds"];
 	        this.contextWindow = source["contextWindow"];
 	        this.enableAskUser = source["enableAskUser"];
-	        this.enableMemory = source["enableMemory"];
 	        this.fallbackProviders = this.convertValues(source["fallbackProviders"], FallbackProvider);
 	    }
 	
@@ -1590,28 +1588,6 @@ export namespace mod {
 	        this.memory = source["memory"];
 	        this.description = source["description"];
 	        this.price = source["price"];
-	    }
-	}
-	export class MemoryItem {
-	    id: number;
-	    project: string;
-	    category: string;
-	    content: string;
-	    source: string;
-	    createdAt: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new MemoryItem(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.project = source["project"];
-	        this.category = source["category"];
-	        this.content = source["content"];
-	        this.source = source["source"];
-	        this.createdAt = source["createdAt"];
 	    }
 	}
 	export class ProfileInfo {

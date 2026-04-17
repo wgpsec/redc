@@ -38,8 +38,6 @@ export function CheckAllUpdates():Promise<main.UpdateCheckResult>;
 
 export function CheckForUpdates():Promise<main.VersionCheckResult>;
 
-export function ClearAgentMemories():Promise<void>;
-
 export function ClearAuditLogs():Promise<void>;
 
 export function CloneCase(arg1:string,arg2:string):Promise<void>;
@@ -75,8 +73,6 @@ export function CreateProfile(arg1:string,arg2:string,arg3:string):Promise<mod.P
 export function CreateProject(arg1:string):Promise<void>;
 
 export function CreateRemoteDirectory(arg1:string,arg2:string):Promise<void>;
-
-export function DeleteAgentMemory(arg1:number):Promise<void>;
 
 export function DeleteConfigTemplate(arg1:string):Promise<void>;
 
@@ -127,8 +123,6 @@ export function FetchSkillsRegistry():Promise<Array<ai.RegistrySkill>>;
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
-
-export function GetAgentMemories():Promise<Array<mod.MemoryItem>>;
 
 export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
 
@@ -344,8 +338,6 @@ export function RenameRemoteFile(arg1:string,arg2:string,arg3:string):Promise<vo
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
-export function ResumeAgentStream(arg1:string):Promise<void>;
-
 export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function SaveConfigTemplate(arg1:string,arg2:mod.DeploymentConfig):Promise<void>;
@@ -446,7 +438,7 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean,arg9:number):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:number):Promise<void>;
 
 export function UpdateProfileFallbackProviders(arg1:string,arg2:Array<mod.FallbackProvider>):Promise<void>;
 

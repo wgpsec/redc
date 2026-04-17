@@ -59,30 +59,6 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 	// System prompt for free chat mode (only mode used via AIChatStream)
 	systemPrompt := fmt.Sprintf(ai.FreeChatSystemPrompt, langPrompt)
 
-	// Inject agent memory context if enabled
-	enableMemory := aiConfig.EnableMemory == nil || *aiConfig.EnableMemory
-	if enableMemory && a.memoryStore != nil {
-		a.mu.Lock()
-		projectName := ""
-		if a.project != nil {
-			projectName = a.project.ProjectName
-		}
-		a.mu.Unlock()
-		if projectName != "" {
-			memCtx := a.memoryStore.GetMemoryContext(projectName)
-			statsCtx := redc.GetUsageStats(projectName)
-			if memCtx != "" || statsCtx != "" {
-				systemPrompt += "\n\n## 用户偏好与历史经验\n"
-				if statsCtx != "" {
-					systemPrompt += statsCtx
-				}
-				if memCtx != "" {
-					systemPrompt += memCtx
-				}
-			}
-		}
-	}
-
 	// Build ai.Message slice: system prompt + user-provided history
 	aiMessages := make([]ai.Message, 0, len(messages)+1)
 	aiMessages = append(aiMessages, ai.Message{Role: "system", Content: systemPrompt})
@@ -300,45 +276,6 @@ func (a *App) StopAgentStream(conversationId string) {
 	agentCancelMap.Unlock()
 }
 
-// ResumeAgentStream resumes an interrupted agent conversation from its last checkpoint
-func (a *App) ResumeAgentStream(conversationId string) error {
-	if a.memoryStore == nil {
-		return fmt.Errorf("memory store not available")
-	}
-	cp, err := a.memoryStore.LoadCheckpoint(conversationId)
-	if err != nil {
-		return fmt.Errorf("无法恢复: %v", err)
-	}
-
-	// Deserialize checkpoint messages
-	var aiMessages []ai.Message
-	if err := json.Unmarshal([]byte(cp.Messages), &aiMessages); err != nil {
-		return fmt.Errorf("checkpoint data corrupted: %v", err)
-	}
-
-	// Convert to AIChatMessage for the agent loop (only user/assistant messages)
-	var chatMessages []AIChatMessage
-	for _, m := range aiMessages {
-		if m.Role == "user" || m.Role == "assistant" {
-			chatMessages = append(chatMessages, AIChatMessage{Role: m.Role, Content: m.Content})
-		}
-	}
-
-	// Notify frontend that resume is starting
-	a.emitEvent("ai-chat-chunk", map[string]string{
-		"conversationId": conversationId,
-		"chunk":          fmt.Sprintf("\n\n🔄 从第 %d 轮检查点恢复执行...\n\n", cp.Round),
-	})
-
-	// Re-run agent loop with remaining rounds
-	promptTemplate := cp.PromptTemplate
-	if promptTemplate == "" {
-		promptTemplate = ai.DeployAgentSystemPrompt
-	}
-
-	return a.runAgentLoop(conversationId, chatMessages, promptTemplate, 50, 15*time.Minute)
-}
-
 // SubmitAskUserResponse sends user's answer back to a waiting ask_user tool call
 func (a *App) SubmitAskUserResponse(conversationId string, answer string) {
 	askUserChannels.Lock()
@@ -433,40 +370,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	offsetHours := offset / 3600
 	systemPrompt += fmt.Sprintf("\n\n## 当前时间\n当前时间: %s (时区: %s, UTC%+d:00)",
 		now.Format("2006-01-02 15:04:05"), zone, offsetHours)
-
-	// Inject agent memory context if enabled
-	enableMemory := aiConfig.EnableMemory == nil || *aiConfig.EnableMemory // default true
-	if enableMemory && a.memoryStore != nil {
-		memCtx := a.memoryStore.GetMemoryContext(project.ProjectName)
-		statsCtx := redc.GetUsageStats(project.ProjectName)
-		if memCtx != "" || statsCtx != "" {
-			systemPrompt += "\n\n## 用户偏好与历史经验\n"
-			if statsCtx != "" {
-				systemPrompt += statsCtx
-			}
-			if memCtx != "" {
-				systemPrompt += memCtx
-			}
-		}
-
-		// Inject recent incomplete tasks for checkpoint/resume
-		recentTasks, err := a.memoryStore.GetRecentTasks(project.ProjectName, 3)
-		if err == nil {
-			var incompleteTasks []string
-			for _, t := range recentTasks {
-				if t.TaskStatus == "in_progress" {
-					incompleteTasks = append(incompleteTasks, fmt.Sprintf("- [%s] %s (更新于 %s)", t.ConversationID[:8], t.TaskTitle, t.UpdatedAt))
-				}
-			}
-			if len(incompleteTasks) > 0 {
-				systemPrompt += "\n\n## 未完成任务（可能需要续接）\n"
-				systemPrompt += "以下任务之前未完成，如用户提到继续或恢复，可参考其上下文：\n"
-				for _, t := range incompleteTasks {
-					systemPrompt += t + "\n"
-				}
-			}
-		}
-	}
 
 	// Build tool definitions from MCP server
 	mcpServer := mcp.NewMCPServer(project, a)
@@ -590,15 +493,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	// Accumulate token usage across all rounds
 	var totalUsage ai.TokenUsage
 
-	// Helper to save checkpoint at current state
-	saveCheckpoint := func(round int) {
-		if enableMemory && a.memoryStore != nil {
-			if cpJSON, err := json.Marshal(aiMessages); err == nil {
-				a.memoryStore.SaveCheckpoint(project.ProjectName, conversationId, string(cpJSON), round, promptTemplate)
-			}
-		}
-	}
-
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
 		// Smart context window management: LLM-powered compaction when exceeding budget
@@ -634,7 +528,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 
 		// Check if cancelled before each round
 		if ctx.Err() != nil {
-			saveCheckpoint(round)
 			msg := "\n\n⏹️ 操作已被用户停止。"
 			if ctx.Err() == context.DeadlineExceeded {
 				msg = fmt.Sprintf("\n\n⏱️ 操作超时（已执行 %d 轮）。如需更长时间，请在 AI 配置中调整最大工具调用轮次。", round)
@@ -677,7 +570,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				})
 				continue // Retry this round with new provider
 			}
-			saveCheckpoint(round)
 			if ctx.Err() != nil {
 				msg := "\n\n⏹️ 操作已被用户停止。"
 				if ctx.Err() == context.DeadlineExceeded {
@@ -710,11 +602,6 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		// No tool calls → final answer (already streamed via callback)
 		if len(resp.ToolCalls) == 0 {
 			aiMessages = append(aiMessages, ai.Message{Role: "assistant", Content: resp.Content})
-			// Extract memories asynchronously
-			if enableMemory && a.memoryStore != nil {
-				go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
-				a.memoryStore.CompleteTask(conversationId)
-			}
 			a.notifyAgentComplete(i18n.T("notify_agent_complete"), i18n.Tf("notify_agent_complete_msg", round))
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
@@ -870,19 +757,9 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				})
 			}
 		}
-
-		// Save checkpoint every 3 rounds for resumption after interruption
-		if round > 0 && round%3 == 0 {
-			saveCheckpoint(round)
-		}
 	}
 
 	// Exceeded max rounds
-	saveCheckpoint(maxRounds)
-	// Extract memories asynchronously
-	if enableMemory && a.memoryStore != nil {
-		go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
-	}
 	a.notifyAgentComplete(i18n.T("notify_agent_max_rounds"), i18n.Tf("notify_agent_max_rounds_msg", maxRounds))
 	a.emitEvent( "ai-chat-chunk", map[string]string{
 		"conversationId": conversationId,
@@ -1104,17 +981,6 @@ func (a *App) handleUpdatePlan(args map[string]interface{}, conversationId strin
 		"currentStep":    currentStep,
 	})
 
-	// Persist task plan to memory store
-	if a.memoryStore != nil {
-		a.mu.Lock()
-		proj := a.project
-		a.mu.Unlock()
-		if proj != nil {
-			planJSON, _ := json.Marshal(args)
-			a.memoryStore.SaveTaskPlan(proj.ProjectName, conversationId, title, string(planJSON))
-		}
-	}
-
 	return "Plan updated and displayed to user.", true
 }
 
@@ -1231,86 +1097,4 @@ func (a *App) gatherRunningCasesInfo() (string, int) {
 	}
 
 	return strings.Join(caseInfoList, "\n\n"), runningCount
-}
-
-const memoryExtractionPrompt = `你是一个经验提取器。根据以下 AI Agent 对话记录，提取值得记住的经验教训。
-
-规则：
-1. 只提取通用的、跨对话可复用的经验，不要提取一次性的具体操作细节（如具体的 IP、case ID）
-2. 最多提取 5 条，没有值得记住的就返回空行
-3. 每条经验一行，格式为 "category|content"，category 只能是 lesson、preference 或 failure
-4. lesson: 操作中遇到的问题和解决方案、环境兼容性信息、工具使用技巧
-5. preference: 用户表达的偏好（如常用的云厂商、模板、实例规格）
-6. failure: 工具调用失败的结构化记录，格式为 "failure|[tool:工具名][error:错误类型][solution:解决方案]"
-
-示例输出：
-lesson|AWS t4g 系列是 ARM64 架构，VulHub 等 x86-only Docker 镜像应使用 aws/ec2-x86 模板
-preference|用户偏好使用阿里云部署
-failure|[tool:exec_command][error:apt lock][solution:等待 30-60 秒或 kill cloud-init 进程]
-
-对话记录：
-%s`
-
-// extractMemories extracts reusable experience from a completed conversation
-func (a *App) extractMemories(aiConfig *redc.AIConfig, messages []ai.Message, projectName string) {
-	// Build conversation summary (user + assistant + failed tool messages, truncated)
-	var summary strings.Builder
-	for _, m := range messages {
-		if m.Role == "system" {
-			continue
-		}
-		content := m.Content
-		// Include tool failures but skip successful tool results (too verbose)
-		if m.Role == "tool" {
-			if !strings.Contains(content, "失败") && !strings.Contains(content, "error") && !strings.Contains(content, "Error") {
-				continue
-			}
-			content = fmt.Sprintf("[tool:%s] %s", m.Name, content)
-		}
-		if len(content) > 500 {
-			content = content[:500] + "..."
-		}
-		summary.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, content))
-		if summary.Len() > 5000 {
-			break
-		}
-	}
-
-	if summary.Len() < 100 {
-		return // conversation too short, nothing to extract
-	}
-
-	prompt := fmt.Sprintf(memoryExtractionPrompt, summary.String())
-
-	client := ai.NewClient(aiConfig.Provider, aiConfig.APIKey, aiConfig.BaseURL, aiConfig.Model)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	resp, err := client.ChatWithTools(ctx, []ai.Message{
-		{Role: "user", Content: prompt},
-	}, nil)
-	if err != nil || resp.Content == "" {
-		return // silently ignore extraction failures
-	}
-
-	// Parse response lines
-	for _, line := range strings.Split(resp.Content, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		parts := strings.SplitN(line, "|", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		category := strings.TrimSpace(parts[0])
-		content := strings.TrimSpace(parts[1])
-		if category != "lesson" && category != "preference" && category != "failure" {
-			continue
-		}
-		if content == "" {
-			continue
-		}
-		a.memoryStore.AddMemory(projectName, category, content, "auto")
-	}
 }

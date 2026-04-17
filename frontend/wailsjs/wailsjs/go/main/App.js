@@ -62,10 +62,6 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
-export function ClearAgentMemories() {
-  return window['go']['main']['App']['ClearAgentMemories']();
-}
-
 export function ClearAuditLogs() {
   return window['go']['main']['App']['ClearAuditLogs']();
 }
@@ -136,10 +132,6 @@ export function CreateProject(arg1) {
 
 export function CreateRemoteDirectory(arg1, arg2) {
   return window['go']['main']['App']['CreateRemoteDirectory'](arg1, arg2);
-}
-
-export function DeleteAgentMemory(arg1) {
-  return window['go']['main']['App']['DeleteAgentMemory'](arg1);
 }
 
 export function DeleteConfigTemplate(arg1) {
@@ -240,10 +232,6 @@ export function FetchTemplateReadme(arg1, arg2) {
 
 export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
-}
-
-export function GetAgentMemories() {
-  return window['go']['main']['App']['GetAgentMemories']();
 }
 
 export function GetAllCaseTags() {
@@ -674,10 +662,6 @@ export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
 }
 
-export function ResumeAgentStream(arg1) {
-  return window['go']['main']['App']['ResumeAgentStream'](arg1);
-}
-
 export function RunF8xInstall(arg1, arg2) {
   return window['go']['main']['App']['RunF8xInstall'](arg1, arg2);
 }
@@ -878,8 +862,8 @@ export function UpdateProfile(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateProfile'](arg1, arg2, arg3, arg4);
 }
 
-export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function UpdateProfileFallbackProviders(arg1, arg2) {

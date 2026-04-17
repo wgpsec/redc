@@ -170,7 +170,7 @@ var methodMinRole = map[string]string{
 	"AIChatStream": "operator", "SmartAgentChatStream": "operator",
 	"AgentChatStream": "operator", "DeployAgentChatStream": "operator",
 	"TroubleshootAgentChatStream": "operator", "OrchestratorStream": "operator",
-	"StopAgentStream": "operator", "ResumeAgentStream": "operator",
+	"StopAgentStream": "operator",
 	"SubmitAskUserResponse": "operator", "ExportChatLog": "operator",
 	"AIRecommendTemplates": "operator", "AIGenerateTemplate": "operator",
 	"AICostOptimization": "operator", "RecommendTemplates": "operator",

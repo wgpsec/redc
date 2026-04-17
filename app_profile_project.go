@@ -336,7 +336,7 @@ func (a *App) DeleteProfile(profileID string) error {
 	return redc.DeleteProfile(profileID)
 }
 
-func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, enableMemory bool, contextWindow int) error {
+func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool, contextWindow int) error {
 	// Read existing config to preserve fallback providers
 	existingProfile, _ := redc.GetActiveProfile()
 	var existingFallbacks []redc.FallbackProvider
@@ -351,7 +351,6 @@ func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey st
 		Model:             model,
 		MaxToolRounds:     maxToolRounds,
 		EnableAskUser:     &enableAskUser,
-		EnableMemory:      &enableMemory,
 		FallbackProviders: existingFallbacks,
 	}
 	if contextWindow > 0 {

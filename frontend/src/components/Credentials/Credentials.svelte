@@ -34,7 +34,6 @@ let { t } = $props();
     model: '',
     maxToolRounds: 0,
     enableAskUser: true,
-    enableMemory: true,
     contextWindow: 0
   });
   let aiConfigSaving = $state(false);
@@ -100,7 +99,6 @@ let { t } = $props();
             model: active.aiConfig.model || aiProviderPresets[active.aiConfig.provider || 'openai'].defaultModel,
             maxToolRounds: active.aiConfig.maxToolRounds || 0,
             enableAskUser: active.aiConfig.enableAskUser !== false,
-            enableMemory: active.aiConfig.enableMemory !== false,
             contextWindow: active.aiConfig.contextWindow || 0
           };
         } else {
@@ -112,7 +110,6 @@ let { t } = $props();
             model: preset.defaultModel,
             maxToolRounds: 0,
             enableAskUser: true,
-            enableMemory: true,
             contextWindow: 0
           };
         }
@@ -226,7 +223,7 @@ let { t } = $props();
     aiConfigSaving = true;
     aiConfigSaved = false;
     try {
-      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0, aiConfig.enableAskUser !== false, aiConfig.enableMemory !== false, aiConfig.contextWindow || 0);
+      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0, aiConfig.enableAskUser !== false, aiConfig.contextWindow || 0);
       aiConfigSaved = true;
       setTimeout(() => { aiConfigSaved = false; }, 2000);
     } catch (e) {
@@ -720,23 +717,6 @@ let { t } = $props();
               <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
                 class:translate-x-4={aiConfig.enableAskUser}
                 class:translate-x-0={!aiConfig.enableAskUser}></span>
-            </button>
-          </div>
-          <div class="flex items-center justify-between py-2">
-            <div>
-              <label class="block text-[11px] font-medium text-gray-500">{t.enableMemory || 'Agent 记忆系统'}</label>
-              <p class="text-[10px] text-gray-500 mt-0.5">{t.enableMemoryHint || '自动记忆历史操作经验，避免重复踩坑'}</p>
-            </div>
-            <button
-              type="button"
-              class="relative w-9 h-5 flex-shrink-0 rounded-full transition-colors cursor-pointer"
-              class:bg-emerald-500={aiConfig.enableMemory}
-              class:bg-gray-300={!aiConfig.enableMemory}
-              onclick={() => { aiConfig.enableMemory = !aiConfig.enableMemory; }}
-            >
-              <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
-                class:translate-x-4={aiConfig.enableMemory}
-                class:translate-x-0={!aiConfig.enableMemory}></span>
             </button>
           </div>
         </div>

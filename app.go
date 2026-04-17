@@ -38,7 +38,6 @@ type App struct {
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
 	pluginMgr               *plugin.PluginManager
-	memoryStore             *redc.MemoryStore
 	auditStore              *redc.AuditStore
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
@@ -268,14 +267,6 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	fmt.Printf("[INFO] %s\n", i18n.T("app_deploy_service_init_success"))
-
-	// Initialize agent memory store
-	if ms, err := redc.NewMemoryStore(); err == nil {
-		a.memoryStore = ms
-		fmt.Println("[INFO] Agent memory store initialized")
-	} else {
-		fmt.Printf("[WARN] Agent memory store init failed: %v\n", err)
-	}
 
 	// Initialize audit log store
 	if as, err := redc.NewAuditStore(); err == nil {

@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, SmartAgentChatStream, StopAgentStream, ResumeAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, SmartAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse, OrchestratorStream } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
 
@@ -41,7 +41,6 @@
   let askUserInput = $state('');
   let agentPlan = $state(null); // { title, steps: [{name, status, detail}], currentStep }
   let orchestratorStatus = $state(null); // { round, maxRounds, phase, detail }
-  let lastInterruptedConvId = $state(''); // Track last interrupted conversation for resume
   let lastUsage = $state(null); // { prompt_tokens, completion_tokens, total_tokens }
   // Conversation history state
   let conversations = $state([]);   // Array of { id, title, mode, messages, updatedAt }
@@ -270,7 +269,7 @@
           }];
           // Track timeout interruptions (sent as success=true with timeout emoji)
           if (mode !== 'free' && streamingContent.includes('⏱️')) {
-            lastInterruptedConvId = currentConversationId;
+            // timeout interrupted — message already saved above
           }
         } else if (!data.success) {
           // Preserve partial streaming content on error (e.g. timeout)
@@ -287,10 +286,6 @@
               plan: planSnapshot,
               usage
             }];
-          }
-          // Track interrupted conversation for potential resume
-          if (mode !== 'free') {
-            lastInterruptedConvId = currentConversationId;
           }
           error = t.aiChatStreamError || 'AI 响应失败，请重试';
         }
@@ -535,25 +530,6 @@
       await StopAgentStream(currentConversationId);
     } catch (e) {
       console.error('Failed to stop agent:', e);
-    }
-  }
-
-  // Resume an interrupted agent conversation from checkpoint
-  async function resumeAgent() {
-    if (!lastInterruptedConvId || isStreaming) return;
-    const convId = lastInterruptedConvId;
-    lastInterruptedConvId = '';
-    error = '';
-    isStreaming = true;
-    currentConversationId = convId;
-    streamingContent = '';
-    agentToolCalls = [];
-    try {
-      await ResumeAgentStream(convId);
-    } catch (e) {
-      error = `恢复失败: ${e}`;
-      isStreaming = false;
-      currentConversationId = '';
     }
   }
 
@@ -880,22 +856,6 @@
       </svg>
       <span class="text-[12px] text-red-700 flex-1">{error}</span>
       <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''}>
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  {/if}
-  {#if lastInterruptedConvId && !isStreaming}
-    <div class="mb-3 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
-      <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.182" />
-      </svg>
-      <span class="text-[12px] text-amber-700 flex-1">{t.aiChatResumeHint || '上次 Agent 任务中断，可从检查点恢复继续执行'}</span>
-      <button class="text-[11px] px-2 py-0.5 bg-amber-500 text-white rounded hover:bg-amber-600 cursor-pointer" onclick={resumeAgent}>
-        {t.aiChatResume || '恢复执行'}
-      </button>
-      <button class="text-amber-400 hover:text-amber-600 cursor-pointer" onclick={() => lastInterruptedConvId = ''}>
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
