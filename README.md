@@ -8,7 +8,7 @@
   </a>
 <a href="https://github.com/wgpsec/redc/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/wgpsec/redc"/></a>
 <a href="https://github.com/wgpsec/redc/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/wgpsec/redc"/></a>
-<a href="https://github.com/wgpsec/redc/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a>
+<a href="https://github.com/wgpsec/redc/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a>
 <a href="https://github.com/wgpsec/redc/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/wgpsec/redc/total?color=brightgreen"/></a>
 <a href="https://goreportcard.com/report/github.com/wgpsec/redc"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/wgpsec/redc"/></a>
 <a href="https://twitter.com/wgpsec"><img alt="Twitter" src="https://img.shields.io/twitter/follow/wgpsec?label=Followers&style=social" /></a>
@@ -36,7 +36,7 @@
 - **[AI Operations Skills](.claude/skills/useage/SKILL.md)** - Comprehensive guide for AI agents and automation tools
 - **[MCP Protocol Support](doc/MCP.md)** - Model Context Protocol integration for AI assistants
 - **[Compose Orchestration Guide](doc/Compose.md)** - Best practices for multi-service orchestration
-- **[Plugin Development Guide](https://github.com/wgpsec/redc-template/blob/main/doc/plugin-development.md)** - How to write your own RedC plugin
+- **[Plugin Development Guide](https://github.com/wgpsec/redc-template/blob/master/doc/plugin-development.md)** - How to write your own RedC plugin
 - **[Template Repository](https://github.com/wgpsec/redc-template)** - Pre-configured infrastructure templates
 - **[Online Templates](https://redc.wgpsec.org/)** - Browse and download templates
 

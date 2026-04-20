@@ -2,6 +2,7 @@
 
   import { onMount } from 'svelte';
   import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates, CreateLocalTemplate, DeleteTemplateFile, ValidateTemplate, GetTemplatesDir } from '../../../wailsjs/go/main/App.js';
+  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
   import Modal from '../UI/Modal.svelte';
@@ -577,6 +578,13 @@
       >
         <svg class="w-3.5 h-3.5 {localTemplatesLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
         {localTemplatesLoading ? t.loading : t.refresh}
+      </button>
+      <button
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+        onclick={() => BrowserOpenURL('https://github.com/wgpsec/redc-template/blob/master/WRITING_TEMPLATES_CN.md')}
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+        {t.templateDevGuide || '模板编写文档'}
       </button>
       <button 
         class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"

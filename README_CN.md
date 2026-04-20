@@ -8,7 +8,7 @@
   </a>
 <a href="https://github.com/wgpsec/redc/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/wgpsec/redc"/></a>
 <a href="https://github.com/wgpsec/redc/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/wgpsec/redc"/></a>
-<a href="https://github.com/wgpsec/redc/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a>
+<a href="https://github.com/wgpsec/redc/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a>
 <a href="https://github.com/wgpsec/redc/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/wgpsec/redc/total?color=brightgreen"/></a>
 <a href="https://goreportcard.com/report/github.com/wgpsec/redc"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/wgpsec/redc"/></a>
 <a href="https://twitter.com/wgpsec"><img alt="Twitter" src="https://img.shields.io/twitter/follow/wgpsec?label=Followers&style=social" /></a>
@@ -36,7 +36,7 @@
 - **[AI 运维 Skills](.claude/skills/useage/SKILL_CN.md)** - AI 代理和自动化工具的综合指南
 - **[MCP 协议支持](doc/MCP_CN.md)** - AI 助手的模型上下文协议集成
 - **[Compose 编排指南](doc/Compose_CN.md)** - 多服务编排部署最佳实践
-- **[插件开发指南](https://github.com/wgpsec/redc-template/blob/main/doc/plugin-development.md)** - 编写自定义 RedC 插件
+- **[插件开发指南](https://github.com/wgpsec/redc-template/blob/master/doc/plugin-development.md)** - 编写自定义 RedC 插件
 - **[模板仓库](https://github.com/wgpsec/redc-template)** - 预配置的基础设施模板
 - **[在线模板](https://redc.wgpsec.org/)** - 浏览和下载模板
 
