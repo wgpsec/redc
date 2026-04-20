@@ -5,7 +5,12 @@
       "date": "2026-04-20",
       "changes": [
         "新增：场景启动前插件依赖检测 — 启动场景时自动检测 case.json 声明的 redc_plugins 是否已安装，缺失则弹窗提示缺少的插件列表，提供「去安装」跳转插件管理页、「仍然启动」和「取消」三个选项",
-        "新增：批量启动插件检测 — 批量启动多个场景时汇总所有缺失插件的场景到一个弹窗，避免逐个弹窗打断操作"
+        "新增：批量启动插件检测 — 批量启动多个场景时汇总所有缺失插件的场景到一个弹窗，避免逐个弹窗打断操作",
+        "优化：自定义部署模板描述国际化 — 自定义部署页面的模板描述和变量描述根据界面语言展示 description 或 description_en，后端 BaseTemplate 和 caseJSON 结构体补充 description_en 字段",
+        "优化：全站 i18n 兼容性修复 — 修复前端 20+ 个组件中约 50 处硬编码中文文案，统一使用 t.xxx 国际化模式，包括 HTTPServer 审计方法标签、Registry 标签、AI 工具名称映射、Dashboard 错误翻译、自定义部署相关组件等",
+        "修复：模板仓库 README Markdown 表格渲染 — 新增表格解析支持，aliyun/nat-probe 等包含 Markdown 表格的 README 可正常渲染",
+        "修复：模板仓库 README Markdown 渲染优化 — 修复引用块（blockquote）因 HTML 转义导致完全失效、图片语法不支持、下划线斜体破坏内联代码和 URL、代码块内 HTML 未转义、无空格 dash 误匹配列表项、连续引用块不合并等 6 个渲染 bug",
+        "新增：模板仓库 README 图片渲染 — 支持 ![alt](url) 图片语法，自动将相对路径（如 ../../img/redc-1.png）解析为 GitHub raw 绝对 URL"
       ]
     },
     {
