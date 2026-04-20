@@ -897,3 +897,15 @@ export function ListTimelineEvents(arg1, arg2, arg3, arg4) {
 export function ClearTimeline() {
   return window['go']['main']['App']['ClearTimeline']();
 }
+
+export function GetUpdateStatus() {
+  return window['go']['main']['App']['GetUpdateStatus']();
+}
+
+export function DownloadUpdate() {
+  return window['go']['main']['App']['DownloadUpdate']();
+}
+
+export function ApplyUpdateAndRestart() {
+  return window['go']['main']['App']['ApplyUpdateAndRestart']();
+}

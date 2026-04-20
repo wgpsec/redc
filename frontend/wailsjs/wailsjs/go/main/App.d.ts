@@ -24,6 +24,8 @@ export function AnalyzeCaseError(arg1:string,arg2:string,arg3:string,arg4:string
 
 export function AnalyzeDeploymentError(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function ApplyUpdateAndRestart():Promise<void>;
+
 export function BatchDeleteCustomDeployments(arg1:Array<string>):Promise<Array<mod.BatchOperationResult>>;
 
 export function BatchStartCustomDeployments(arg1:Array<string>):Promise<Array<mod.BatchOperationResult>>;
@@ -37,6 +39,8 @@ export function CancelScheduledTask(arg1:string):Promise<void>;
 export function CheckAllUpdates():Promise<main.UpdateCheckResult>;
 
 export function CheckForUpdates():Promise<main.VersionCheckResult>;
+
+export function CheckForUpdatesOnStartup():Promise<void>;
 
 export function ClearAuditLogs():Promise<void>;
 
@@ -95,6 +99,8 @@ export function DeployCase(arg1:string,arg2:string,arg3:Record<string, string>):
 export function DisablePlugin(arg1:string):Promise<void>;
 
 export function DownloadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
+
+export function DownloadUpdate():Promise<void>;
 
 export function EnablePlugin(arg1:string):Promise<void>;
 
@@ -225,6 +231,8 @@ export function GetTemplatesDir():Promise<string>;
 export function GetTerraformMirrorConfig():Promise<main.TerraformMirrorConfig>;
 
 export function GetTotalRuntime():Promise<string>;
+
+export function GetUpdateStatus():Promise<main.UpdateState>;
 
 export function GetVersion():Promise<string>;
 

@@ -1082,6 +1082,36 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class UpdateState {
+	    status: string;
+	    currentVer: string;
+	    latestVer: string;
+	    releaseNotes: string;
+	    downloadURL: string;
+	    assetURL: string;
+	    assetSize: number;
+	    progress: number;
+	    downloaded: number;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.currentVer = source["currentVer"];
+	        this.latestVer = source["latestVer"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.downloadURL = source["downloadURL"];
+	        this.assetURL = source["assetURL"];
+	        this.assetSize = source["assetSize"];
+	        this.progress = source["progress"];
+	        this.downloaded = source["downloaded"];
+	        this.error = source["error"];
+	    }
+	}
 	
 	export class WebhookConfig {
 	    enabled: boolean;

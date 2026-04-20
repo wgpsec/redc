@@ -44,6 +44,7 @@ type App struct {
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
 	activeOps               atomic.Int32 // tracks in-flight async operations (apply/destroy/compose)
+	updateState             UpdateState
 }
 
 // NewApp creates a new App application struct
@@ -304,6 +305,9 @@ func (a *App) startup(ctx context.Context) {
 		a.spotMonitor.Start()
 		fmt.Printf("[INFO] %s\n", i18n.T("app_spot_monitor_start_success"))
 	}
+
+	// Check for updates in the background
+	go a.CheckForUpdatesOnStartup()
 }
 
 // startupHeadless initializes the app without Wails context

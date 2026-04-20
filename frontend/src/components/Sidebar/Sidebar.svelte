@@ -2,21 +2,22 @@
 
   import Modal from '../UI/Modal.svelte';
   import { onMount } from 'svelte';
-  import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { Environment } from '../../../wailsjs/runtime/runtime.js';
   import { ListProjects, GetCurrentProject, SwitchProject, CreateProject } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
-let { 
-    t, 
-    activeTab, 
+let {
+    t,
+    activeTab,
     lang,
     version,
-    onTabChange, 
-    onToggleLang, 
-    onLoadMCPStatus, 
+    onTabChange,
+    onToggleLang,
+    onLoadMCPStatus,
     onLoadResourceSummary,
-    onCheckUpdate
+    onCheckUpdate,
+    updateState = {},
+    onShowUpdate = () => {}
   } = $props();
   
   // Project switching state - managed internally
@@ -210,10 +211,6 @@ let {
     }
   }
 
-  function openGitHub() {
-    BrowserOpenURL('https://github.com/wgpsec/redc');
-  }
-
 </script>
 
 <aside class="w-44 bg-white border-r border-gray-100 flex flex-col overflow-hidden overscroll-none">
@@ -366,27 +363,32 @@ let {
   <div class="p-2 border-t border-gray-100">
     <div class="flex items-center justify-between px-2 py-2">
       <button
-        class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap cursor-pointer"
-        onclick={() => { if (onCheckUpdate) onCheckUpdate(); onTabChange('about'); }}
-        title={t.aboutRedC || '关于 RedC，点击检查更新'}
+        class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors cursor-pointer flex items-center gap-1.5 min-w-0 truncate"
+        onclick={() => {
+          if (updateState?.status === 'available' || updateState?.status === 'ready') {
+            onShowUpdate();
+          } else {
+            if (onCheckUpdate) onCheckUpdate();
+            onTabChange('about');
+          }
+        }}
+        title={updateState?.status === 'available' ? (t.updateAvailable || '发现新版本') : (t.aboutRedC || '关于 RedC，点击检查更新')}
       >
         {version || 'v3.0.7'} by WgpSec
+        {#if updateState?.status === 'available' || updateState?.status === 'ready'}
+          <span class="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-50 animate-pulse">
+            <svg class="w-2.5 h-2.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+            </svg>
+          </span>
+        {/if}
       </button>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1 flex-shrink-0">
         <button
           class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-[10px] font-medium cursor-pointer"
           onclick={onToggleLang}
           title={t.switchLanguage || '切换语言'}
         >{lang === 'zh' ? (t.langEn || 'EN') : (t.langZh || '中')}</button>
-        <button
-          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-          onclick={openGitHub}
-          title="GitHub"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-          </svg>
-        </button>
       </div>
     </div>
   </div>

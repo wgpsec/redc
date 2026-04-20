@@ -34,6 +34,10 @@ export function AnalyzeDeploymentError(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['AnalyzeDeploymentError'](arg1, arg2, arg3, arg4);
 }
 
+export function ApplyUpdateAndRestart() {
+  return window['go']['main']['App']['ApplyUpdateAndRestart']();
+}
+
 export function BatchDeleteCustomDeployments(arg1) {
   return window['go']['main']['App']['BatchDeleteCustomDeployments'](arg1);
 }
@@ -60,6 +64,10 @@ export function CheckAllUpdates() {
 
 export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
+}
+
+export function CheckForUpdatesOnStartup() {
+  return window['go']['main']['App']['CheckForUpdatesOnStartup']();
 }
 
 export function ClearAuditLogs() {
@@ -176,6 +184,10 @@ export function DisablePlugin(arg1) {
 
 export function DownloadFile(arg1, arg2, arg3) {
   return window['go']['main']['App']['DownloadFile'](arg1, arg2, arg3);
+}
+
+export function DownloadUpdate() {
+  return window['go']['main']['App']['DownloadUpdate']();
 }
 
 export function EnablePlugin(arg1) {
@@ -436,6 +448,10 @@ export function GetTerraformMirrorConfig() {
 
 export function GetTotalRuntime() {
   return window['go']['main']['App']['GetTotalRuntime']();
+}
+
+export function GetUpdateStatus() {
+  return window['go']['main']['App']['GetUpdateStatus']();
 }
 
 export function GetVersion() {

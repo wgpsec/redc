@@ -577,6 +577,21 @@ export const i18n = {
     helpResourceOverview: '资源概览展示所有已运行场景创建的云资源（ECS、VPC、安全组等）。数据通过 Terraform state 获取，需要有运行中的场景才会显示。',
     helpHttpRoles: 'Admin 可管理用户和所有操作；Operator 可执行部署操作但不能管理用户；Viewer 只能查看状态和日志。',
     helpTemplateInstalled: '"已安装"表示模板已下载到本地模板目录，可离线使用。更新操作会拉取远程最新版本覆盖本地文件。',
+    // Auto-update
+    updateAvailable: '发现新版本',
+    updateCurrentVer: '当前版本',
+    updateLatestVer: '最新版本',
+    updateReleaseNotes: '更新日志',
+    updateAutoDownload: '自动下载安装',
+    updateGoToGithub: '前往 GitHub',
+    updateLater: '稍后',
+    updateDownloading: '正在下载...',
+    updateCancel: '取消',
+    updateReady: '下载完成，重启以应用更新',
+    updateRestartNow: '立即重启',
+    updateRestartLater: '稍后重启',
+    updateError: '更新失败',
+    updateUpToDate: '已是最新版本',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', userdataScripts: 'Userdata Scripts', softwareStore: 'Software Store',
@@ -1166,6 +1181,21 @@ export const i18n = {
     helpResourceOverview: 'Resource overview shows cloud resources (ECS, VPC, security groups, etc.) created by running scenes. Data comes from Terraform state and requires active scenes.',
     helpHttpRoles: 'Admin can manage users and all operations; Operator can deploy but not manage users; Viewer can only view status and logs.',
     helpTemplateInstalled: '"Installed" means the template is downloaded locally and works offline. Update pulls the latest remote version to overwrite local files.',
+    // Auto-update
+    updateAvailable: 'New Version Available',
+    updateCurrentVer: 'Current Version',
+    updateLatestVer: 'Latest Version',
+    updateReleaseNotes: 'Release Notes',
+    updateAutoDownload: 'Download & Install',
+    updateGoToGithub: 'Go to GitHub',
+    updateLater: 'Later',
+    updateDownloading: 'Downloading...',
+    updateCancel: 'Cancel',
+    updateReady: 'Download complete. Restart to apply update.',
+    updateRestartNow: 'Restart Now',
+    updateRestartLater: 'Restart Later',
+    updateError: 'Update Failed',
+    updateUpToDate: 'Already up to date',
   }
 };
 
