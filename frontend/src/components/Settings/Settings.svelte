@@ -1,5 +1,7 @@
 <script>
   import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled, GetWebhookConfig, SetWebhookConfig, TestWebhook } from '../../../wailsjs/go/main/App.js';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
@@ -285,6 +287,7 @@
 </script>
 
 <div class="space-y-4">
+    <PageGuide text={t.pgSettings} dismissKey="settings" />
     <!-- 基本信息 + 开关 -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100">
@@ -346,7 +349,7 @@
         <!-- Spot 实例监控 -->
         <div class="flex items-center justify-between px-5 py-3">
           <div>
-            <div class="text-[13px] font-medium text-gray-900">{t.spotMonitor || 'Spot 实例监控'}</div>
+            <div class="text-[13px] font-medium text-gray-900">{t.spotMonitor || 'Spot 实例监控'} <HelpTooltip text={t.helpSpotMonitor} /></div>
             <div class="text-[11px] text-gray-500 mt-0.5">{t.spotMonitorDesc || '定期检测运行中的抢占式实例是否被云厂商回收'}</div>
           </div>
           <button
@@ -364,7 +367,7 @@
         {#if spotMonitorEnabled}
         <div class="flex items-center justify-between px-5 py-3 ml-4 border-l-2 border-gray-200">
           <div>
-            <div class="text-[13px] font-medium text-gray-900">{t.spotAutoRecover || 'Spot 自动恢复'}</div>
+            <div class="text-[13px] font-medium text-gray-900">{t.spotAutoRecover || 'Spot 自动恢复'} <HelpTooltip text={t.helpSpotAutoRecover} /></div>
             <div class="text-[11px] text-gray-500 mt-0.5">{t.spotAutoRecoverDesc || '检测到实例被回收时自动执行 terraform apply 补齐'}</div>
           </div>
           <button
@@ -439,7 +442,7 @@
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.terraformMirror}</h3>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.terraformMirror} <HelpTooltip text={t.helpTfMirror} /></h3>
           <p class="text-[11px] text-gray-500 mt-0.5">{t.mirrorConfigHint}</p>
         </div>
         <button

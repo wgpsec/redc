@@ -3,6 +3,8 @@
   import { GetResourceSummary, GetBalances, GetBills } from '../../../wailsjs/go/main/App.js';
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { cloudDocs } from '../../lib/cloudDocs.js';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   function openLink(url) {
     BrowserOpenURL(url);
@@ -99,10 +101,11 @@
 </script>
 
 <div class="space-y-4">
+  <PageGuide text={t.pgResources} dismissKey="resources" />
   <!-- Resource Summary -->
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-[13px] font-semibold text-gray-900">{t.resourceSummary}</h3>
+      <h3 class="text-[13px] font-semibold text-gray-900">{t.resourceSummary} <HelpTooltip text={t.helpResourceOverview} /></h3>
       <button
         class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
         onclick={loadResourceSummary}

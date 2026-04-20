@@ -1,4 +1,5 @@
 <script>
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
   let { t, lang = 'zh', templates = [], selectedTemplate = null, onSelect = () => {} } = $props();
   
   let searchQuery = $state('');
@@ -31,8 +32,9 @@
 
 <div class="bg-white rounded-xl border border-gray-100 p-5">
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-[15px] font-semibold text-gray-900">
+    <h2 class="text-[15px] font-semibold text-gray-900 flex items-center gap-1">
       {t.selectTemplate || '选择模板'}
+      <HelpTooltip text={t.helpBaseTemplate} />
     </h2>
     {#if selectedTemplate}
       <button

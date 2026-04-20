@@ -691,6 +691,77 @@ func (a *App) GetShowWelcomeDialog() bool {
 	return settings.WelcomeDialogShown == ""
 }
 
+// OnboardingStatus represents the new user onboarding progress
+type OnboardingStatus struct {
+	CredentialsConfigured bool `json:"credentialsConfigured"`
+	TemplatesInstalled    bool `json:"templatesInstalled"`
+	ScenesCreated         bool `json:"scenesCreated"`
+	Dismissed             bool `json:"dismissed"`
+}
+
+func (a *App) GetOnboardingStatus() OnboardingStatus {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	status := OnboardingStatus{}
+
+	// Check dismissed
+	settings, err := redc.LoadGUISettings()
+	if err == nil {
+		status.Dismissed = settings.OnboardingDismissed
+	}
+
+	// If dismissed, skip expensive checks
+	if status.Dismissed {
+		return status
+	}
+
+	// Check credentials: any provider has access key configured
+	if a.project != nil {
+		conf, _, err := redc.ReadConfig("")
+		if err == nil && conf != nil {
+			p := conf.Providers
+			status.CredentialsConfigured = p.Alicloud.AccessKey != "" ||
+				p.Aws.AccessKey != "" ||
+				p.Volcengine.AccessKey != "" ||
+				p.Tencentcloud.SecretId != "" ||
+				p.Huaweicloud.AccessKey != "" ||
+				p.UCloud.PublicKey != "" ||
+				p.Vultr.ApiKey != "" ||
+				p.Google.Credentials != "" ||
+				p.Azure.SubscriptionId != ""
+		}
+	}
+
+	// Check templates installed
+	templates, err := redc.ListLocalTemplates()
+	if err == nil {
+		status.TemplatesInstalled = len(templates) > 0
+	}
+
+	// Check scenes created
+	if a.project != nil {
+		cases, err := redc.LoadProjectCases(a.project.ProjectName)
+		if err == nil {
+			status.ScenesCreated = len(cases) > 0
+		}
+	}
+
+	return status
+}
+
+func (a *App) SetOnboardingDismissed() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.OnboardingDismissed = true
+	return redc.SaveGUISettings(settings)
+}
+
 // GetWebhookConfig returns the current webhook configuration
 func (a *App) GetWebhookConfig() WebhookConfig {
 	if a.notificationMgr != nil && a.notificationMgr.webhookMgr != nil {

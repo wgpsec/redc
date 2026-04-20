@@ -8,6 +8,8 @@
   import ELK from 'elkjs/lib/elk.bundled.js';
   import ZoomControls from '../UI/ZoomControls.svelte';
   import Modal from '../UI/Modal.svelte';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   let { t, onTabChange } = $props();
 
@@ -331,6 +333,7 @@
 </script>
 
 <div class="space-y-4">
+  <PageGuide text={t.pgCompose} dismissKey="compose" />
   <!-- No templates hint -->
   {#if !templatesLoading && composeTemplates.length === 0}
     <div class="bg-blue-50 border border-blue-100 rounded-xl p-5">
@@ -424,7 +427,7 @@
         </button>
         {#if showAdvanced}
           <div class="px-5 pb-4 border-t border-gray-50">
-            <label class="block text-[11px] font-medium text-gray-500 mb-1.5 mt-3">{t.composeProfiles}</label>
+            <label class="block text-[11px] font-medium text-gray-500 mb-1.5 mt-3">{t.composeProfiles} <HelpTooltip text={t.helpComposeProfiles} /></label>
             <input
               type="text"
               placeholder="prod, dev"
@@ -475,6 +478,7 @@
               </svg>
               {t.composeTopology || '拓扑视图'}
             </button>
+            <HelpTooltip text={t.helpComposeTopo} />
           </div>
           <div class="border border-gray-100 rounded-lg overflow-hidden">
             <table class="w-full text-[12px]">

@@ -1,5 +1,7 @@
 <script>
   import { GetHTTPServerConfig, SetHTTPServerConfig, StartHTTPServer, StopHTTPServer, GetHTTPServerStatus, GetHTTPServerUsers, AddHTTPServerUser, RemoveHTTPServerUser, UpdateHTTPServerUser, GetAuditLogs, ExportAuditLogs, ClearAuditLogs } from '../../../wailsjs/go/main/App.js';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   let { t = {} } = $props();
 
@@ -258,6 +260,7 @@
 </script>
 
 <div class="space-y-4">
+  <PageGuide text={t.pgHttpServer} dismissKey="httpServer" />
   <!-- Status Banner -->
   {#if httpStatus.running}
   <div class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-2">
@@ -352,7 +355,7 @@
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
       <div>
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.httpServerUsers || '用户权限管理'}</h3>
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.httpServerUsers || '用户权限管理'} <HelpTooltip text={t.helpHttpRoles} /></h3>
         <p class="text-[11px] text-gray-500 mt-0.5">{t.httpServerUsersDesc || '为不同用户分配 Admin / Operator / Viewer 角色'}</p>
       </div>
       <button onclick={() => { showAddUser = !showAddUser; }}

@@ -3,6 +3,7 @@
   import { GetBaseTemplates, GetTemplateMetadata, EstimateDeploymentCost, CreateCustomDeployment } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
   import TemplateSelector from './TemplateSelector.svelte';
+  import PageGuide from '../UI/PageGuide.svelte';
   import ConfigEditor from './ConfigEditor.svelte';
   import DeploymentPreview from './DeploymentPreview.svelte';
   import ConfigTemplateManager from './ConfigTemplateManager.svelte';
@@ -271,6 +272,7 @@
 </script>
 
 <div class="space-y-5">
+  <PageGuide text={t.pgCustomDeploy} dismissKey="customDeploy" />
   <!-- Tabs -->
   <div class="flex items-center gap-3 flex-wrap">
     <div class="flex gap-1 bg-gray-100 rounded-lg p-1">

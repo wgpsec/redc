@@ -10,6 +10,8 @@
   import ELK from 'elkjs/lib/elk.bundled.js';
   import ZoomControls from '../UI/ZoomControls.svelte';
   import Modal from '../UI/Modal.svelte';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
 let { t, onTabChange = () => {} } = $props();
   let cases = $state([]);
@@ -1179,6 +1181,7 @@ let { t, onTabChange = () => {} } = $props();
 </script>
 
 <div class="space-y-5">
+  <PageGuide text={t.pgCases} dismissKey="cases" />
   {#if error}
     <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
       <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1215,7 +1218,7 @@ let { t, onTabChange = () => {} } = $props();
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-end gap-4 mb-4">
       <div class="flex-1 relative">
-        <label for="templateSelect" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.template}</label>
+        <label for="templateSelect" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.template} <HelpTooltip text={t.helpTemplateSelect} /></label>
         <button
           type="button"
           class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-left flex items-center justify-between focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow cursor-pointer {selectedTemplate ? 'text-gray-900' : 'text-gray-400'}"
@@ -1278,13 +1281,14 @@ let { t, onTabChange = () => {} } = $props();
       >
         {t.create}
       </button>
-      <button 
+      <button
         class="h-10 px-5 bg-emerald-500 text-white text-[13px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         onclick={handleCreateAndRun}
         disabled={createBusy}
       >
         {t.createAndRun}
       </button>
+      <HelpTooltip text={t.helpCreateAndRun} />
       {#if selectedTemplate}
         <button 
           class="h-10 px-5 bg-blue-600 text-white text-[13px] font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -1300,6 +1304,7 @@ let { t, onTabChange = () => {} } = $props();
             {t.costEstimate}
           {/if}
         </button>
+        <HelpTooltip text={t.helpCostEstimate} />
       {/if}
       <button 
         class="h-10 px-5 text-red-500 border border-red-500 bg-white hover:bg-red-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"

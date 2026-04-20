@@ -40,6 +40,7 @@ type GUISettings struct {
 	NoProxy             string `json:"noProxy"`
 	Language            string `json:"language"`
 	WelcomeDialogShown  string `json:"welcomeDialogShown"` // "true" means already shown, user chose to hide
+	OnboardingDismissed bool   `json:"onboardingDismissed"`
 	WebhookEnabled      bool   `json:"webhookEnabled"`
 	WebhookSlack        string `json:"webhookSlack"`
 	WebhookDingtalk     string `json:"webhookDingtalk"`

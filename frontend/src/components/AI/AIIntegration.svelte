@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { GetMCPStatus, StartMCPServer, StopMCPServer, GetActiveProfile, ListSkills, GetSkill, SaveCustomSkill, DeleteCustomSkill, FetchSkillsRegistry, InstallSkill, UpdateSkill, InstallAllSkills, UpdateAllSkills, GetSkillsDir } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   let { t, onTabChange = () => {} } = $props();
   let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
@@ -277,6 +279,7 @@
 </script>
 
 <div class="space-y-4 sm:space-y-5">
+  <PageGuide text={t.pgAI} dismissKey="ai" />
   <!-- Error display -->
   {#if error}
     <div class="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-50 border border-red-100 rounded-lg">
@@ -392,7 +395,7 @@
         <svg class="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
         </svg>
-        <h3 class="text-[13px] sm:text-[14px] font-semibold text-gray-900">{t.mcpServer}</h3>
+        <h3 class="text-[13px] sm:text-[14px] font-semibold text-gray-900">{t.mcpServer} <HelpTooltip text={t.helpMcp} /></h3>
         <span class="text-[11px] text-gray-400">{t.mcpDesc}</span>
       </div>
       <div class="flex items-center gap-2">
@@ -452,6 +455,7 @@
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 text-[12px] text-gray-500">
           <span class="px-2 py-0.5 bg-gray-100 rounded text-[11px] font-medium text-gray-600">Streamable HTTP</span>
+          <HelpTooltip text={t.helpMcpTransport} />
         </div>
         <div class="flex-1">
           <input 
@@ -498,7 +502,7 @@
         <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
         </svg>
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsKnowledgeBase || 'Skills 技能库'}</h3>
+        <h3 class="text-[13px] font-semibold text-gray-900">{t.skillsKnowledgeBase || 'Skills 技能库'} <HelpTooltip text={t.helpSkills} /></h3>
         <span class="text-[11px] text-gray-400">{skills.length} {t.skillItems || 'items'}</span>
       </div>
       <div class="flex items-center gap-2">

@@ -2,6 +2,8 @@
 
   import { onMount } from 'svelte';
   import Modal from '../UI/Modal.svelte';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
   import { GetProvidersConfig, SaveProvidersConfig, ListProfiles, GetActiveProfile, SetActiveProfile, CreateProfile, UpdateProfile, DeleteProfile, UpdateProfileAIConfig, UpdateProfileFallbackProviders, GetProfileFallbackProviders } from '../../../wailsjs/go/main/App.js';
 
   // Credentials state
@@ -423,11 +425,12 @@ let { t } = $props();
 </script>
 
 <div class="max-w-3xl lg:max-w-5xl xl:max-w-full space-y-5">
+  <PageGuide text={t.pgCredentials} dismissKey="credentials" />
   <!-- Profile Management -->
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h3 class="text-[14px] font-semibold text-gray-900">{t.profileManage}</h3>
+        <h3 class="text-[14px] font-semibold text-gray-900">{t.profileManage} <HelpTooltip text={t.helpProfile} /></h3>
         <p class="text-[12px] text-gray-500">{t.profileHint}</p>
       </div>
       <div class="flex items-center gap-2">
@@ -672,7 +675,7 @@ let { t } = $props();
         <h4 class="text-[12px] font-medium text-gray-700 mb-3">{t.agentBehavior || 'Agent 行为设置'}</h4>
         <div class="space-y-3">
           <div>
-            <label for="aiMaxRounds" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiMaxToolRounds || 'Agent 最大工具调用轮次'}</label>
+            <label for="aiMaxRounds" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiMaxToolRounds || 'Agent 最大工具调用轮次'} <HelpTooltip text={t.helpMaxToolRounds} /></label>
             <div class="flex items-center gap-3">
               <input 
                 id="aiMaxRounds"
@@ -689,7 +692,7 @@ let { t } = $props();
             <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
           </div>
           <div>
-            <label for="aiContextWindow" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiContextWindow || '模型上下文窗口 (tokens)'}</label>
+            <label for="aiContextWindow" class="block text-[11px] font-medium text-gray-500 mb-1">{t.aiContextWindow || '模型上下文窗口 (tokens)'} <HelpTooltip text={t.helpContextWindow} /></label>
             <div class="flex items-center gap-3">
               <input 
                 id="aiContextWindow"
@@ -729,7 +732,7 @@ let { t } = $props();
       <div class="border-t border-gray-100 pt-4">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <h4 class="text-[12px] font-medium text-gray-700">{t.fallbackProviders || '备用 Provider（自动故障转移）'}</h4>
+            <h4 class="text-[12px] font-medium text-gray-700">{t.fallbackProviders || '备用 Provider（自动故障转移）'} <HelpTooltip text={t.helpFallbackProvider} /></h4>
             <p class="text-[10px] text-gray-500 mt-0.5">{t.fallbackProviderHint || '当主 Provider 出现错误时，自动切换到备用 Provider 继续工作'}</p>
           </div>
           <div class="flex items-center gap-2">

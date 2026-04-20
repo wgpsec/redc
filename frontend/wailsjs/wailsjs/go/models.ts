@@ -493,6 +493,24 @@ export namespace main {
 	        this.protocolVersion = source["protocolVersion"];
 	    }
 	}
+	export class OnboardingStatus {
+	    credentialsConfigured: boolean;
+	    templatesInstalled: boolean;
+	    scenesCreated: boolean;
+	    dismissed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new OnboardingStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.credentialsConfigured = source["credentialsConfigured"];
+	        this.templatesInstalled = source["templatesInstalled"];
+	        this.scenesCreated = source["scenesCreated"];
+	        this.dismissed = source["dismissed"];
+	    }
+	}
 	export class OrchestratorConfig {
 	    maxRounds: number;
 	    objective: string;

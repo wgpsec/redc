@@ -6,6 +6,8 @@
   import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { normalizeVersion, compareVersions, hasUpdate } from '../../utils/version.js';
   import { toast } from '../../lib/toast.js';
+  import PageGuide from '../UI/PageGuide.svelte';
+  import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   // Registry state
 let { t, lang } = $props();
@@ -511,6 +513,7 @@ let { t, lang } = $props();
 </script>
 
 <div class="space-y-4">
+  <PageGuide text={t.pgRegistry} dismissKey="registry" />
   <!-- Toolbar: search + actions -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
     <div class="flex-1 relative w-full sm:w-auto">
@@ -569,6 +572,7 @@ let { t, lang } = $props();
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'installed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'installed'; selectedTemplates = new Set(); }}
       >{t.installed} ({installedCount})</button>
+      <HelpTooltip text={t.helpTemplateInstalled} />
       <button 
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'notInstalled' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'notInstalled'; selectedTemplates = new Set(); }}

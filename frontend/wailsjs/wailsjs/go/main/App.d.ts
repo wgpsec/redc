@@ -180,6 +180,8 @@ export function GetMCPStatus():Promise<main.MCPStatus>;
 
 export function GetNotificationEnabled():Promise<boolean>;
 
+export function GetOnboardingStatus():Promise<main.OnboardingStatus>;
+
 export function GetPluginConfig(arg1:string):Promise<string>;
 
 export function GetPluginsDir():Promise<string>;
@@ -387,6 +389,8 @@ export function SetHTTPServerConfig(arg1:boolean,arg2:number,arg3:string,arg4:st
 export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetNotificationEnabled(arg1:boolean):Promise<void>;
+
+export function SetOnboardingDismissed():Promise<void>;
 
 export function SetShowWelcomeDialog(arg1:boolean):Promise<void>;
 

@@ -346,6 +346,10 @@ export function GetNotificationEnabled() {
   return window['go']['main']['App']['GetNotificationEnabled']();
 }
 
+export function GetOnboardingStatus() {
+  return window['go']['main']['App']['GetOnboardingStatus']();
+}
+
 export function GetPluginConfig(arg1) {
   return window['go']['main']['App']['GetPluginConfig'](arg1);
 }
@@ -760,6 +764,10 @@ export function SetLanguage(arg1) {
 
 export function SetNotificationEnabled(arg1) {
   return window['go']['main']['App']['SetNotificationEnabled'](arg1);
+}
+
+export function SetOnboardingDismissed() {
+  return window['go']['main']['App']['SetOnboardingDismissed']();
 }
 
 export function SetShowWelcomeDialog(arg1) {

@@ -10,7 +10,11 @@
         "优化：全站 i18n 兼容性修复 — 修复前端 20+ 个组件中约 50 处硬编码中文文案，统一使用 t.xxx 国际化模式，包括 HTTPServer 审计方法标签、Registry 标签、AI 工具名称映射、Dashboard 错误翻译、自定义部署相关组件等",
         "修复：模板仓库 README Markdown 表格渲染 — 新增表格解析支持，aliyun/nat-probe 等包含 Markdown 表格的 README 可正常渲染",
         "修复：模板仓库 README Markdown 渲染优化 — 修复引用块（blockquote）因 HTML 转义导致完全失效、图片语法不支持、下划线斜体破坏内联代码和 URL、代码块内 HTML 未转义、无空格 dash 误匹配列表项、连续引用块不合并等 6 个渲染 bug",
-        "新增：模板仓库 README 图片渲染 — 支持 ![alt](url) 图片语法，自动将相对路径（如 ../../img/redc-1.png）解析为 GitHub raw 绝对 URL"
+        "新增：模板仓库 README 图片渲染 — 支持 ![alt](url) 图片语法，自动将相对路径（如 ../../img/redc-1.png）解析为 GitHub raw 绝对 URL",
+        "新增：新用户引导系统 — Dashboard 新增「快速上手」Checklist（配置凭据→下载模板→创建场景），后端实时检测各步骤完成状态，全部完成自动折叠为成功提示，可永久关闭",
+        "新增：页面引导条（PageGuide） — 9 个核心页面顶部新增一句话功能说明，含内联跳转链接，点击 ✕ 永久关闭（localStorage 持久化）",
+        "新增：通用 HelpTooltip 组件 — 19 处关键术语和字段旁增加 (?) 帮助图标，hover 显示上下文说明，支持图标模式和内联模式，自动边缘避让",
+        "新增：后端 GetOnboardingStatus/SetOnboardingDismissed API — 检测凭据（9 家云厂商）、模板、场景的配置状态，关闭状态写入 gui_settings.json"
       ]
     },
     {

@@ -4,6 +4,7 @@
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import Modal from '../UI/Modal.svelte';
+  import GettingStarted from './GettingStarted.svelte';
 
   let { t, onTabChange = () => {} } = $props();
 
@@ -372,6 +373,7 @@
 </script>
 
 <div class="space-y-3">
+  <GettingStarted {t} onTabChange={onTabChange} />
   <!-- Stats Row: 4 scene stats + 4 quick stats in one row -->
   <div class="grid grid-cols-4 sm:grid-cols-8 gap-3">
     <div class="bg-white rounded-xl border border-gray-100 p-4">
