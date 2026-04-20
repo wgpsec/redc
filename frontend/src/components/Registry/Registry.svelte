@@ -25,68 +25,100 @@ let { t, lang } = $props();
   let justPulled = $state({});
 
   // Simple markdown to HTML converter
-  function parseMarkdown(md) {
+  function parseMarkdown(md, templateName) {
     if (!md) return '';
-    
-    // First escape HTML (but preserve code blocks placeholder)
-    const codeBlocks = [];
-    let idx = 0;
-    
-    // Replace code blocks with placeholders to protect them
-    md = md.replace(/```[\s\S]*?```/g, (match) => {
-      const placeholder = `__CODEBLOCK_${idx}__`;
-      codeBlocks.push(match);
-      idx++;
-      return placeholder;
+
+    // Placeholder registry for protecting processed content
+    const placeholders = [];
+    function protect(html) {
+      const id = `\x00PH${placeholders.length}\x00`;
+      placeholders.push(html);
+      return id;
+    }
+    function restore(text) {
+      // Restore all placeholders (may be nested, so loop until stable)
+      let prev;
+      do {
+        prev = text;
+        placeholders.forEach((html, i) => {
+          text = text.replaceAll(`\x00PH${i}\x00`, html);
+        });
+      } while (text !== prev);
+      return text;
+    }
+
+    // Helper: escape HTML entities
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Step 1: Extract fenced code blocks → placeholders
+    md = md.replace(/```([a-z]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      const escaped = escHtml(code.trimEnd());
+      return protect(`<pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3 text-[12px] font-mono leading-relaxed"><code>${escaped}</code></pre>`);
     });
-    
-    // Now escape HTML in the rest
+
+    // Step 2: Escape HTML in the rest of the content
     md = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    
-    // Step 3: Restore code blocks with escaped content
-    codeBlocks.forEach((block, i) => {
-      // Extract code content (remove ``` and optional language)
-      let code = block.replace(/^```[a-z]*\n?/, '').replace(/```$/, '').trim();
-      // Escape any remaining markdown characters in code
-      code = code.replace(/^# /gm, '&#35; ').replace(/^\* /gm, '&#42; ').replace(/^- /gm, '&#45; ');
-      const codeHtml = `<pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3 text-[12px] font-mono leading-relaxed"><code>${code}</code></pre>`;
-      md = md.replace(`__CODEBLOCK_${i}__`, codeHtml);
+
+    // Step 3: Extract inline code → placeholders (protect from bold/italic)
+    md = md.replace(/`([^`]+)`/g, (_, code) => {
+      return protect(`<code class="bg-gray-100 px-1.5 py-0.5 rounded text-[12px] font-mono text-pink-600">${code}</code>`);
     });
-    
-    // Process inline code
-    md = md.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-[12px] font-mono text-pink-600">$1</code>');
-    
-    // Process headers (only at line start)
+
+    // Step 4: Process images (before links, so ![alt](url) isn't caught by link regex)
+    md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
+      const safeAlt = alt || '';
+      // Resolve relative paths to absolute GitHub raw URLs
+      let resolvedUrl = url;
+      if (templateName && !url.startsWith('http://') && !url.startsWith('https://')) {
+        const baseParts = templateName.split('/'); // e.g. ['aliyun', 'proxy']
+        const imgParts = url.split('/');
+        // Start from the template directory and resolve ../
+        const resolved = [...baseParts];
+        for (const part of imgParts) {
+          if (part === '..') { resolved.pop(); }
+          else if (part !== '.') { resolved.push(part); }
+        }
+        resolvedUrl = `https://raw.githubusercontent.com/wgpsec/redc-template/master/${resolved.join('/')}`;
+      }
+      return protect(`<img src="${resolvedUrl}" alt="${safeAlt}" class="max-w-full rounded-lg my-3" onerror="this.style.display='none'">`);
+    });
+
+    // Step 5: Process links → placeholders (protect href from italic)
+    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      return protect(`<a href="${url}" class="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2" target="_blank" rel="noopener">${text}</a>`);
+    });
+
+    // Step 6: Process headers (only at line start)
     md = md.replace(/^#### (.*$)/gm, '<h4 class="text-sm font-semibold mt-5 mb-2 text-gray-800">$1</h4>');
     md = md.replace(/^### (.*$)/gm, '<h3 class="text-sm font-semibold mt-5 mb-2 text-gray-800">$1</h3>');
     md = md.replace(/^## (.*$)/gm, '<h2 class="text-base font-bold mt-6 mb-3 text-gray-900">$1</h2>');
     md = md.replace(/^# (.*$)/gm, '<h1 class="text-lg font-bold mt-6 mb-3 text-gray-900">$1</h1>');
-    
-    // Process bold and italic
+
+    // Step 7: Process bold and italic
+    // Asterisk-based (safe — no word-boundary issues)
     md = md.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
     md = md.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
     md = md.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    md = md.replace(/___(.*?)___/g, '<strong><em>$1</em></strong>');
-    md = md.replace(/__(.*?)__/g, '<strong class="font-semibold">$1</strong>');
-    md = md.replace(/_(.*?)_/g, '<em>$1</em>');
-    
-    // Process links
-    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2" target="_blank" rel="noopener">$1</a>');
-    
-    // Process blockquotes
-    md = md.replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 py-1 my-3 text-gray-600 italic">$1</blockquote>');
+    // Underscore-based (tightened — require non-word char or line boundary around underscores)
+    md = md.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+    md = md.replace(/__(.+?)__/g, '<strong class="font-semibold">$1</strong>');
+    md = md.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '<em>$1</em>');
 
-    // Process tables - extract table blocks and convert to HTML
+    // Step 8: Process blockquotes (match &gt; since > was escaped in Step 2)
+    md = md.replace(/^&gt; (.*$)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 py-1 my-1 text-gray-600 italic">$1</blockquote>');
+    // Merge consecutive blockquotes into one
+    md = md.replace(/(<\/blockquote>)\n(<blockquote[^>]*>)/g, '<br>');
+
+    // Step 9: Process tables → placeholders
     const tableBlocks = [];
     let tableIdx = 0;
     md = md.replace(/(^\|.+\|[ \t]*\n\|[\s:|-]+\|[ \t]*\n(\|.+\|[ \t]*\n?)*)/gm, (match) => {
       const lines = match.trim().split('\n').filter(l => l.trim());
       if (lines.length < 2) return match;
 
-      // Parse header
       const headerCells = lines[0].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
-
-      // Parse alignment from separator row
       const separators = lines[1].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
       const aligns = separators.map(s => {
         if (s.startsWith(':') && s.endsWith(':')) return 'center';
@@ -94,12 +126,10 @@ let { t, lang } = $props();
         return 'left';
       });
 
-      // Build header HTML
       const thCells = headerCells.map((cell, i) =>
         `<th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-900 bg-gray-50" style="text-align:${aligns[i] || 'left'}">${cell}</th>`
       ).join('');
 
-      // Build body rows
       const bodyRows = lines.slice(2).map(line => {
         const cells = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
         const tds = cells.map((cell, i) =>
@@ -115,24 +145,23 @@ let { t, lang } = $props();
       return placeholder;
     });
 
-    // Process horizontal rules
+    // Step 10: Process horizontal rules
     md = md.replace(/^---$/gm, '<hr class="my-6 border-gray-200">');
     md = md.replace(/^\*\*\*$/gm, '<hr class="my-6 border-gray-200">');
-    
-    // Process unordered lists - more specific pattern to avoid matching code
-    md = md.replace(/^(\* |-)(?!\*)(.*$)/gm, '<li class="ml-4 list-disc text-gray-700">$2</li>');
-    
+
+    // Step 11: Process unordered lists (require space after - or *)
+    md = md.replace(/^(?:\* |- )(.*$)/gm, '<li class="ml-4 list-disc text-gray-700">$1</li>');
+
     // Process ordered lists
-    md = md.replace(/^\d+\.(?!\.)(.*$)/gm, '<li class="ml-4 list-decimal text-gray-700">$1</li>');
-    
+    md = md.replace(/^\d+\. (.*$)/gm, '<li class="ml-4 list-decimal text-gray-700">$1</li>');
+
     // Remove newlines between list items to allow proper grouping
     md = md.replace(/<\/li>\n<li/g, '</li><li');
     md = md.replace(/<\/li>\s*<br>/g, '</li>');
     md = md.replace(/<br>\s*<li/g, '<li');
-    
+
     // Wrap consecutive list items in ul/ol tags
-    md = md.replace(/(<li[^>]*>[^<]*<\/li>)+/g, (match) => {
-      // Clean up any remaining <br> tags
+    md = md.replace(/(<li[^>]*>[\s\S]*?<\/li>)+/g, (match) => {
       match = match.replace(/<br\s*\/?>/g, '');
       if (match.includes('list-disc')) {
         return `<ul class="my-2">${match}</ul>`;
@@ -140,23 +169,26 @@ let { t, lang } = $props();
         return `<ol class="my-2 list-inside">${match}</ol>`;
       }
     });
-    
-    // Process paragraphs - split by double newlines
+
+    // Step 12: Process paragraphs - split by double newlines
     const paragraphs = md.split(/\n\n+/);
     let result = paragraphs.map(p => {
       p = p.trim();
       if (!p) return '';
-      // Skip if already wrapped in HTML tags (including lists) or is a placeholder
+      // Skip if already wrapped in HTML tags or is a placeholder
       if (p.match(/^<(h[1-4]|ul|ol|pre|blockquote|hr|div)/i)) return p;
-      if (p.match(/^__TABLE_\d+__$/)) return p;
+      if (p.match(/^__TABLE_\d+__$/) || p.match(/^\x00PH\d+\x00$/)) return p;
       // Wrap in paragraph
       return `<p class="my-2 text-gray-700 leading-relaxed">${p.replace(/\n/g, '<br>')}</p>`;
     }).join('\n');
 
-    // Restore table placeholders
+    // Step 13: Restore table placeholders
     tableBlocks.forEach((html, i) => {
       result = result.replace(`__TABLE_${i}__`, html);
     });
+
+    // Step 14: Restore all protected placeholders (code, links, images)
+    result = restore(result);
 
     return result;
   }
@@ -288,7 +320,7 @@ let { t, lang } = $props();
     readmeModal = { show: true, content: '', html: '', loading: true, templateName };
     try {
       const content = await FetchTemplateReadme(templateName, lang || 'zh');
-      const html = parseMarkdown(content);
+      const html = parseMarkdown(content, templateName);
       readmeModal = { ...readmeModal, content, html, loading: false };
     } catch (e) {
       readmeModal = { ...readmeModal, content: e.message || String(e), html: `<p class="text-red-500">${e.message || String(e)}</p>`, loading: false };
