@@ -384,7 +384,7 @@
       }
     } catch (e) {
       console.error('Export failed:', e);
-      exportMessage = '导出失败: ' + String(e);
+      exportMessage = (t.exportFailed || '导出失败') + ': ' + String(e);
     } finally {
       exporting = false;
     }

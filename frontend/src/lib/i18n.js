@@ -458,6 +458,37 @@ export const i18n = {
     settingsGeneral: '通用设置', settingsClickTest: '点击上方按钮进行网络诊断',
     webModeFileHint: '浏览器模式下请选择文件', webModeNotSupported: '此功能在浏览器模式下不可用',
     clone: '克隆', cloneCase: '克隆场景', cloneSuccess: '克隆任务已提交', cloneFailed: '克隆失败',
+    // CustomDeploymentList stop/delete modals
+    confirmStopDeployment: '确认停止', resourceWillBeDestroyed: '资源将会被销毁',
+    confirmStopDeploymentMsg: '确定要停止部署', confirmDeleteDeploymentMsg: '确定要删除部署',
+    stopFailedPrefix: '停止失败', deleteFailedPrefix: '删除失败',
+    unknownError: '未知错误',
+    sendToAIChat: '发送到 AI',
+    // ConfigTemplateManager errors
+    loadConfigTemplateFailed: '加载配置模板失败', deleteConfigTemplateFailed: '删除配置模板失败',
+    // LocalTemplates export error
+    exportFailed: '导出失败',
+    // AIChat prompt labels
+    aiPromptTemplate: '模板', aiPromptProvider: '云厂商', aiPromptError: '错误信息',
+    // AIChat tool name map
+    toolListTemplates: '列出模板', toolSearchTemplates: '搜索模板', toolPullTemplate: '下载模板',
+    toolListCases: '列出场景', toolPlanCase: '规划场景', toolStartCase: '启动场景',
+    toolStopCase: '停止场景', toolKillCase: '销毁场景', toolGetCaseStatus: '查看状态',
+    toolExecCommand: '执行命令', toolGetSSHInfo: '获取 SSH 信息',
+    toolUploadFile: '上传文件', toolDownloadFile: '下载文件',
+    toolGetTemplateInfo: '模板详情', toolDeleteTemplate: '删除模板',
+    toolGetCaseOutputs: '获取输出', toolGetConfig: '获取配置', toolValidateConfig: '验证配置',
+    toolListUserdataTemplates: '列出部署脚本', toolExecUserdata: '执行部署脚本',
+    toolSaveComposeFile: '保存编排文件', toolComposePreview: '预览编排', toolComposeUp: '启动编排', toolComposeDown: '销毁编排',
+    toolSaveTemplateFiles: '保存模板文件', toolAskUser: '用户决策', toolUpdatePlan: '更新计划',
+    toolGetTemplateFiles: '读取模板文件',
+    toolGetCostEstimate: '成本估算', toolGetBalances: '余额查询', toolGetResourceSummary: '资源汇总', toolGetPredictedMonthlyCost: '月度预测',
+    toolScheduleTask: '定时任务', toolListScheduledTasks: '列出定时任务', toolCancelScheduledTask: '取消定时任务',
+    // UserdataEditor category names
+    userdataCatAI: 'AI 应用', userdataCatVulhub: '漏洞环境',
+    // UserdataEditor placeholder
+    userdataPlaceholderBash: '#!/bin/bash\n# 在此输入初始化脚本...\n\napt-get update -y\napt-get install -y nginx',
+    userdataPlaceholderPowershell: '<powershell>\n# 在此输入初始化脚本...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', userdataScripts: 'Userdata Scripts', softwareStore: 'Software Store',
@@ -928,6 +959,37 @@ export const i18n = {
     settingsGeneral: 'General', settingsClickTest: 'Click above button to run network diagnostics',
     webModeFileHint: 'Select file in browser mode', webModeNotSupported: 'This feature is not available in browser mode',
     clone: 'Clone', cloneCase: 'Clone case', cloneSuccess: 'Clone task submitted', cloneFailed: 'Clone failed',
+    // CustomDeploymentList stop/delete modals
+    confirmStopDeployment: 'Confirm Stop', resourceWillBeDestroyed: 'Resources will be destroyed',
+    confirmStopDeploymentMsg: 'Are you sure you want to stop deployment', confirmDeleteDeploymentMsg: 'Are you sure you want to delete deployment',
+    stopFailedPrefix: 'Stop failed', deleteFailedPrefix: 'Delete failed',
+    unknownError: 'Unknown error',
+    sendToAIChat: 'Send to AI',
+    // ConfigTemplateManager errors
+    loadConfigTemplateFailed: 'Failed to load config template', deleteConfigTemplateFailed: 'Failed to delete config template',
+    // LocalTemplates export error
+    exportFailed: 'Export failed',
+    // AIChat prompt labels
+    aiPromptTemplate: 'Template', aiPromptProvider: 'Provider', aiPromptError: 'Error message',
+    // AIChat tool name map
+    toolListTemplates: 'List Templates', toolSearchTemplates: 'Search Templates', toolPullTemplate: 'Pull Template',
+    toolListCases: 'List Cases', toolPlanCase: 'Plan Case', toolStartCase: 'Start Case',
+    toolStopCase: 'Stop Case', toolKillCase: 'Kill Case', toolGetCaseStatus: 'Get Status',
+    toolExecCommand: 'Execute Command', toolGetSSHInfo: 'Get SSH Info',
+    toolUploadFile: 'Upload File', toolDownloadFile: 'Download File',
+    toolGetTemplateInfo: 'Template Info', toolDeleteTemplate: 'Delete Template',
+    toolGetCaseOutputs: 'Get Outputs', toolGetConfig: 'Get Config', toolValidateConfig: 'Validate Config',
+    toolListUserdataTemplates: 'List Userdata Scripts', toolExecUserdata: 'Execute Userdata',
+    toolSaveComposeFile: 'Save Compose File', toolComposePreview: 'Preview Compose', toolComposeUp: 'Compose Up', toolComposeDown: 'Compose Down',
+    toolSaveTemplateFiles: 'Save Template Files', toolAskUser: 'Ask User', toolUpdatePlan: 'Update Plan',
+    toolGetTemplateFiles: 'Read Template Files',
+    toolGetCostEstimate: 'Cost Estimate', toolGetBalances: 'Query Balance', toolGetResourceSummary: 'Resource Summary', toolGetPredictedMonthlyCost: 'Monthly Forecast',
+    toolScheduleTask: 'Schedule Task', toolListScheduledTasks: 'List Scheduled Tasks', toolCancelScheduledTask: 'Cancel Scheduled Task',
+    // UserdataEditor category names
+    userdataCatAI: 'AI Apps', userdataCatVulhub: 'Vulhub',
+    // UserdataEditor placeholder
+    userdataPlaceholderBash: '#!/bin/bash\n# Enter init script here...\n\napt-get update -y\napt-get install -y nginx',
+    userdataPlaceholderPowershell: '<powershell>\n# Enter init script here...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>',
   }
 };
 

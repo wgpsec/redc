@@ -40,7 +40,7 @@
         onLoadTemplate(config, templateName);
       }
     } catch (e) {
-      error = `加载配置模板失败: ${e.message || String(e)}`;
+      error = `${t.loadConfigTemplateFailed || '加载配置模板失败'}: ${e.message || String(e)}`;
     }
   }
 
@@ -67,7 +67,7 @@
       showDeleteConfirm = false;
       templateToDelete = null;
     } catch (e) {
-      error = `删除配置模板失败: ${e.message || String(e)}`;
+      error = `${t.deleteConfigTemplateFailed || '删除配置模板失败'}: ${e.message || String(e)}`;
     } finally {
       isDeleting = false;
     }

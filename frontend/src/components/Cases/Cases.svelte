@@ -1353,8 +1353,8 @@ let { t, onTabChange = () => {} } = $props();
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div class="flex-1">
-              <h4 class="text-[13px] font-semibold text-red-900">场景创建失败</h4>
-              <p class="text-[12px] text-red-700 mt-1">请检查配置后重试。错误详情：</p>
+              <h4 class="text-[13px] font-semibold text-red-900">{t.sceneCreationFailed || '场景创建失败'}</h4>
+              <p class="text-[12px] text-red-700 mt-1">{t.checkConfigRetry || '请检查配置后重试。错误详情：'}</p>
               {#if (getPersistentError()?.detail || createStatusDetail)}
                 <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap max-h-48">{getPersistentError()?.detail || createStatusDetail}</pre>
               {/if}

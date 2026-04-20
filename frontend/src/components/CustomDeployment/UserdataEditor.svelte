@@ -60,13 +60,13 @@
   });
 
   // Category display names
-  const categoryNames: Record<string, string> = {
-    basic: '基础环境',
-    ai: 'AI 应用',
-    security: '安全工具',
-    vulhub: '漏洞环境',
-    other: '其他'
-  };
+  const categoryNames: Record<string, string> = $derived({
+    basic: t.userdataCatBasic || '基础环境',
+    ai: t.userdataCatAI || 'AI 应用',
+    security: t.userdataCatSecurity || '安全工具',
+    vulhub: t.userdataCatVulhub || '漏洞环境',
+    other: t.userdataCatOther || '其他'
+  });
 
   // Toggle category expanded state
   let expandedCategories = $state<Record<string, boolean>>({});
@@ -165,9 +165,9 @@
   <textarea
     id="userdata-textarea"
     class="w-full h-64 px-3 py-2 text-[12px] font-mono bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow resize-y"
-    placeholder={selectedLanguage === 'bash' 
-      ? '#!/bin/bash\n# 在此输入初始化脚本...\n\napt-get update -y\napt-get install -y nginx' 
-      : '<powershell>\n# 在此输入初始化脚本...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>'}
+    placeholder={selectedLanguage === 'bash'
+      ? (t.userdataPlaceholderBash || '#!/bin/bash\n# 在此输入初始化脚本...\n\napt-get update -y\napt-get install -y nginx')
+      : (t.userdataPlaceholderPowershell || '<powershell>\n# 在此输入初始化脚本...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>')}
     {disabled}
     {value}
     oninput={handleChange}

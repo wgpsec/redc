@@ -334,7 +334,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      toast.error(`停止失败: ${err.message || err}`);
+      toast.error(`${t.stopFailedPrefix || '停止失败'}: ${err.message || err}`);
       await loadDeployments();
     }
   }
@@ -364,7 +364,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      toast.error(`删除失败: ${err.message || err}`);
+      toast.error(`${t.deleteFailedPrefix || '删除失败'}: ${err.message || err}`);
       // 失败后重新加载以恢复正确状态
       await loadDeployments();
     }
@@ -1035,7 +1035,7 @@
                           <div class="flex-1">
                             <h4 class="text-[13px] font-semibold text-red-900">{t.deploymentFailed || '部署失败'}</h4>
                             <p class="text-[12px] text-red-700 mt-1">{t.checkConfigRetry || '请检查配置后重试。错误详情：'}</p>
-                            <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap">{deployment.outputs?.error_message || '未知错误'}</pre>
+                            <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap">{deployment.outputs?.error_message || t.unknownError || '未知错误'}</pre>
                             
                             <button 
                               class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5"
@@ -1180,22 +1180,22 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">确认停止</h3>
-            <p class="text-[13px] text-gray-500">资源将会被销毁</p>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmStopDeployment || '确认停止'}</h3>
+            <p class="text-[13px] text-gray-500">{t.resourceWillBeDestroyed || '资源将会被销毁'}</p>
           </div>
         </div>
         <p class="text-[14px] text-gray-600 mb-4">
-          确定要停止部署 "{stopConfirm.deploymentName}" 吗？
+          {t.confirmStopDeploymentMsg || '确定要停止部署'} "{stopConfirm.deploymentName}" {t.questionMark || '吗？'}
         </p>
         <div class="flex justify-end gap-2">
           <button 
             class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
             onclick={cancelStop}
-          >取消</button>
-          <button 
+          >{t.cancel || '取消'}</button>
+          <button
             class="px-4 py-2 text-[13px] font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors"
             onclick={confirmStop}
-          >停止</button>
+          >{t.stop || '停止'}</button>
         </div>
       </div>
     </div>
@@ -1244,22 +1244,22 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-[15px] font-semibold text-gray-900">确认删除</h3>
-            <p class="text-[13px] text-gray-500">此操作不可撤销</p>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.confirmDelete || '确认删除'}</h3>
+            <p class="text-[13px] text-gray-500">{t.cannotUndo || '此操作不可撤销'}</p>
           </div>
         </div>
         <p class="text-[14px] text-gray-600 mb-4">
-          确定要删除部署 "{deleteConfirm.deploymentName}" 吗？
+          {t.confirmDeleteDeploymentMsg || '确定要删除部署'} "{deleteConfirm.deploymentName}" {t.questionMark || '吗？'}
         </p>
         <div class="flex justify-end gap-2">
           <button 
             class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
             onclick={cancelDelete}
-          >取消</button>
-          <button 
+          >{t.cancel || '取消'}</button>
+          <button
             class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
             onclick={confirmDelete}
-          >删除</button>
+          >{t.delete || '删除'}</button>
         </div>
       </div>
     </div>
@@ -1551,9 +1551,9 @@
         <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" /></svg>
         {t.tags || '标签'}
       </button>
-      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => { const name = contextMenu.name; const tmpl = contextMenu.templateName; closeContextMenu(); localStorage.setItem('ai-chat-pending-error', JSON.stringify({ error: `部署: ${name} (${tmpl})`, templateName: tmpl, provider: '', source: 'context-menu' })); onTabChange('aiChat'); }}>
+      <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-gray-700" onclick={() => { const name = contextMenu.name; const tmpl = contextMenu.templateName; closeContextMenu(); localStorage.setItem('ai-chat-pending-error', JSON.stringify({ error: `${t.customDeployment || '部署'}: ${name} (${tmpl})`, templateName: tmpl, provider: '', source: 'context-menu' })); onTabChange('aiChat'); }}>
         <svg class="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
-        {t.sendToAI || '发送到 AI'}
+        {t.sendToAIChat || '发送到 AI'}
       </button>
       <div class="border-t border-gray-100 my-1"></div>
       <button class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2.5 text-red-600" onclick={() => ctxAction(() => handleDelete(contextMenu.id, contextMenu.name))}>

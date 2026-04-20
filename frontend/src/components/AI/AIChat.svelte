@@ -515,9 +515,9 @@
         currentConversationId = '';
 
         let prompt = '';
-        if (data.templateName) prompt += `模板: ${data.templateName}\n`;
-        if (data.provider) prompt += `云厂商: ${data.provider}\n`;
-        prompt += '错误信息:\n```\n' + (data.error || '') + '\n```';
+        if (data.templateName) prompt += `${t.aiPromptTemplate || '模板'}: ${data.templateName}\n`;
+        if (data.provider) prompt += `${t.aiPromptProvider || '云厂商'}: ${data.provider}\n`;
+        prompt += `${t.aiPromptError || '错误信息'}:\n\`\`\`\n` + (data.error || '') + '\n```';
         inputText = prompt;
         // Auto-send the error analysis message
         setTimeout(() => sendMessage(), 100);
@@ -716,26 +716,28 @@
   }
 
   // Tool name display mapping
-  const toolNameMap = {
-    list_templates: '列出模板', search_templates: '搜索模板', pull_template: '下载模板',
-    list_cases: '列出场景', plan_case: '规划场景', start_case: '启动场景',
-    stop_case: '停止场景', kill_case: '销毁场景', get_case_status: '查看状态',
-    exec_command: '执行命令', get_ssh_info: '获取 SSH 信息',
-    upload_file: '上传文件', download_file: '下载文件',
-    get_template_info: '模板详情', delete_template: '删除模板',
-    get_case_outputs: '获取输出', get_config: '获取配置', validate_config: '验证配置',
-    list_userdata_templates: '列出部署脚本', exec_userdata: '执行部署脚本',
-    save_compose_file: '保存编排文件', compose_preview: '预览编排', compose_up: '启动编排', compose_down: '销毁编排',
-    save_template_files: '保存模板文件',
-    ask_user: '用户决策',
-    update_plan: '更新计划',
-    get_template_files: '读取模板文件',
-    get_cost_estimate: '成本估算', get_balances: '余额查询', get_resource_summary: '资源汇总', get_predicted_monthly_cost: '月度预测',
-    schedule_task: '定时任务', list_scheduled_tasks: '列出定时任务', cancel_scheduled_task: '取消定时任务',
-  };
+  function getToolNameMap() {
+    return {
+      list_templates: t.toolListTemplates || '列出模板', search_templates: t.toolSearchTemplates || '搜索模板', pull_template: t.toolPullTemplate || '下载模板',
+      list_cases: t.toolListCases || '列出场景', plan_case: t.toolPlanCase || '规划场景', start_case: t.toolStartCase || '启动场景',
+      stop_case: t.toolStopCase || '停止场景', kill_case: t.toolKillCase || '销毁场景', get_case_status: t.toolGetCaseStatus || '查看状态',
+      exec_command: t.toolExecCommand || '执行命令', get_ssh_info: t.toolGetSSHInfo || '获取 SSH 信息',
+      upload_file: t.toolUploadFile || '上传文件', download_file: t.toolDownloadFile || '下载文件',
+      get_template_info: t.toolGetTemplateInfo || '模板详情', delete_template: t.toolDeleteTemplate || '删除模板',
+      get_case_outputs: t.toolGetCaseOutputs || '获取输出', get_config: t.toolGetConfig || '获取配置', validate_config: t.toolValidateConfig || '验证配置',
+      list_userdata_templates: t.toolListUserdataTemplates || '列出部署脚本', exec_userdata: t.toolExecUserdata || '执行部署脚本',
+      save_compose_file: t.toolSaveComposeFile || '保存编排文件', compose_preview: t.toolComposePreview || '预览编排', compose_up: t.toolComposeUp || '启动编排', compose_down: t.toolComposeDown || '销毁编排',
+      save_template_files: t.toolSaveTemplateFiles || '保存模板文件',
+      ask_user: t.toolAskUser || '用户决策',
+      update_plan: t.toolUpdatePlan || '更新计划',
+      get_template_files: t.toolGetTemplateFiles || '读取模板文件',
+      get_cost_estimate: t.toolGetCostEstimate || '成本估算', get_balances: t.toolGetBalances || '余额查询', get_resource_summary: t.toolGetResourceSummary || '资源汇总', get_predicted_monthly_cost: t.toolGetPredictedMonthlyCost || '月度预测',
+      schedule_task: t.toolScheduleTask || '定时任务', list_scheduled_tasks: t.toolListScheduledTasks || '列出定时任务', cancel_scheduled_task: t.toolCancelScheduledTask || '取消定时任务',
+    };
+  }
 
   function getToolDisplayName(name) {
-    return toolNameMap[name] || name;
+    return getToolNameMap()[name] || name;
   }
 
   function formatToolArgs(args) {
