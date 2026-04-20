@@ -75,7 +75,46 @@ let { t, lang } = $props();
     
     // Process blockquotes
     md = md.replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 py-1 my-3 text-gray-600 italic">$1</blockquote>');
-    
+
+    // Process tables - extract table blocks and convert to HTML
+    const tableBlocks = [];
+    let tableIdx = 0;
+    md = md.replace(/(^\|.+\|[ \t]*\n\|[\s:|-]+\|[ \t]*\n(\|.+\|[ \t]*\n?)*)/gm, (match) => {
+      const lines = match.trim().split('\n').filter(l => l.trim());
+      if (lines.length < 2) return match;
+
+      // Parse header
+      const headerCells = lines[0].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
+
+      // Parse alignment from separator row
+      const separators = lines[1].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
+      const aligns = separators.map(s => {
+        if (s.startsWith(':') && s.endsWith(':')) return 'center';
+        if (s.endsWith(':')) return 'right';
+        return 'left';
+      });
+
+      // Build header HTML
+      const thCells = headerCells.map((cell, i) =>
+        `<th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-900 bg-gray-50" style="text-align:${aligns[i] || 'left'}">${cell}</th>`
+      ).join('');
+
+      // Build body rows
+      const bodyRows = lines.slice(2).map(line => {
+        const cells = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
+        const tds = cells.map((cell, i) =>
+          `<td class="px-3 py-2 text-[12px] text-gray-700 border-t border-gray-100" style="text-align:${aligns[i] || 'left'}">${cell}</td>`
+        ).join('');
+        return `<tr class="hover:bg-gray-50/50">${tds}</tr>`;
+      }).join('');
+
+      const tableHtml = `<div class="my-3 overflow-x-auto rounded-lg border border-gray-200"><table class="w-full border-collapse text-[12px]"><thead><tr>${thCells}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
+      const placeholder = `__TABLE_${tableIdx}__`;
+      tableBlocks.push(tableHtml);
+      tableIdx++;
+      return placeholder;
+    });
+
     // Process horizontal rules
     md = md.replace(/^---$/gm, '<hr class="my-6 border-gray-200">');
     md = md.replace(/^\*\*\*$/gm, '<hr class="my-6 border-gray-200">');
@@ -107,12 +146,18 @@ let { t, lang } = $props();
     let result = paragraphs.map(p => {
       p = p.trim();
       if (!p) return '';
-      // Skip if already wrapped in HTML tags (including lists)
-      if (p.match(/^<(h[1-4]|ul|ol|pre|blockquote|hr)/i)) return p;
+      // Skip if already wrapped in HTML tags (including lists) or is a placeholder
+      if (p.match(/^<(h[1-4]|ul|ol|pre|blockquote|hr|div)/i)) return p;
+      if (p.match(/^__TABLE_\d+__$/)) return p;
       // Wrap in paragraph
       return `<p class="my-2 text-gray-700 leading-relaxed">${p.replace(/\n/g, '<br>')}</p>`;
     }).join('\n');
-    
+
+    // Restore table placeholders
+    tableBlocks.forEach((html, i) => {
+      result = result.replace(`__TABLE_${i}__`, html);
+    });
+
     return result;
   }
 
