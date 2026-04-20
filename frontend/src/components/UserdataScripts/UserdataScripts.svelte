@@ -208,10 +208,10 @@
               {#if selectedTemplate.environment}
                 <div class="flex gap-3 text-[12px] text-gray-500">
                   {#if selectedTemplate.environment.port}
-                    <span>端口: <span class="text-gray-700">{selectedTemplate.environment.port}</span></span>
+                    <span>{t.portLabel || '端口'}: <span class="text-gray-700">{selectedTemplate.environment.port}</span></span>
                   {/if}
                   {#if selectedTemplate.environment.image}
-                    <span>镜像: <span class="text-gray-700 font-mono">{selectedTemplate.environment.image}</span></span>
+                    <span>{t.imageLabel || '镜像'}: <span class="text-gray-700 font-mono">{selectedTemplate.environment.image}</span></span>
                   {/if}
                 </div>
               {/if}

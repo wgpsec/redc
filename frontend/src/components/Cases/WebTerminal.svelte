@@ -105,7 +105,7 @@
       userdataTemplates = await loadUserdataTemplates();
       userdataTemplatesLoading = false;
     } catch (err) {
-      error = `加载终端失败: ${err.message}`;
+      error = `${t.loadTerminalFailed || '加载终端失败'}: ${err.message}`;
       console.error('加载终端失败:', err);
     }
   }
@@ -161,7 +161,7 @@
 
       // 监听终端错误
       EventsOn(`terminal-error-${sessionId}`, (err) => {
-        terminal?.writeln(`\r\n\x1b[1;31m错误: ${err}\x1b[0m`);
+        terminal?.writeln(`\r\n\x1b[1;31m${t.terminalError || '错误'}: ${err}\x1b[0m`);
         error = err;
       });
 
@@ -175,7 +175,7 @@
       terminal?.writeln('\x1b[1;32m' + (t.sshConnected || '已连接') + '\x1b[0m\r\n');
     } catch (err) {
       error = err.message || String(err);
-      terminal?.writeln(`\r\n\x1b[1;31m连接失败: ${error}\x1b[0m`);
+      terminal?.writeln(`\r\n\x1b[1;31m${t.connectFailed || '连接失败'}: ${error}\x1b[0m`);
     } finally {
       connecting = false;
     }

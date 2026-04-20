@@ -489,6 +489,53 @@ export const i18n = {
     // UserdataEditor placeholder
     userdataPlaceholderBash: '#!/bin/bash\n# 在此输入初始化脚本...\n\napt-get update -y\napt-get install -y nginx',
     userdataPlaceholderPowershell: '<powershell>\n# 在此输入初始化脚本...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>',
+    // HTTPServer audit method labels
+    auditStartCase: '启动场景', auditStopCase: '停止场景', auditRemoveCase: '删除场景',
+    auditCreateCase: '创建场景', auditCreateAndRunCase: '创建并启动', auditDeployCase: '部署场景', auditCloneCase: '克隆场景',
+    auditCreateCustomDeployment: '创建自定义部署', auditStartCustomDeployment: '启动部署', auditStopCustomDeployment: '停止部署',
+    auditDeleteCustomDeployment: '删除部署', auditBatchDeleteCustomDeployments: '批量删除部署',
+    auditComposeUp: '编排启动', auditComposeDown: '编排停止',
+    auditExecCommand: 'SSH 命令', auditStartSSHTerminal: '开启终端', auditStartSSHTerminalDirect: '直连终端',
+    auditStartPortForward: '端口转发', auditStopPortForward: '停止转发',
+    auditPullTemplate: '拉取模板', auditRemoveTemplate: '删除模板', auditCreateLocalTemplate: '创建模板',
+    auditInstallPlugin: '安装插件', auditUninstallPlugin: '卸载插件',
+    auditAddHTTPServerUser: '添加用户', auditRemoveHTTPServerUser: '删除用户', auditUpdateHTTPServerUser: '更新用户',
+    auditClearAuditLogs: '清空审计日志',
+    auditSaveProvidersConfig: '保存凭据', auditSetActiveProfile: '切换 Profile',
+    auditSwitchProject: '切换项目', auditScheduleTask: '创建定时', auditCancelScheduledTask: '取消定时',
+    auditAIChatStream: 'AI 对话', auditSmartAgentChatStream: 'Agent 对话', auditOrchestratorStream: '多轮编排',
+    // Audit export headers
+    auditHeaderTime: '时间', auditHeaderUser: '用户', auditHeaderRole: '角色', auditHeaderAction: '操作',
+    auditHeaderArgs: '参数', auditHeaderResult: '结果', auditHeaderError: '错误',
+    auditSuccess: '成功', auditFailed: '失败',
+    // Registry tag labels
+    tagProxy: '代理', tagTunnel: '隧道', tagPhishing: '钓鱼', tagRange: '靶场',
+    tagRecon: '侦查', tagScan: '扫描', tagMail: '邮件', tagInfra: '基础设施',
+    tagBase: '基础', tagCollaborate: '协作', tagFile: '文件',
+    // Provider display names (bilingual format)
+    providerAlicloud: '阿里云 (Alibaba Cloud)', providerTencentcloud: '腾讯云 (Tencent Cloud)',
+    providerAWS: 'AWS (Amazon Web Services)', providerVolcengine: '火山引擎 (Volcengine)',
+    providerHuaweicloud: '华为云 (Huawei Cloud)',
+    // Provider short names (for ProviderSelector)
+    providerAlicloudShort: '阿里云', providerTencentcloudShort: '腾讯云',
+    providerVolcengineShort: '火山引擎', providerHuaweicloudShort: '华为云',
+    // About changelog types
+    changelogNew: '新增', changelogFix: '修复', changelogImprove: '优化', changelogOther: '变更',
+    // UserdataScripts labels
+    portLabel: '端口', imageLabel: '镜像',
+    // InstanceTypeSelector
+    perHour: '/小时',
+    // CustomDeploymentList additional errors
+    loadDeploymentListFailed: '加载部署列表失败', startFailedPrefix: '启动失败',
+    // WebTerminal
+    loadTerminalFailed: '加载终端失败', terminalError: '错误', connectFailed: '连接失败',
+    // FileManager
+    uploadingProgress: '上传中...', uploadSuccessProgress: '上传成功',
+    downloadingProgress: '下载中...', downloadSuccessProgress: '下载成功',
+    // Cases context menu
+    sceneLabel: '场景',
+    // Settings placeholder
+    proxyExample: '例',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', userdataScripts: 'Userdata Scripts', softwareStore: 'Software Store',
@@ -990,6 +1037,53 @@ export const i18n = {
     // UserdataEditor placeholder
     userdataPlaceholderBash: '#!/bin/bash\n# Enter init script here...\n\napt-get update -y\napt-get install -y nginx',
     userdataPlaceholderPowershell: '<powershell>\n# Enter init script here...\n\nInstall-WindowsFeature -name Web-Server\n</powershell>',
+    // HTTPServer audit method labels
+    auditStartCase: 'Start Case', auditStopCase: 'Stop Case', auditRemoveCase: 'Remove Case',
+    auditCreateCase: 'Create Case', auditCreateAndRunCase: 'Create & Run', auditDeployCase: 'Deploy Case', auditCloneCase: 'Clone Case',
+    auditCreateCustomDeployment: 'Create Deployment', auditStartCustomDeployment: 'Start Deployment', auditStopCustomDeployment: 'Stop Deployment',
+    auditDeleteCustomDeployment: 'Delete Deployment', auditBatchDeleteCustomDeployments: 'Batch Delete Deployments',
+    auditComposeUp: 'Compose Up', auditComposeDown: 'Compose Down',
+    auditExecCommand: 'SSH Command', auditStartSSHTerminal: 'Open Terminal', auditStartSSHTerminalDirect: 'Direct Terminal',
+    auditStartPortForward: 'Port Forward', auditStopPortForward: 'Stop Forward',
+    auditPullTemplate: 'Pull Template', auditRemoveTemplate: 'Remove Template', auditCreateLocalTemplate: 'Create Template',
+    auditInstallPlugin: 'Install Plugin', auditUninstallPlugin: 'Uninstall Plugin',
+    auditAddHTTPServerUser: 'Add User', auditRemoveHTTPServerUser: 'Remove User', auditUpdateHTTPServerUser: 'Update User',
+    auditClearAuditLogs: 'Clear Audit Logs',
+    auditSaveProvidersConfig: 'Save Credentials', auditSetActiveProfile: 'Switch Profile',
+    auditSwitchProject: 'Switch Project', auditScheduleTask: 'Schedule Task', auditCancelScheduledTask: 'Cancel Task',
+    auditAIChatStream: 'AI Chat', auditSmartAgentChatStream: 'Agent Chat', auditOrchestratorStream: 'Orchestrator',
+    // Audit export headers
+    auditHeaderTime: 'Time', auditHeaderUser: 'User', auditHeaderRole: 'Role', auditHeaderAction: 'Action',
+    auditHeaderArgs: 'Args', auditHeaderResult: 'Result', auditHeaderError: 'Error',
+    auditSuccess: 'Success', auditFailed: 'Failed',
+    // Registry tag labels
+    tagProxy: 'Proxy', tagTunnel: 'Tunnel', tagPhishing: 'Phishing', tagRange: 'Range',
+    tagRecon: 'Recon', tagScan: 'Scan', tagMail: 'Mail', tagInfra: 'Infra',
+    tagBase: 'Base', tagCollaborate: 'Collaborate', tagFile: 'File',
+    // Provider display names (bilingual format)
+    providerAlicloud: 'Alibaba Cloud (Aliyun)', providerTencentcloud: 'Tencent Cloud',
+    providerAWS: 'AWS (Amazon Web Services)', providerVolcengine: 'Volcengine',
+    providerHuaweicloud: 'Huawei Cloud',
+    // Provider short names (for ProviderSelector)
+    providerAlicloudShort: 'Alibaba Cloud', providerTencentcloudShort: 'Tencent Cloud',
+    providerVolcengineShort: 'Volcengine', providerHuaweicloudShort: 'Huawei Cloud',
+    // About changelog types
+    changelogNew: 'New', changelogFix: 'Fix', changelogImprove: 'Improve', changelogOther: 'Change',
+    // UserdataScripts labels
+    portLabel: 'Port', imageLabel: 'Image',
+    // InstanceTypeSelector
+    perHour: '/hr',
+    // CustomDeploymentList additional errors
+    loadDeploymentListFailed: 'Failed to load deployment list', startFailedPrefix: 'Start failed',
+    // WebTerminal
+    loadTerminalFailed: 'Failed to load terminal', terminalError: 'Error', connectFailed: 'Connection failed',
+    // FileManager
+    uploadingProgress: 'Uploading...', uploadSuccessProgress: 'Upload successful',
+    downloadingProgress: 'Downloading...', downloadSuccessProgress: 'Download successful',
+    // Cases context menu
+    sceneLabel: 'Scene',
+    // Settings placeholder
+    proxyExample: 'e.g.',
   }
 };
 

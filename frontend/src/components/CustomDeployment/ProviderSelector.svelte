@@ -8,13 +8,13 @@
   } = $props();
 
   // Supported cloud providers
-  const providers = [
-    { code: 'alicloud', name: '阿里云', nameEn: 'Alibaba Cloud' },
-    { code: 'tencentcloud', name: '腾讯云', nameEn: 'Tencent Cloud' },
+  const providers = $derived([
+    { code: 'alicloud', name: t.providerAlicloudShort || '阿里云', nameEn: 'Alibaba Cloud' },
+    { code: 'tencentcloud', name: t.providerTencentcloudShort || '腾讯云', nameEn: 'Tencent Cloud' },
     { code: 'aws', name: 'AWS', nameEn: 'Amazon Web Services' },
-    { code: 'volcengine', name: '火山引擎', nameEn: 'Volcengine' },
-    { code: 'huaweicloud', name: '华为云', nameEn: 'Huawei Cloud' }
-  ];
+    { code: 'volcengine', name: t.providerVolcengineShort || '火山引擎', nameEn: 'Volcengine' },
+    { code: 'huaweicloud', name: t.providerHuaweicloudShort || '华为云', nameEn: 'Huawei Cloud' }
+  ]);
 
   function handleChange(event) {
     const newValue = event.currentTarget.value;

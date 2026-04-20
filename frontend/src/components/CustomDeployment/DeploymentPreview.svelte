@@ -23,11 +23,11 @@
   // Get provider display name
   function getProviderName(code) {
     const providers = {
-      'alicloud': '阿里云 (Alibaba Cloud)',
-      'tencentcloud': '腾讯云 (Tencent Cloud)',
-      'aws': 'AWS (Amazon Web Services)',
-      'volcengine': '火山引擎 (Volcengine)',
-      'huaweicloud': '华为云 (Huawei Cloud)'
+      'alicloud': t.providerAlicloud || '阿里云 (Alibaba Cloud)',
+      'tencentcloud': t.providerTencentcloud || '腾讯云 (Tencent Cloud)',
+      'aws': t.providerAWS || 'AWS (Amazon Web Services)',
+      'volcengine': t.providerVolcengine || '火山引擎 (Volcengine)',
+      'huaweicloud': t.providerHuaweicloud || '华为云 (Huawei Cloud)'
     };
     return providers[code] || code;
   }

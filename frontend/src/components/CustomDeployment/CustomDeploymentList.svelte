@@ -178,7 +178,7 @@
       // 检查是否有中间态的部署，如果有则启动轮询
       checkAndStartPolling();
     } catch (err) {
-      error = `加载部署列表失败: ${err}`;
+      error = `${t.loadDeploymentListFailed || '加载部署列表失败'}: ${err}`;
       console.error('Failed to load deployments:', err);
     } finally {
       loading = false;
@@ -285,7 +285,7 @@
       await loadDeployments();
       onRefresh();
     } catch (err: any) {
-      toast.error(`启动失败: ${err.message || err}`);
+      toast.error(`${t.startFailedPrefix || '启动失败'}: ${err.message || err}`);
       // 失败后重新加载以恢复正确状态
       await loadDeployments();
     }

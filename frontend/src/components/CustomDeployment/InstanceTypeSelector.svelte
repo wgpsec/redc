@@ -116,7 +116,7 @@
     if (!price || price === 0) {
       return '';
     }
-    return `¥${price.toFixed(4)}/小时`;
+    return `¥${price.toFixed(4)}${t.perHour || '/小时'}`;
   }
 
   // Get display text for instance type

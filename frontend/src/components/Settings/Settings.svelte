@@ -391,25 +391,25 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label for="httpProxy" class="block text-[11px] font-medium text-gray-500 mb-1.5">{t.httpProxy}</label>
-            <input id="httpProxy" type="text" placeholder="例: http://127.0.0.1:7890"
+            <input id="httpProxy" type="text" placeholder="{t.proxyExample || '例'}: http://127.0.0.1:7890"
               class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={proxyForm.httpProxy} />
           </div>
           <div>
             <label for="httpsProxy" class="block text-[11px] font-medium text-gray-500 mb-1.5">{t.httpsProxy}</label>
-            <input id="httpsProxy" type="text" placeholder="例: http://127.0.0.1:7890"
+            <input id="httpsProxy" type="text" placeholder="{t.proxyExample || '例'}: http://127.0.0.1:7890"
               class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={proxyForm.httpsProxy} />
           </div>
           <div>
             <label for="socks5Proxy" class="block text-[11px] font-medium text-gray-500 mb-1.5">{t.socks5Proxy}</label>
-            <input id="socks5Proxy" type="text" placeholder="例: socks5://127.0.0.1:1080"
+            <input id="socks5Proxy" type="text" placeholder="{t.proxyExample || '例'}: socks5://127.0.0.1:1080"
               class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={proxyForm.socks5Proxy} />
           </div>
           <div>
             <label for="noProxy" class="block text-[11px] font-medium text-gray-500 mb-1.5">{t.noProxyLabel}</label>
-            <input id="noProxy" type="text" placeholder="例: localhost,127.0.0.1,.local"
+            <input id="noProxy" type="text" placeholder="{t.proxyExample || '例'}: localhost,127.0.0.1,.local"
               class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={proxyForm.noProxy} />
           </div>

@@ -178,25 +178,27 @@
   let confirmClearAudit = $state(false);
   const auditPageSize = 50;
 
-  const methodLabels = {
-    StartCase: '启动场景', StopCase: '停止场景', RemoveCase: '删除场景',
-    CreateCase: '创建场景', CreateAndRunCase: '创建并启动', DeployCase: '部署场景', CloneCase: '克隆场景',
-    CreateCustomDeployment: '创建自定义部署', StartCustomDeployment: '启动部署', StopCustomDeployment: '停止部署',
-    DeleteCustomDeployment: '删除部署', BatchDeleteCustomDeployments: '批量删除部署',
-    ComposeUp: '编排启动', ComposeDown: '编排停止',
-    ExecCommand: 'SSH 命令', StartSSHTerminal: '开启终端', StartSSHTerminalDirect: '直连终端',
-    StartPortForward: '端口转发', StopPortForward: '停止转发',
-    PullTemplate: '拉取模板', RemoveTemplate: '删除模板', CreateLocalTemplate: '创建模板',
-    InstallPlugin: '安装插件', UninstallPlugin: '卸载插件',
-    AddHTTPServerUser: '添加用户', RemoveHTTPServerUser: '删除用户', UpdateHTTPServerUser: '更新用户',
-    ClearAuditLogs: '清空审计日志',
-    SaveProvidersConfig: '保存凭据', SetActiveProfile: '切换 Profile',
-    SwitchProject: '切换项目', ScheduleTask: '创建定时', CancelScheduledTask: '取消定时',
-    AIChatStream: 'AI 对话', SmartAgentChatStream: 'Agent 对话', OrchestratorStream: '多轮编排',
-  };
+  function getMethodLabels() {
+    return {
+      StartCase: t.auditStartCase || '启动场景', StopCase: t.auditStopCase || '停止场景', RemoveCase: t.auditRemoveCase || '删除场景',
+      CreateCase: t.auditCreateCase || '创建场景', CreateAndRunCase: t.auditCreateAndRunCase || '创建并启动', DeployCase: t.auditDeployCase || '部署场景', CloneCase: t.auditCloneCase || '克隆场景',
+      CreateCustomDeployment: t.auditCreateCustomDeployment || '创建自定义部署', StartCustomDeployment: t.auditStartCustomDeployment || '启动部署', StopCustomDeployment: t.auditStopCustomDeployment || '停止部署',
+      DeleteCustomDeployment: t.auditDeleteCustomDeployment || '删除部署', BatchDeleteCustomDeployments: t.auditBatchDeleteCustomDeployments || '批量删除部署',
+      ComposeUp: t.auditComposeUp || '编排启动', ComposeDown: t.auditComposeDown || '编排停止',
+      ExecCommand: t.auditExecCommand || 'SSH 命令', StartSSHTerminal: t.auditStartSSHTerminal || '开启终端', StartSSHTerminalDirect: t.auditStartSSHTerminalDirect || '直连终端',
+      StartPortForward: t.auditStartPortForward || '端口转发', StopPortForward: t.auditStopPortForward || '停止转发',
+      PullTemplate: t.auditPullTemplate || '拉取模板', RemoveTemplate: t.auditRemoveTemplate || '删除模板', CreateLocalTemplate: t.auditCreateLocalTemplate || '创建模板',
+      InstallPlugin: t.auditInstallPlugin || '安装插件', UninstallPlugin: t.auditUninstallPlugin || '卸载插件',
+      AddHTTPServerUser: t.auditAddHTTPServerUser || '添加用户', RemoveHTTPServerUser: t.auditRemoveHTTPServerUser || '删除用户', UpdateHTTPServerUser: t.auditUpdateHTTPServerUser || '更新用户',
+      ClearAuditLogs: t.auditClearAuditLogs || '清空审计日志',
+      SaveProvidersConfig: t.auditSaveProvidersConfig || '保存凭据', SetActiveProfile: t.auditSetActiveProfile || '切换 Profile',
+      SwitchProject: t.auditSwitchProject || '切换项目', ScheduleTask: t.auditScheduleTask || '创建定时', CancelScheduledTask: t.auditCancelScheduledTask || '取消定时',
+      AIChatStream: t.auditAIChatStream || 'AI 对话', SmartAgentChatStream: t.auditSmartAgentChatStream || 'Agent 对话', OrchestratorStream: t.auditOrchestratorStream || '多轮编排',
+    };
+  }
 
   function getMethodLabel(method) {
-    return methodLabels[method] || method;
+    return getMethodLabels()[method] || method;
   }
 
   async function loadAuditLogs() {
@@ -218,10 +220,10 @@
       const entries = await ExportAuditLogs();
       if (!entries || entries.length === 0) return;
       const lines = [
-        ['时间', '用户', '角色', '操作', '参数', '结果', '错误', 'IP'].join('\t'),
+        [t.auditHeaderTime || '时间', t.auditHeaderUser || '用户', t.auditHeaderRole || '角色', t.auditHeaderAction || '操作', t.auditHeaderArgs || '参数', t.auditHeaderResult || '结果', t.auditHeaderError || '错误', 'IP'].join('\t'),
         ...entries.map(e => [
           e.timestamp, e.username, e.role, e.method,
-          e.args || '', e.success ? '成功' : '失败', e.error || '', e.ip || ''
+          e.args || '', e.success ? (t.auditSuccess || '成功') : (t.auditFailed || '失败'), e.error || '', e.ip || ''
         ].join('\t'))
       ];
       const blob = new Blob([lines.join('\n')], { type: 'text/tab-separated-values' });

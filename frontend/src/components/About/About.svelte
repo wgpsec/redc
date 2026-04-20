@@ -32,10 +32,10 @@
   function openLink(url) { BrowserOpenURL(url); }
 
   function getChangeType(text) {
-    if (text.startsWith('新增：') || text.startsWith('新增:')) return { type: 'new', label: '新增', color: 'bg-emerald-50 text-emerald-700' };
-    if (text.startsWith('修复：') || text.startsWith('修复:')) return { type: 'fix', label: '修复', color: 'bg-red-50 text-red-700' };
-    if (text.startsWith('优化：') || text.startsWith('优化:')) return { type: 'improve', label: '优化', color: 'bg-blue-50 text-blue-700' };
-    return { type: 'other', label: '变更', color: 'bg-gray-100 text-gray-600' };
+    if (text.startsWith('新增：') || text.startsWith('新增:')) return { type: 'new', label: t.changelogNew || '新增', color: 'bg-emerald-50 text-emerald-700' };
+    if (text.startsWith('修复：') || text.startsWith('修复:')) return { type: 'fix', label: t.changelogFix || '修复', color: 'bg-red-50 text-red-700' };
+    if (text.startsWith('优化：') || text.startsWith('优化:')) return { type: 'improve', label: t.changelogImprove || '优化', color: 'bg-blue-50 text-blue-700' };
+    return { type: 'other', label: t.changelogOther || '变更', color: 'bg-gray-100 text-gray-600' };
   }
 
   function getChangeContent(text) {

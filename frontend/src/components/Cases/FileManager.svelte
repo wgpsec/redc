@@ -129,11 +129,11 @@
       if (!localPath) return;
       
       uploading = true;
-      uploadProgress = '上传中...';
+      uploadProgress = t.uploadingProgress || '上传中...';
       
       const result = await UploadFile(caseId, localPath, currentPath);
       if (result.success) {
-        uploadProgress = '上传成功';
+        uploadProgress = t.uploadSuccessProgress || '上传成功';
         await loadFiles();
         setTimeout(() => { uploadProgress = ''; uploading = false; }, 2000);
       } else {
@@ -154,12 +154,12 @@
       if (!localDir) return;
       
       downloading = true;
-      downloadProgress = '下载中...';
+      downloadProgress = t.downloadingProgress || '下载中...';
       
       const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
       const result = await DownloadFile(caseId, remotePath, localDir);
       if (result.success) {
-        downloadProgress = '下载成功';
+        downloadProgress = t.downloadSuccessProgress || '下载成功';
         setTimeout(() => { downloadProgress = ''; downloading = false; }, 2000);
       } else {
         error = result.error;

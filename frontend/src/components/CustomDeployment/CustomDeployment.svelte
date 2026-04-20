@@ -211,7 +211,7 @@
       deploymentError = err.message || String(err);
       
       // Show error message
-      toast.error(`部署失败: ${deploymentError}`);
+      toast.error(`${t.deploymentFailed || '部署失败'}: ${deploymentError}`);
     } finally {
       isDeploying = false;
     }

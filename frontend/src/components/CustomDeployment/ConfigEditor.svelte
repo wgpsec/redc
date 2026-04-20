@@ -308,11 +308,11 @@
           {t.cloudProvider || '云厂商'}
         </span>
         <div class="w-full h-10 px-3 text-[13px] bg-gray-100 border-0 rounded-lg text-gray-600 flex items-center">
-          {template.provider === 'alicloud' ? '阿里云 (Alibaba Cloud)' :
-           template.provider === 'tencentcloud' ? '腾讯云 (Tencent Cloud)' :
-           template.provider === 'aws' ? 'AWS (Amazon Web Services)' :
-           template.provider === 'volcengine' ? '火山引擎 (Volcengine)' :
-           template.provider === 'huaweicloud' ? '华为云 (Huawei Cloud)' :
+          {template.provider === 'alicloud' ? (t.providerAlicloud || '阿里云 (Alibaba Cloud)') :
+           template.provider === 'tencentcloud' ? (t.providerTencentcloud || '腾讯云 (Tencent Cloud)') :
+           template.provider === 'aws' ? (t.providerAWS || 'AWS (Amazon Web Services)') :
+           template.provider === 'volcengine' ? (t.providerVolcengine || '火山引擎 (Volcengine)') :
+           template.provider === 'huaweicloud' ? (t.providerHuaweicloud || '华为云 (Huawei Cloud)') :
            template.provider}
         </div>
       </div>

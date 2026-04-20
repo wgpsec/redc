@@ -376,24 +376,24 @@ let { t, lang } = $props();
   });
 
   // Scenario type label from tags
-  const tagLabelMap = {
+  const tagLabelMap = $derived({
     'c2': { label: 'C2', color: 'bg-red-50 text-red-600' },
-    'proxy': { label: '代理', color: 'bg-purple-50 text-purple-600' },
-    'tunnel': { label: '隧道', color: 'bg-purple-50 text-purple-600' },
-    'phishing': { label: '钓鱼', color: 'bg-orange-50 text-orange-600' },
-    'range': { label: '靶场', color: 'bg-cyan-50 text-cyan-600' },
-    'recon': { label: '侦查', color: 'bg-blue-50 text-blue-600' },
-    'scan': { label: '扫描', color: 'bg-blue-50 text-blue-600' },
-    'mail': { label: '邮件', color: 'bg-amber-50 text-amber-600' },
+    'proxy': { label: t.tagProxy || '代理', color: 'bg-purple-50 text-purple-600' },
+    'tunnel': { label: t.tagTunnel || '隧道', color: 'bg-purple-50 text-purple-600' },
+    'phishing': { label: t.tagPhishing || '钓鱼', color: 'bg-orange-50 text-orange-600' },
+    'range': { label: t.tagRange || '靶场', color: 'bg-cyan-50 text-cyan-600' },
+    'recon': { label: t.tagRecon || '侦查', color: 'bg-blue-50 text-blue-600' },
+    'scan': { label: t.tagScan || '扫描', color: 'bg-blue-50 text-blue-600' },
+    'mail': { label: t.tagMail || '邮件', color: 'bg-amber-50 text-amber-600' },
     'vpn': { label: 'VPN', color: 'bg-green-50 text-green-600' },
     'docker': { label: 'Docker', color: 'bg-sky-50 text-sky-600' },
     'ddos': { label: 'DDoS', color: 'bg-rose-50 text-rose-600' },
     'dns': { label: 'DNS', color: 'bg-indigo-50 text-indigo-600' },
-    'infra': { label: '基础设施', color: 'bg-gray-100 text-gray-600' },
-    'base': { label: '基础', color: 'bg-gray-100 text-gray-600' },
-    'collaborate': { label: '协作', color: 'bg-teal-50 text-teal-600' },
-    'file': { label: '文件', color: 'bg-lime-50 text-lime-600' },
-  };
+    'infra': { label: t.tagInfra || '基础设施', color: 'bg-gray-100 text-gray-600' },
+    'base': { label: t.tagBase || '基础', color: 'bg-gray-100 text-gray-600' },
+    'collaborate': { label: t.tagCollaborate || '协作', color: 'bg-teal-50 text-teal-600' },
+    'file': { label: t.tagFile || '文件', color: 'bg-lime-50 text-lime-600' },
+  });
 
   function scenarioLabels(tags) {
     if (!tags || tags.length === 0) return [];
