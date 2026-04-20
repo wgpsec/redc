@@ -121,9 +121,12 @@ func parseVariablesTf(filePath string) ([]*TemplateVariable, error) {
 	descRegex := regexp.MustCompile(`^\s*description\s*=\s*"([^"]*)"`)
 	defaultRegex := regexp.MustCompile(`^\s*default\s*=\s*(.+)`)
 	sensitiveRegex := regexp.MustCompile(`^\s*sensitive\s*=\s*true`)
+	containsRegex := regexp.MustCompile(`contains\(\s*\[([^\]]*)\]`)
 
 	var currentVar *TemplateVariable
 	braceCount := 0
+	inValidation := false
+	validationBraceCount := 0
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -139,10 +142,50 @@ func parseVariablesTf(filePath string) ([]*TemplateVariable, error) {
 				Type:     "string",
 			}
 			braceCount = 1
+			inValidation = false
 			continue
 		}
 
 		if currentVar == nil {
+			continue
+		}
+
+		// Detect validation block start
+		trimmed := strings.TrimSpace(line)
+		if !inValidation && strings.HasPrefix(trimmed, "validation") && strings.Contains(line, "{") {
+			inValidation = true
+			validationBraceCount = 1
+			// Don't count these braces in the outer counter — they are already part of the variable block
+			braceCount += strings.Count(line, "{") - strings.Count(line, "}")
+			continue
+		}
+
+		if inValidation {
+			validationBraceCount += strings.Count(line, "{") - strings.Count(line, "}")
+
+			// Parse contains([...]) inside validation condition
+			if matches := containsRegex.FindStringSubmatch(line); len(matches) > 1 {
+				valuesStr := matches[1]
+				var allowedValues []string
+				for _, part := range strings.Split(valuesStr, ",") {
+					v := strings.TrimSpace(part)
+					v = strings.Trim(v, `"`)
+					if v != "" {
+						allowedValues = append(allowedValues, v)
+					}
+				}
+				if len(allowedValues) > 0 {
+					currentVar.Validation = &TemplateVariableValidation{
+						AllowedValues: allowedValues,
+					}
+				}
+			}
+
+			braceCount += strings.Count(line, "{") - strings.Count(line, "}")
+
+			if validationBraceCount <= 0 {
+				inValidation = false
+			}
 			continue
 		}
 

@@ -1,6 +1,15 @@
 {
   "changelog": [
     {
+      "version": "3.2.3",
+      "date": "2026-04-20",
+      "changes": [
+        "新增：aliyun/proxy 模板多区域支持 — 新增东京（ap-northeast-1）区域，每个区域硬编码机型和可用区（北京 ecs.n1.tiny / 东京 ecs.t5-lc1m1.small），海外区域使用共享 API 端点避免网络超时",
+        "新增：预定义场景 region 下拉选择框 — 模板 variables.tf 中的 contains() 验证规则自动解析为下拉选项，region 变量不再显示为文本输入框",
+        "修复：预定义场景变量解析器补全 validation 支持 — app_templates_registry.go 的 parseVariablesTf() 新增 validation 块解析，提取 contains([...]) 中的 allowed_values 传递给前端"
+      ]
+    },
+    {
       "version": "3.2.2",
       "date": "2026-04-17",
       "changes": [

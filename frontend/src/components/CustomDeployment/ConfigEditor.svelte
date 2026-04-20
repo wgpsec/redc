@@ -195,12 +195,22 @@
   // Get optional variables from template (excluding already configured ones)
   let optionalVariables = $derived(() => {
     if (!template || !template.variables) return [];
-    return template.variables.filter(v => 
-      !v.required && 
-      v.name !== 'cloud_provider' && 
-      v.name !== 'region' && 
+    return template.variables.filter(v =>
+      !v.required &&
+      v.name !== 'cloud_provider' &&
+      v.name !== 'region' &&
       v.name !== 'instance_type'
     );
+  });
+
+  // Extract allowed regions from template's region variable validation (if any)
+  let allowedRegions = $derived(() => {
+    if (!template || !template.variables) return null;
+    const regionVar = template.variables.find(v => v.name === 'region');
+    if (regionVar && regionVar.validation && regionVar.validation.allowed_values && regionVar.validation.allowed_values.length > 0) {
+      return regionVar.validation.allowed_values;
+    }
+    return null;
   });
 </script>
 
@@ -314,6 +324,7 @@
       provider={formData.provider}
       value={formData.region}
       onChange={(value) => handleFieldChange('region', value)}
+      allowedRegions={allowedRegions()}
     />
 
     <!-- Instance Type -->

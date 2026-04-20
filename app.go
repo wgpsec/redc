@@ -515,14 +515,20 @@ type BillInfo struct {
 	Error       string `json:"error"`
 }
 
+// TemplateVariableValidation holds validation rules for a template variable
+type TemplateVariableValidation struct {
+	AllowedValues []string `json:"allowed_values,omitempty"`
+}
+
 // TemplateVariable represents a variable definition from terraform
 type TemplateVariable struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	Description  string `json:"description"`
-	DefaultValue string `json:"defaultValue"`
-	Required     bool   `json:"required"`
-	Sensitive    bool   `json:"sensitive"`
+	Name         string                      `json:"name"`
+	Type         string                      `json:"type"`
+	Description  string                      `json:"description"`
+	DefaultValue string                      `json:"defaultValue"`
+	Required     bool                        `json:"required"`
+	Sensitive    bool                        `json:"sensitive"`
+	Validation   *TemplateVariableValidation `json:"validation,omitempty"`
 }
 
 type RegistryTemplate struct {

@@ -3,12 +3,13 @@
   import { GetProviderRegions } from '../../../wailsjs/go/main/App.js';
 
   // Props
-  let { 
-    t, 
-    provider = '', 
-    value = '', 
+  let {
+    t,
+    provider = '',
+    value = '',
     onChange = () => {},
-    disabled = false
+    disabled = false,
+    allowedRegions = null
   } = $props();
 
   // State
@@ -58,17 +59,24 @@
     onChange(newValue);
   }
 
-  // Filtered regions based on search query
+  // Filtered regions based on allowedRegions and search query
   let filteredRegions = $derived(() => {
-    if (!searchQuery.trim()) {
-      return regions;
+    let result = regions;
+
+    // If template specifies allowed regions, only show those
+    if (allowedRegions && allowedRegions.length > 0) {
+      result = result.filter(region => allowedRegions.includes(region.code));
     }
-    
-    const query = searchQuery.toLowerCase();
-    return regions.filter(region => 
-      region.code.toLowerCase().includes(query) ||
-      region.name.toLowerCase().includes(query)
-    );
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(region =>
+        region.code.toLowerCase().includes(query) ||
+        region.name.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
   });
 
   // Get display text for region

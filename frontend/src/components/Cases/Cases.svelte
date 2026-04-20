@@ -1381,8 +1381,18 @@ let { t, onTabChange = () => {} } = $props();
                   placeholder={variable.defaultValue || '0'}
                   bind:value={variableValues[variable.name]}
                 />
+              {:else if variable.name === 'region' && variable.validation?.allowed_values?.length > 0}
+                <select
+                  id="var-{variable.name}"
+                  class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow appearance-none cursor-pointer"
+                  bind:value={variableValues[variable.name]}
+                >
+                  {#each variable.validation.allowed_values as val}
+                    <option value={val}>{val}</option>
+                  {/each}
+                </select>
               {:else}
-                <input 
+                <input
                   id="var-{variable.name}"
                   type={variable.sensitive ? 'password' : 'text'}
                   class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
