@@ -126,6 +126,10 @@ export function DeleteCustomDeployment(arg1) {
   return window['go']['main']['App']['DeleteCustomDeployment'](arg1);
 }
 
+export function DeleteTagByName(arg1) {
+  return window['go']['main']['App']['DeleteTagByName'](arg1);
+}
+
 export function DeleteCustomSkill(arg1) {
   return window['go']['main']['App']['DeleteCustomSkill'](arg1);
 }

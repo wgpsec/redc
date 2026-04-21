@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames, CloneCustomDeployment } from '../../../wailsjs/go/main/App';
+  import { ListCustomDeployments, StartCustomDeployment, StopCustomDeployment, DeleteCustomDeployment, BatchStartCustomDeployments, BatchStopCustomDeployments, BatchDeleteCustomDeployments, GetDeploymentPlanPreview, SetCaseTags, GetAllCaseTags, GetAllTagNames, DeleteTagByName, CloneCustomDeployment } from '../../../wailsjs/go/main/App';
   import { toast } from '../../lib/toast.js';
   import SSHModal from '../Cases/SSHModal.svelte';
   import ScheduleDialog from '../Cases/ScheduleDialog.svelte';
@@ -66,6 +66,7 @@
   let selectedTag = $state('');
   let tagEditId = $state<string | null>(null);
   let tagInput = $state('');
+  let tagContextMenu = $state({ show: false, x: 0, y: 0, tag: '' });
   let filteredDeployments = $derived(selectedTag ? deployments.filter(d => (caseTags[d.id] || []).includes(selectedTag)) : deployments);
   let deploymentSearch = $state('');
   let deploymentStatusFilter = $state('all');
@@ -121,6 +122,13 @@
   async function removeTagFromDeployment(id: string, tag: string) {
     const tags = (caseTags[id] || []).filter(t => t !== tag);
     await SetCaseTags(id, tags);
+    await loadTags();
+  }
+
+  async function deleteTagGlobally(tag: string) {
+    await DeleteTagByName(tag);
+    if (selectedTag === tag) selectedTag = '';
+    tagContextMenu = { show: false, x: 0, y: 0, tag: '' };
     await loadTags();
   }
 
@@ -739,6 +747,7 @@
         <button
           class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === tag ? 'bg-gray-900 text-white' : getTagColor(tag)}"
           onclick={() => { selectedTag = selectedTag === tag ? '' : tag; }}
+          oncontextmenu={(e) => { e.preventDefault(); tagContextMenu = { show: true, x: e.clientX, y: e.clientY, tag }; }}
         >{tag}</button>
       {/each}
     </div>
@@ -1510,6 +1519,25 @@
 {/if}
 
 <!-- Context Menu -->
+{#if tagContextMenu.show}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 z-[100]" onclick={() => { tagContextMenu.show = false; }} oncontextmenu={(e) => { e.preventDefault(); tagContextMenu.show = false; }}></div>
+  <div
+    class="fixed z-[101] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[140px] text-[13px]"
+    style="left: {tagContextMenu.x}px; top: {tagContextMenu.y}px;"
+  >
+    <button
+      class="w-full px-3 py-1.5 text-left hover:bg-red-50 text-red-600 flex items-center gap-2 cursor-pointer"
+      onclick={() => deleteTagGlobally(tagContextMenu.tag)}
+    >
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      {t.deleteTag || '删除该标签'}
+    </button>
+  </div>
+{/if}
+
 {#if contextMenu.show}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="fixed inset-0 z-[100]" onclick={closeContextMenu} oncontextmenu={(e) => { e.preventDefault(); closeContextMenu(); }}></div>

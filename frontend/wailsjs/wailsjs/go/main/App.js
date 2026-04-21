@@ -166,6 +166,10 @@ export function DeleteRemoteFile(arg1, arg2) {
   return window['go']['main']['App']['DeleteRemoteFile'](arg1, arg2);
 }
 
+export function DeleteTagByName(arg1) {
+  return window['go']['main']['App']['DeleteTagByName'](arg1);
+}
+
 export function DeleteTemplateFile(arg1, arg2) {
   return window['go']['main']['App']['DeleteTemplateFile'](arg1, arg2);
 }

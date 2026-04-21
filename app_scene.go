@@ -189,6 +189,8 @@ func (a *App) RemoveCase(caseID string) error {
 		}
 		a.emitLog(i18n.Tf("app_scene_delete_success", c.Name))
 		a.logTimeline("scene", "scene_removed", caseID, c.Name, i18n.Tf("app_scene_delete_success", c.Name), "", "info")
+		// Clean up orphaned tags
+		_ = a.SetCaseTags(caseID, nil)
 	}()
 
 	return nil

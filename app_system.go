@@ -929,6 +929,31 @@ tags = append(tags, t)
 return tags
 }
 
+// DeleteTagByName removes a tag from all cases/deployments that use it
+func (a *App) DeleteTagByName(tagName string) error {
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	if settings.CaseTags == nil {
+		return nil
+	}
+	for id, tags := range settings.CaseTags {
+		filtered := make([]string, 0, len(tags))
+		for _, t := range tags {
+			if t != tagName {
+				filtered = append(filtered, t)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(settings.CaseTags, id)
+		} else {
+			settings.CaseTags[id] = filtered
+		}
+	}
+	return redc.SaveGUISettings(settings)
+}
+
 // GetHTTPServerConfig returns current HTTP server config
 func (a *App) GetHTTPServerConfig() map[string]interface{} {
 settings, _ := redc.LoadGUISettings()

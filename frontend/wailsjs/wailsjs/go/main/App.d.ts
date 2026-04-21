@@ -90,6 +90,8 @@ export function DeleteProfile(arg1:string):Promise<void>;
 
 export function DeleteRemoteFile(arg1:string,arg2:string):Promise<void>;
 
+export function DeleteTagByName(arg1:string):Promise<void>;
+
 export function DeleteTemplateFile(arg1:string,arg2:string):Promise<void>;
 
 export function DeployAgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;

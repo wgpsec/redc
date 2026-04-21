@@ -259,6 +259,9 @@ func (a *App) DeleteCustomDeployment(id string) error {
 		return fmt.Errorf(i18n.Tf("app_deploy_delete_failed", err))
 	}
 
+	// Clean up orphaned tags
+	_ = a.SetCaseTags(id, nil)
+
 	a.emitLog(i18n.Tf("app_deploy_delete_success", id))
 	a.emitRefresh()
 
@@ -504,6 +507,13 @@ func (a *App) BatchDeleteCustomDeployments(ids []string) []redc.BatchOperationRe
 	}
 
 	results := service.BatchDeleteDeployments(project.ProjectName, ids, project.ProjectPath)
+
+	// Clean up orphaned tags for successfully deleted deployments
+	for i, r := range results {
+		if r.Success && i < len(ids) {
+			_ = a.SetCaseTags(ids[i], nil)
+		}
+	}
 
 	a.emitLog(i18n.Tf("app_batch_delete", countSuccessful(results), countFailed(results)))
 	a.emitRefresh()
