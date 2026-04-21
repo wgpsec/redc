@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -53,6 +54,72 @@ func (a *App) GetF8xCategories() []redc.F8xCategoryInfo {
 // GetF8xPresets returns preset install combinations
 func (a *App) GetF8xPresets() []redc.F8xPreset {
 	return redc.GetF8xPresets()
+}
+
+// GetF8xTools returns the list of individually installable tools
+func (a *App) GetF8xTools() []redc.F8xTool {
+	return redc.GetF8xTools()
+}
+
+// GetInstalledTools detects installed tools on a target VPS via SSH
+func (a *App) GetInstalledTools(caseID string) (*redc.F8xInstalledFile, error) {
+	sshConfig, err := a.getSSHConfigForCase(caseID)
+	if err != nil {
+		return nil, fmt.Errorf("SSH config error: %v", err)
+	}
+
+	// Try reading the installed.json file first
+	result := a.execSSHCommand(sshConfig, "cat /opt/.f8x/installed.json 2>/dev/null")
+	if result.Success && strings.TrimSpace(result.Stdout) != "" {
+		var installed redc.F8xInstalledFile
+		if err := json.Unmarshal([]byte(result.Stdout), &installed); err == nil {
+			return &installed, nil
+		}
+	}
+
+	// Fallback: detect common tools via which
+	tools := redc.GetF8xTools()
+	if len(tools) == 0 {
+		return &redc.F8xInstalledFile{Tools: map[string]redc.F8xInstalledInfo{}}, nil
+	}
+
+	// Batch check in groups of 50
+	installed := &redc.F8xInstalledFile{
+		Tools:       make(map[string]redc.F8xInstalledInfo),
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	batchSize := 50
+	for i := 0; i < len(tools); i += batchSize {
+		end := i + batchSize
+		if end > len(tools) {
+			end = len(tools)
+		}
+		var names []string
+		for _, t := range tools[i:end] {
+			names = append(names, t.ID)
+		}
+		cmd := "for t in " + strings.Join(names, " ") + "; do command -v $t >/dev/null 2>&1 && echo $t; done"
+		checkResult := a.execSSHCommand(sshConfig, cmd)
+		if checkResult.Success {
+			for _, line := range strings.Split(strings.TrimSpace(checkResult.Stdout), "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					installed.Tools[line] = redc.F8xInstalledInfo{
+						InstalledAt: "unknown",
+						Method:      "detected",
+					}
+				}
+			}
+		}
+	}
+
+	return installed, nil
+}
+
+// InstallF8xTool installs a single tool on a target VPS via f8x -install
+func (a *App) InstallF8xTool(caseID string, toolID string) string {
+	return a.RunF8xInstall(caseID, []string{"-install", toolID})
 }
 
 // RefreshF8xCatalog forces a refresh of the remote catalog cache
