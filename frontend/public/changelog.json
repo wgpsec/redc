@@ -1,6 +1,13 @@
 {
   "changelog": [
     {
+      "version": "3.2.8",
+      "date": "2026-04-25",
+      "changes": [
+        "修复：Windows 下凭据管理页面保存 AI 配置报错 — Wails 绑定文件 UpdateProfileAIConfig 参数数量（9个）与后端方法签名（8个）不匹配，同步修正 App.js 和 App.d.ts"
+      ]
+    },
+    {
       "version": "3.2.7",
       "date": "2026-04-21",
       "changes": [
