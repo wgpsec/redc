@@ -1,6 +1,14 @@
 {
   "changelog": [
     {
+      "version": "3.2.9",
+      "date": "2026-04-28",
+      "changes": [
+        "修复：预定义场景全部删除后 GUI 卡死 — GetAllTagNames 在无标签时返回 Go nil slice，序列化为 JSON null，Svelte 模板访问 null.length 触发错误边界导致界面失去响应；后端改为始终返回 []string{}，前端增加 ?? [] 防御",
+        "新增：SSH 终端复制粘贴支持 — Ctrl+Shift+C / Cmd+Shift+C 复制选中内容到剪贴板，Ctrl+V / Cmd+V 粘贴剪贴板内容到终端，右键菜单提供复制、粘贴、发送到 AI 三项操作"
+      ]
+    },
+    {
       "version": "3.2.8",
       "date": "2026-04-25",
       "changes": [
