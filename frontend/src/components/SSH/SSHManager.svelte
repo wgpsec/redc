@@ -56,6 +56,9 @@
   let selectedText = $state('');
   let showSendToAI = $state(false);
 
+  // --- Copy/paste context menu ---
+  let contextMenu = $state({ show: false, x: 0, y: 0 });
+
   // --- Broadcast mode ---
   let showBroadcast = $state(false);
   let broadcastCmd = $state('');
@@ -95,6 +98,8 @@
       console.error('Failed to load xterm:', err);
     }
 
+    document.addEventListener('click', closeContextMenu);
+
     // Check for pending session from other pages
     try {
       const pending = localStorage.getItem('ssh-pending-session');
@@ -129,6 +134,7 @@
     }
     EventsOff('port-forward-closed');
     window.removeEventListener('f8x-execute', handleF8xExecute);
+    document.removeEventListener('click', closeContextMenu);
   });
 
   function handleF8xExecute(event) {
@@ -256,6 +262,39 @@
         showSendToAI = false;
       }
     });
+
+    // Ctrl+Shift+C / Cmd+Shift+C: copy; Ctrl+V / Cmd+V: block ^V (paste handled by 'paste' event below)
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown') return true;
+      const mod = event.ctrlKey || event.metaKey;
+      if (mod && event.shiftKey && event.key === 'C') {
+        const sel = terminal.getSelection();
+        if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+        return false;
+      }
+      if (mod && !event.shiftKey && event.key === 'v') {
+        return false;
+      }
+      return true;
+    });
+
+    // Right-click context menu
+    if (session.containerEl) {
+      session.containerEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        contextMenu = { show: true, x: e.clientX, y: e.clientY };
+      });
+
+      // Capture-phase paste: intercepts before xterm's textarea handler, fires exactly once
+      session.containerEl.addEventListener('paste', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const text = e.clipboardData?.getData('text') || '';
+        if (text && session.sessionId && session.connected) {
+          WriteToTerminal(session.sessionId, text).catch(() => {});
+        }
+      }, true);
+    }
 
     if (session.containerEl) {
       const resizeObserver = new ResizeObserver(() => {
@@ -477,6 +516,23 @@
     }
     selectedText = '';
     onTabChange?.('aiChat');
+  }
+
+  function copyToClipboard() {
+    if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {});
+    contextMenu = { ...contextMenu, show: false };
+  }
+
+  async function pasteFromClipboard() {
+    contextMenu = { ...contextMenu, show: false };
+    const text = await navigator.clipboard.readText().catch(() => '');
+    if (text && activeSession?.sessionId && activeSession?.connected) {
+      WriteToTerminal(activeSession.sessionId, text).catch(() => {});
+    }
+  }
+
+  function closeContextMenu() {
+    if (contextMenu.show) contextMenu = { ...contextMenu, show: false };
   }
 
   function togglePanel(panel) {
@@ -727,6 +783,41 @@
           </div>
         {/if}
       </div>
+
+      <!-- Right-click context menu -->
+      {#if contextMenu.show}
+        <div
+          class="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[160px] text-[13px]"
+          style="left: {contextMenu.x}px; top: {contextMenu.y}px"
+          role="menu"
+        >
+          <button
+            class="w-full flex items-center justify-between gap-4 px-3 py-1.5 text-left hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            onclick={copyToClipboard}
+            disabled={!selectedText}
+          >
+            <span>{t.copy || '复制'}</span>
+            <span class="text-[11px] text-gray-400">⌘⇧C</span>
+          </button>
+          <button
+            class="w-full flex items-center justify-between gap-4 px-3 py-1.5 text-left hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            onclick={pasteFromClipboard}
+            disabled={!activeSession?.connected}
+          >
+            <span>{t.paste || '粘贴'}</span>
+            <span class="text-[11px] text-gray-400">⌘V</span>
+          </button>
+          {#if selectedText}
+            <div class="border-t border-gray-100 my-1"></div>
+            <button
+              class="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 text-red-600"
+              onclick={() => { sendToAIChat(); contextMenu = { ...contextMenu, show: false }; }}
+            >
+              {t.sendToAI || '发送到 AI 分析'}
+            </button>
+          {/if}
+        </div>
+      {/if}
 
       <!-- Broadcast command bar -->
       {#if showBroadcast && sessions.length > 1}
