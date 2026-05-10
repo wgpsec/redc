@@ -594,6 +594,10 @@ export const i18n = {
     updateRestartLater: '稍后重启',
     updateError: '更新失败',
     updateUpToDate: '已是最新版本',
+    // WgpSec Infra Ecosystem
+    ecosystemTitle: 'WgpSec Infra 生态系统', ecosystemRedcName: 'RedC', ecosystemRedcDesc: '控制面 — 编排和管理云基础设施的 GUI 工具', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: '场景仓库 — 提供预配置的多云 Terraform 模板', ecosystemF8xName: 'f8x', ecosystemF8xDesc: '装配引擎 — 在目标主机上自动安装工具和配置环境', ecosystemFlow: 'RedC 拉取模板 → 部署云资源 → f8x 装配环境，全程自动化',
+    welcomeEcosystemTitle: 'WgpSec Infra 生态', welcomeEcosystemDesc: '了解 RedC 背后的工具生态',
+    f8xLatest: 'f8x 最新版',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', userdataScripts: 'Userdata Scripts', softwareStore: 'Software Store',
@@ -1200,6 +1204,10 @@ export const i18n = {
     updateRestartLater: 'Restart Later',
     updateError: 'Update Failed',
     updateUpToDate: 'Already up to date',
+    // WgpSec Infra Ecosystem
+    ecosystemTitle: 'WgpSec Infra Ecosystem', ecosystemRedcName: 'RedC', ecosystemRedcDesc: 'Control Plane — GUI tool for orchestrating and managing cloud infrastructure', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: 'Scenario Repository — Pre-configured multi-cloud Terraform templates', ecosystemF8xName: 'f8x', ecosystemF8xDesc: 'Provisioning Engine — Automated tool installation and environment setup on target hosts', ecosystemFlow: 'RedC pulls templates → deploys cloud resources → f8x provisions environment, fully automated',
+    welcomeEcosystemTitle: 'WgpSec Infra Ecosystem', welcomeEcosystemDesc: 'Understand the tooling ecosystem behind RedC',
+    f8xLatest: 'f8x Latest',
   }
 };
 
