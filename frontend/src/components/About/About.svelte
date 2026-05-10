@@ -59,8 +59,16 @@
 
   const links = [
     { url: 'https://github.com/wgpsec/redc', icon: 'github', title: 'GitHub', sub: 'github.com/wgpsec/redc' },
+    { url: 'https://github.com/wgpsec/redc-template', icon: 'github', title: 'Templates', sub: 'github.com/wgpsec/redc-template' },
+    { url: 'https://github.com/ffffffff0x/f8x', icon: 'github', title: 'f8x', sub: 'github.com/ffffffff0x/f8x' },
     { url: 'https://redc.wgpsec.org', icon: 'doc', titleKey: 'documentation', titleFallback: '文档', sub: 'redc.wgpsec.org' },
     { url: 'https://www.wgpsec.org', icon: 'web', titleKey: 'team', titlePrefix: 'WgpSec ', titleFallback: '团队', sub: 'www.wgpsec.org' },
+  ];
+
+  const ecosystem = [
+    { name: 'RedC', nameKey: 'ecosystemRedcName', descKey: 'ecosystemRedcDesc', descFallback: '控制面 — 编排和管理云基础设施的 GUI 工具', url: 'https://github.com/wgpsec/redc', color: 'bg-red-50', iconColor: 'text-red-500' },
+    { name: 'redc-template', nameKey: 'ecosystemTemplateName', descKey: 'ecosystemTemplateDesc', descFallback: '场景仓库 — 提供预配置的多云 Terraform 模板', url: 'https://github.com/wgpsec/redc-template', color: 'bg-amber-50', iconColor: 'text-amber-500' },
+    { name: 'f8x', nameKey: 'ecosystemF8xName', descKey: 'ecosystemF8xDesc', descFallback: '装配引擎 — 在目标主机上自动安装工具和配置环境', url: 'https://github.com/ffffffff0x/f8x', color: 'bg-cyan-50', iconColor: 'text-cyan-500' },
   ];
 </script>
 
@@ -172,8 +180,40 @@
     </div>
   </div>
 
-  <!-- Links (horizontal 3-column) -->
-  <div class="grid grid-cols-3 gap-4">
+  <!-- WgpSec Infra Ecosystem -->
+  <div class="bg-white rounded-xl border border-gray-100 p-5">
+    <h2 class="text-[13px] font-semibold text-gray-900 mb-3">{t.ecosystemTitle || 'WgpSec Infra 生态系统'}</h2>
+    <div class="space-y-3">
+      {#each ecosystem as eco, i}
+        <button
+          class="flex items-start gap-3 w-full text-left hover:bg-gray-50/50 rounded-lg p-2 -m-2 transition-colors cursor-pointer"
+          onclick={() => openLink(eco.url)}
+        >
+          <div class="w-8 h-8 rounded-lg {eco.color} flex items-center justify-center flex-shrink-0">
+            {#if i === 0}
+              <svg class="w-4 h-4 {eco.iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" /></svg>
+            {:else if i === 1}
+              <svg class="w-4 h-4 {eco.iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+            {:else}
+              <svg class="w-4 h-4 {eco.iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.384 3.183A2.25 2.25 0 013 16.268V7.732a2.25 2.25 0 013.036-2.085l5.384 3.183m0 0l5.384-3.183A2.25 2.25 0 0119.8 7.732v8.536a2.25 2.25 0 01-2.996 2.085l-5.384-3.183z" /></svg>
+            {/if}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[12px] font-semibold text-gray-900">{t[eco.nameKey] || eco.name}</span>
+            </div>
+            <p class="text-[11px] text-gray-500 leading-relaxed">{t[eco.descKey] || eco.descFallback}</p>
+          </div>
+        </button>
+      {/each}
+    </div>
+    <div class="mt-3 pt-3 border-t border-gray-100">
+      <p class="text-[11px] text-gray-400 leading-relaxed">{t.ecosystemFlow || 'RedC 拉取模板 → 部署云资源 → f8x 装配环境，全程自动化'}</p>
+    </div>
+  </div>
+
+  <!-- Links (horizontal 5-column) -->
+  <div class="grid grid-cols-5 gap-3">
     {#each links as link}
       <button
         class="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer group text-left"
