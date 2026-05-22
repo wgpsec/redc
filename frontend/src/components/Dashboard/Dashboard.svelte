@@ -385,32 +385,71 @@
       {/each}
     {:else}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
-        <div class="text-[11px] text-gray-500 mb-1">{t.totalScenes || '总场景数'}</div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all group" onclick={() => onTabChange('cases')}>
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-5 h-5 rounded-md bg-gray-100 group-hover:bg-gray-200 flex items-center justify-center transition-colors">
+            <svg class="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+          </div>
+          <span class="text-[11px] text-gray-500">{t.totalScenes || '总场景数'}</span>
+        </div>
         <div class="text-[22px] font-bold text-gray-900">{stats.totalCases}</div>
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
-        <div class="text-[11px] text-gray-500 mb-1">{t.runningScenes || '运行中'}</div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-emerald-200 hover:shadow-sm transition-all group" onclick={() => onTabChange('cases')}>
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-5 h-5 rounded-md bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
+            <svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" /></svg>
+          </div>
+          <span class="text-[11px] text-gray-500">{t.runningScenes || '运行中'}</span>
+          {#if stats.runningCases > 0}
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+          {/if}
+        </div>
         <div class="text-[22px] font-bold text-emerald-600">{stats.runningCases}</div>
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
-        <div class="text-[11px] text-gray-500 mb-1">{t.stoppedScenes || '已停止'}</div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all group" onclick={() => onTabChange('cases')}>
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-5 h-5 rounded-md bg-slate-50 group-hover:bg-slate-100 flex items-center justify-center transition-colors">
+            <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /></svg>
+          </div>
+          <span class="text-[11px] text-gray-500">{t.stoppedScenes || '已停止'}</span>
+        </div>
         <div class="text-[22px] font-bold text-gray-400">{stats.stoppedCases}</div>
       </div>
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
-        <div class="text-[11px] text-gray-500 mb-1">{t.errorScenes || '异常'}</div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-red-200 hover:shadow-sm transition-all group" onclick={() => onTabChange('cases')}>
+        <div class="flex items-center gap-2 mb-1.5">
+          <div class="w-5 h-5 rounded-md bg-red-50 group-hover:bg-red-100 flex items-center justify-center transition-colors">
+            <svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" /></svg>
+          </div>
+          <span class="text-[11px] text-gray-500">{t.errorScenes || '异常'}</span>
+        </div>
         <div class="text-[22px] font-bold text-red-500">{stats.errorCases}</div>
       </div>
       {#each quickStats as stat}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div
-          class="bg-white rounded-xl border border-gray-100 p-4 {stat.tab ? 'cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all' : ''}"
+          class="bg-white rounded-xl border border-gray-100 p-4 {stat.tab ? 'cursor-pointer hover:border-gray-200 hover:shadow-sm' : ''} transition-all group"
           onclick={() => stat.tab && onTabChange(stat.tab)}
         >
-          <div class="text-[11px] text-gray-500 mb-1">{stat.label}</div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-5 h-5 rounded-md bg-gray-50 group-hover:bg-gray-100 flex items-center justify-center transition-colors">
+              {#if stat.icon === 'clock'}
+                <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {:else if stat.icon === 'timer'}
+                <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {:else if stat.icon === 'template'}
+                <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+              {:else}
+                <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+              {/if}
+            </div>
+            <span class="text-[11px] text-gray-500">{stat.label}</span>
+          </div>
           <div class="text-[22px] font-bold text-gray-900">{stat.value}</div>
         </div>
       {/each}
@@ -471,8 +510,9 @@
         {:else}
           {#each recentCases as c}
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="px-4 py-2.5 hover:bg-gray-50/50 transition-colors cursor-pointer" onclick={navigateToCases}>
-              <div class="flex items-center justify-between">
+            <div class="px-4 py-2.5 hover:bg-gray-50/50 transition-colors cursor-pointer flex" onclick={navigateToCases}>
+              <div class="w-0.5 rounded-full mr-3 flex-shrink-0 {c.state === 'running' ? 'bg-emerald-400' : c.state === 'error' ? 'bg-red-400' : 'bg-gray-200'}"></div>
+              <div class="flex items-center justify-between flex-1 min-w-0">
                 <div class="flex-1 min-w-0">
                   <div class="text-[12px] font-medium text-gray-900 truncate">{c.name}</div>
                   <div class="text-[10px] text-gray-400 mt-0.5">{c.type} · {c.stateTime}</div>
@@ -717,7 +757,7 @@
                     <span class="text-[11px] text-gray-600 truncate">{item.name}</span>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <span class="text-[10px] text-gray-400 tabular-nums">{item.latencyMs}ms</span>
+                    <span class="text-[10px] tabular-nums {item.latencyMs < 100 ? 'text-emerald-500' : item.latencyMs < 300 ? 'text-amber-500' : item.latencyMs < 1000 ? 'text-orange-500' : 'text-red-500'}">{item.latencyMs}ms</span>
                     <span class="text-[10px] font-medium {item.ok ? 'text-emerald-500' : 'text-red-500'} w-8 text-right">
                       {item.ok ? 'OK' : 'FAIL'}
                     </span>
@@ -790,20 +830,28 @@
       <div class="bg-white rounded-xl border border-gray-100 p-4 flex-1">
         <h3 class="text-[13px] font-semibold text-gray-900 mb-3">{t.quickLinks || '快捷入口'}</h3>
         <div class="grid grid-cols-2 gap-2">
-          <button class="flex items-center gap-2 px-3 py-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick={() => onTabChange('aiChat')}>
-            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>
+          <button class="flex items-center gap-2.5 px-3 py-2.5 text-[11px] text-gray-700 font-medium bg-gradient-to-r from-violet-50 to-white border border-violet-100/50 rounded-lg hover:border-violet-200 hover:shadow-sm transition-all cursor-pointer group" onclick={() => onTabChange('aiChat')}>
+            <div class="w-6 h-6 rounded-md bg-violet-100 group-hover:bg-violet-200 flex items-center justify-center transition-colors">
+              <svg class="w-3.5 h-3.5 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+            </div>
             {t.aiChat || 'AI 对话'}
           </button>
-          <button class="flex items-center gap-2 px-3 py-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick={() => onTabChange('registry')}>
-            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+          <button class="flex items-center gap-2.5 px-3 py-2.5 text-[11px] text-gray-700 font-medium bg-gradient-to-r from-amber-50 to-white border border-amber-100/50 rounded-lg hover:border-amber-200 hover:shadow-sm transition-all cursor-pointer group" onclick={() => onTabChange('registry')}>
+            <div class="w-6 h-6 rounded-md bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition-colors">
+              <svg class="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+            </div>
             {t.registry || '模板仓库'}
           </button>
-          <button class="flex items-center gap-2 px-3 py-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick={() => onTabChange('sshManager')}>
-            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+          <button class="flex items-center gap-2.5 px-3 py-2.5 text-[11px] text-gray-700 font-medium bg-gradient-to-r from-cyan-50 to-white border border-cyan-100/50 rounded-lg hover:border-cyan-200 hover:shadow-sm transition-all cursor-pointer group" onclick={() => onTabChange('sshManager')}>
+            <div class="w-6 h-6 rounded-md bg-cyan-100 group-hover:bg-cyan-200 flex items-center justify-center transition-colors">
+              <svg class="w-3.5 h-3.5 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+            </div>
             {t.ssh || 'SSH 管理'}
           </button>
-          <button class="flex items-center gap-2 px-3 py-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick={() => onTabChange('credentials')}>
-            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
+          <button class="flex items-center gap-2.5 px-3 py-2.5 text-[11px] text-gray-700 font-medium bg-gradient-to-r from-rose-50 to-white border border-rose-100/50 rounded-lg hover:border-rose-200 hover:shadow-sm transition-all cursor-pointer group" onclick={() => onTabChange('credentials')}>
+            <div class="w-6 h-6 rounded-md bg-rose-100 group-hover:bg-rose-200 flex items-center justify-center transition-colors">
+              <svg class="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
+            </div>
             {t.credentials || '凭据管理'}
           </button>
         </div>
@@ -816,7 +864,12 @@
     <!-- Recent AI Conversations -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.recentAIChat || '最近 AI 对话'}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-violet-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.recentAIChat || '最近 AI 对话'}</h3>
+        </div>
         <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('aiChat')}>
           {t.viewAll || '查看全部'} →
         </button>
@@ -849,7 +902,12 @@
     <!-- Recent Tasks -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.recentTasks || '最近任务'}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.recentTasks || '最近任务'}</h3>
+        </div>
         <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('taskCenter')}>
           {t.viewAll || '查看全部'} →
         </button>
@@ -881,7 +939,12 @@
     <!-- MCP Status -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.mcpStatus || 'MCP 状态'}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-emerald-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.mcpStatus || 'MCP 状态'}</h3>
+        </div>
         <button class="text-[11px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer" onclick={() => onTabChange('ai')}>
           {t.manage || '管理'} →
         </button>
