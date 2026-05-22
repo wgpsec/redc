@@ -607,7 +607,7 @@ export const i18n = {
     noRunningCases: '暂无运行中的场景', completeConfigToPreview: '请完成配置以预览',
     openTerminal: '打开终端', openFileManager: '文件管理', executing: '执行中...', webTerminal: 'Web 终端',
     // WgpSec Infra Ecosystem
-    ecosystemTitle: 'WgpSec Infra 生态系统', ecosystemRedcName: 'RedC', ecosystemRedcDesc: '控制面 — 编排和管理云基础设施的 GUI 工具', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: '场景仓库 — 提供预配置的多云 Terraform 模板', ecosystemF8xName: 'f8x', ecosystemF8xDesc: '装配引擎 — 在目标主机上自动安装工具和配置环境', ecosystemFlow: 'RedC 拉取模板 → 部署云资源 → f8x 装配环境，全程自动化',
+    ecosystemTitle: 'WgpSec Infra Ecosystem', ecosystemIntro: 'WgpSec Infra Ecosystem 将红队基础设施的完整生命周期拆分为模板定义、资源编排、环境装配三层，由 RedC 作为统一控制面串联各组件，实现从场景选择到云端交付的全自动化闭环。', ecosystemRedcName: 'RedC', ecosystemRedcDesc: '控制面 — 编排和管理云基础设施的 GUI 工具', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: '场景仓库 — 提供预配置的多云 Terraform 模板', ecosystemF8xName: 'f8x', ecosystemF8xDesc: '装配引擎 — 在目标主机上自动安装工具和配置环境', ecosystemFlow: '模板 → RedC 编排 → f8x 装配 → 云资源交付，全程自动化', ecosystemTemplateRole: '场景仓库', ecosystemRedcRole: '控制面', ecosystemF8xRole: '装配引擎', ecosystemCloudNode: '多云资源',
     welcomeEcosystemTitle: 'WgpSec Infra 生态', welcomeEcosystemDesc: '了解 RedC 背后的工具生态',
     f8xLatest: 'f8x 最新版',
   },
@@ -1222,7 +1222,7 @@ export const i18n = {
     // Parity keys
     saveAsTemplate: 'Save as Template', noRecentActivity: 'No recent activity',
     // WgpSec Infra Ecosystem
-    ecosystemTitle: 'WgpSec Infra Ecosystem', ecosystemRedcName: 'RedC', ecosystemRedcDesc: 'Control Plane — GUI tool for orchestrating and managing cloud infrastructure', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: 'Scenario Repository — Pre-configured multi-cloud Terraform templates', ecosystemF8xName: 'f8x', ecosystemF8xDesc: 'Provisioning Engine — Automated tool installation and environment setup on target hosts', ecosystemFlow: 'RedC pulls templates → deploys cloud resources → f8x provisions environment, fully automated',
+    ecosystemTitle: 'WgpSec Infra Ecosystem', ecosystemIntro: 'The WgpSec Infra Ecosystem breaks down the full lifecycle of red team infrastructure into three layers — template definition, resource orchestration, and environment provisioning — with RedC as the unified control plane connecting all components for a fully automated pipeline from scenario selection to cloud delivery.', ecosystemRedcName: 'RedC', ecosystemRedcDesc: 'Control Plane — GUI tool for orchestrating and managing cloud infrastructure', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: 'Scenario Repository — Pre-configured multi-cloud Terraform templates', ecosystemF8xName: 'f8x', ecosystemF8xDesc: 'Provisioning Engine — Automated tool installation and environment setup on target hosts', ecosystemFlow: 'Templates → RedC orchestration → f8x provisioning → Cloud resources — fully automated', ecosystemTemplateRole: 'Scenarios', ecosystemRedcRole: 'Control Plane', ecosystemF8xRole: 'Provisioning', ecosystemCloudNode: 'Multi-Cloud',
     welcomeEcosystemTitle: 'WgpSec Infra Ecosystem', welcomeEcosystemDesc: 'Understand the tooling ecosystem behind RedC',
     f8xLatest: 'f8x Latest',
   }
