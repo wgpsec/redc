@@ -629,21 +629,29 @@
         onclick={() => { templateTab = 'all'; selectedTemplates = new Set(); }}
       >{t.allTemplates || '全部'} ({localTemplates.length})</button>
       <button
-        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'preset' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'preset' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { templateTab = 'preset'; selectedTemplates = new Set(); }}
-      >{t.presetTemplates || '预定义'} ({presetCount})</button>
+      >
+        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{t.presetTemplates || '预定义'} ({presetCount})</span>
+      </button>
       <button
-        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'custom' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { templateTab = 'custom'; selectedTemplates = new Set(); }}
-      >{t.customTemplates || '自定义'} ({customCount})</button>
+      >
+        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>{t.customTemplates || '自定义'} ({customCount})</span>
+      </button>
       <button
-        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'userdata' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'userdata' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { templateTab = 'userdata'; selectedTemplates = new Set(); }}
-      >{t.userdataTemplates || 'Userdata'} ({userdataCount})</button>
+      >
+        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>{t.userdataTemplates || 'Userdata'} ({userdataCount})</span>
+      </button>
       <button
-        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'compose' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'compose' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { templateTab = 'compose'; selectedTemplates = new Set(); }}
-      >{t.composeTemplates || 'Compose'} ({composeCount})</button>
+      >
+        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>{t.composeTemplates || 'Compose'} ({composeCount})</span>
+      </button>
     </div>
     <div class="text-[11px] text-gray-400 flex-shrink-0">
       {localTemplates.length} {t.templates || '模板'}
@@ -722,8 +730,14 @@
         <tbody>
           {#each filteredLocalTemplates as tmpl}
             {@const tmplType = getTemplateType(tmpl)}
-            <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+            <tr class="relative border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
               <td class="pl-4 pr-1 py-3" onclick={(e) => e.stopPropagation()}>
+                <div class="absolute left-0 top-0 bottom-0 w-[3px] {
+                  tmplType === 'preset' ? 'bg-blue-400' :
+                  tmplType === 'custom' ? 'bg-amber-400' :
+                  tmplType === 'userdata' ? 'bg-purple-400' :
+                  'bg-teal-400'
+                }"></div>
                 <input
                   type="checkbox"
                   class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"

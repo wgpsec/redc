@@ -466,8 +466,11 @@
         <div class="bg-white rounded-xl border border-gray-100 p-5">
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-md bg-teal-100 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+              </div>
               <span class="text-[14px] font-semibold text-gray-900">{t.composePreview}</span>
-              <span class="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{composeSummary.total} {t.composeSvcCount || '个服务'}</span>
+              <span class="text-[11px] text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full font-medium">{composeSummary.total} {t.composeSvcCount || '个服务'}</span>
             </div>
             <button
               class="flex items-center gap-1.5 h-7 px-3 text-[11px] font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors cursor-pointer"
@@ -494,8 +497,11 @@
               <tbody>
                 {#each composeSummary.services as svc}
                   {@const badge = getStatusBadge(svc.status)}
-                  <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td class="px-4 py-3 text-gray-800 font-medium">{svc.name}</td>
+                  <tr class="relative border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td class="px-4 py-3 text-gray-800 font-medium">
+                      <div class="absolute left-0 top-0 bottom-0 w-[3px] {svc.status === 'running' ? 'bg-emerald-400' : svc.status === 'stopped' ? 'bg-red-400' : svc.status === 'created' ? 'bg-blue-400' : 'bg-gray-200'}"></div>
+                      {svc.name}
+                    </td>
                     <td class="px-4 py-3 text-gray-600 font-mono text-[11px]">{svc.template}</td>
                     <td class="px-4 py-3 text-gray-600">{svc.provider || '-'}</td>
                     <td class="px-4 py-3">
