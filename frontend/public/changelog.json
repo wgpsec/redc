@@ -1,6 +1,28 @@
 {
   "changelog": [
     {
+      "version": "3.3.3",
+      "date": "2026-05-23",
+      "changes": [
+        "优化：Sidebar 项目切换器扁平化 — 降低视觉权重，低频功能不再抢占注意力",
+        "优化：AIChat 模式标签彩色图标 — emerald=自由对话、blue=Agent、purple=编排，活跃标签加 ring 高亮",
+        "优化：AIChat 历史面板 — 日期分组（今天/昨天/具体日期）、活跃会话左边框、模式彩色 badge",
+        "优化：Welcome 对话框 — 简洁白底 + rose 图标方块头部、步骤圆点指示器",
+        "优化：Registry 模板卡片 — 安装状态左侧 3px 色条（emerald=已装、amber=可更新）、筛选彩色圆点",
+        "优化：Credentials 云厂商区块 — blue 图标方块 + 已配置数量 pill badge",
+        "优化：LocalTemplates 筛选与表格 — 类型彩色圆点（blue/amber/purple/teal）、行左侧 3px 类型色条",
+        "优化：Compose 服务表格 — teal 图标方块 header、服务行左侧 3px 状态色条",
+        "优化：Console 视图切换 — 日志/时间线按钮加 SVG 图标",
+        "优化：SSH 面板标题 — 命令片段 amber 图标方块、端口转发 blue 图标方块 + 数量 badge",
+        "优化：SSH 端口转发列表 — 活跃项左侧 3px emerald 色条",
+        "优化：SSH 新建会话对话框 — red 终端图标方块标题",
+        "优化：SoftwareStore 视图标签 — 模块/单工具/预设加彩色圆点（red/cyan/purple）",
+        "优化：SoftwareStore 工具卡片 — 选中状态加左侧 3px red 色条",
+        "优化：UserdataScripts 分类筛选 — 各分类加彩色圆点、选中列表项按分类着色左边框",
+        "优化：CustomDeployment 分段标签 — 创建部署/部署管理加对应含义 SVG 图标"
+      ]
+    },
+    {
       "version": "3.3.2",
       "date": "2026-05-10",
       "changes": [
