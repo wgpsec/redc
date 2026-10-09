@@ -281,6 +281,11 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 	if err := utils.Dir(tpPath, casePath); err != nil {
 		return nil, fmt.Errorf("%s", i18n.Tf("case_copy_template_error", err))
 	}
+	// 目录内会出现 tfstate / tfvars / case.tfplan，三者都可能含生成的实例密码，
+	// 收紧到仅属主可进入，避免同机其他用户直接读取。
+	if err := os.Chmod(casePath, 0700); err != nil {
+		gologger.Warning().Msgf("chmod %s: %v", casePath, err)
+	}
 
 	// 在次 init,防止万一
 	if err := TfInit2(casePath); err != nil {

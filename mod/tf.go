@@ -1,6 +1,7 @@
 package mod
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,6 +59,7 @@ func TfInit2(Path string) error {
 func RVar(s ...string) []string {
 	return s
 }
+
 func TfPlan(Path string, opts ...string) error {
 	ctx, cancel := createContextWithTimeout()
 	defer cancel()
@@ -66,7 +68,14 @@ func TfPlan(Path string, opts ...string) error {
 	if err != nil {
 		return fmt.Errorf("%s", i18n.Tf("tf_exec_failed", err.Error()))
 	}
-	o := ToPlan(opts)
+	// defer 而非只在成功分支调用：terraform 在命令报错返回前就可能已经写出
+	// tfstate / tfplan，失败路径同样可能留下 0644 的明文密码。
+	defer SecureTfState(Path)
+	o, cleanup, err := ToPlan(Path, opts)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 	// 增加 plan 输出文件
 	o = append(o, tfexec.Out(RedcPlanPath))
 	err = te.Plan(ctx, o...)
@@ -80,6 +89,7 @@ func TfPlan(Path string, opts ...string) error {
 	}
 	return nil
 }
+
 func TfApply(Path string, opts ...string) error {
 	ctx, cancel := createContextWithTimeout()
 	defer cancel()
@@ -88,20 +98,27 @@ func TfApply(Path string, opts ...string) error {
 	if err != nil {
 		return fmt.Errorf("%s", i18n.Tf("tf_start_failed_no_tf", err))
 	}
+	defer SecureTfState(Path)
 	var o []tfexec.ApplyOption
 	planFile := filepath.Join(Path, RedcPlanPath)
 	if _, err := os.Stat(planFile); err == nil {
 		o = append(o, tfexec.DirOrPlan(RedcPlanPath))
 	} else {
-		o = ToApply(opts)
+		var cleanup func()
+		o, cleanup, err = ToApply(Path, opts)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
 	}
-	
+
 	err = te.Apply(ctx, o...)
 	if err != nil {
 		gologger.Error().Msgf("%s", i18n.Tf("tf_start_failed", err.Error()))
 		// 返回更详细的错误信息，包含 Terraform 的实际错误输出
 		return fmt.Errorf("%s", i18n.Tf("tf_apply_failed", err))
 	}
+	SecureTfState(Path)
 	return nil
 }
 
@@ -165,33 +182,132 @@ func TfDestroy(Path string, opts []string) error {
 	if te == nil {
 		return fmt.Errorf("TerraformExecutor is nil")
 	}
-	err = te.Destroy(ctx, ToDestroy(opts)...)
+	defer SecureTfState(Path)
+	o, cleanup, err := ToDestroy(Path, opts)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	err = te.Destroy(ctx, o...)
 	if err != nil {
 		gologger.Error().Msgf("%s", i18n.Tf("tf_destroy_failed", Path, err))
+		return err
 	}
 	return nil
 }
 
-func ToApply(v []string) []tfexec.ApplyOption {
+// writeVarFile materialises the -var assignments Terraform would otherwise
+// receive on the command line. Passing them as argv put every generated
+// instance password and provider secret into `ps aux` output for the whole
+// lifetime of the terraform run, readable by any local user.
+//
+// A JSON variable file is used rather than TF_VAR_* environment variables
+// because terraform.tfvars takes precedence over TF_VAR_*, so switching to the
+// environment would silently stop overriding the template's own defaults.
+// JSON also lets Terraform coerce string values into the number and bool
+// variables the templates declare.
+//
+// The file is created 0600 and removed by the returned cleanup function.
+func writeVarFile(dir string, vars []string) (string, func(), error) {
+	noop := func() {}
+	if len(vars) == 0 {
+		return "", noop, nil
+	}
+
+	values := make(map[string]string, len(vars))
+	for _, s := range vars {
+		key, val, ok := strings.Cut(s, "=")
+		if !ok || key == "" {
+			continue
+		}
+		values[key] = val
+	}
+	if len(values) == 0 {
+		return "", noop, nil
+	}
+
+	data, err := json.Marshal(values)
+	if err != nil {
+		return "", noop, fmt.Errorf("%s", i18n.Tf("tf_var_file_encode_failed", err))
+	}
+
+	f, err := os.CreateTemp(dir, ".redc-vars-*.auto.tfvars.json")
+	if err != nil {
+		return "", noop, fmt.Errorf("%s", i18n.Tf("tf_var_file_create_failed", err))
+	}
+	path := f.Name()
+	cleanup := func() { os.Remove(path) }
+
+	if err := f.Chmod(0600); err != nil {
+		f.Close()
+		cleanup()
+		return "", noop, fmt.Errorf("%s", i18n.Tf("tf_var_file_create_failed", err))
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		cleanup()
+		return "", noop, fmt.Errorf("%s", i18n.Tf("tf_var_file_write_failed", err))
+	}
+	if err := f.Close(); err != nil {
+		cleanup()
+		return "", noop, fmt.Errorf("%s", i18n.Tf("tf_var_file_write_failed", err))
+	}
+	return path, cleanup, nil
+}
+
+// SecureTfState tightens permissions on the artefacts Terraform leaves behind
+// in a case directory. tfstate and the saved plan both embed generated
+// instance passwords in plaintext, and the plan additionally captures the
+// values of every variable that was set.
+func SecureTfState(dir string) {
+	for _, name := range []string{
+		"terraform.tfstate",
+		"terraform.tfstate.backup",
+		"terraform.tfvars",
+		RedcPlanPath,
+	} {
+		path := filepath.Join(dir, name)
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+		if err := os.Chmod(path, 0600); err != nil {
+			gologger.Debug().Msgf("chmod %s: %v", path, err)
+		}
+	}
+}
+
+func ToApply(dir string, v []string) ([]tfexec.ApplyOption, func(), error) {
 	var opts []tfexec.ApplyOption
-	for _, s := range v {
-		opts = append(opts, tfexec.Var(s))
+	path, cleanup, err := writeVarFile(dir, v)
+	if err != nil {
+		return nil, nil, err
 	}
-	return opts
+	if path != "" {
+		opts = append(opts, tfexec.VarFile(path))
+	}
+	return opts, cleanup, nil
 }
 
-func ToPlan(v []string) []tfexec.PlanOption {
+func ToPlan(dir string, v []string) ([]tfexec.PlanOption, func(), error) {
 	var opts []tfexec.PlanOption
-	for _, s := range v {
-		opts = append(opts, tfexec.Var(s))
+	path, cleanup, err := writeVarFile(dir, v)
+	if err != nil {
+		return nil, nil, err
 	}
-	return opts
+	if path != "" {
+		opts = append(opts, tfexec.VarFile(path))
+	}
+	return opts, cleanup, nil
 }
 
-func ToDestroy(v []string) []tfexec.DestroyOption {
+func ToDestroy(dir string, v []string) ([]tfexec.DestroyOption, func(), error) {
 	var opts []tfexec.DestroyOption
-	for _, s := range v {
-		opts = append(opts, tfexec.Var(s))
+	path, cleanup, err := writeVarFile(dir, v)
+	if err != nil {
+		return nil, nil, err
 	}
-	return opts
+	if path != "" {
+		opts = append(opts, tfexec.VarFile(path))
+	}
+	return opts, cleanup, nil
 }

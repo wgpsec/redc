@@ -1,10 +1,25 @@
 package cmd
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"os"
+
 	"red-cloud/mod/mcp"
 
 	"github.com/spf13/cobra"
 )
+
+// generateMCPToken returns a fresh random token for the CLI SSE server.
+func generateMCPToken() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to generate token: %v\n", err)
+		os.Exit(1)
+	}
+	return hex.EncodeToString(b)
+}
 
 // MCP commands
 var mcpCmd = &cobra.Command{
@@ -33,15 +48,27 @@ This mode is suitable for integration with AI assistants and tools.`,
 	},
 }
 
+var (
+	mcpSSEToken       string
+	mcpSSEAllowRemote bool
+)
+
 var mcpSSECmd = &cobra.Command{
 	Use:   "sse [address]",
 	Short: "Start MCP server with SSE transport",
 	Long: `Start an MCP server using SSE (Server-Sent Events) transport.
 The server listens on the specified address (default: localhost:8089).
 
+The SSE transport exposes the full tool set, including exec_command and
+start_case, so every request must carry a bearer token (Authorization: Bearer
+<token> or X-RedC-Token: <token>). A token is generated and printed on startup
+unless --token is supplied.
+
+Binding to a non-loopback address additionally requires --allow-remote.
+
 Example:
   redc mcp sse localhost:8089
-  redc mcp sse :9000`,
+  redc mcp sse 0.0.0.0:9000 --token <token> --allow-remote`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		addr := "localhost:8089"
@@ -49,9 +76,23 @@ Example:
 			addr = args[0]
 		}
 
+		token := mcpSSEToken
+		generated := false
+		if token == "" {
+			token = generateMCPToken()
+			generated = true
+		}
+
 		manager := mcp.NewMCPServerManager(redcProject, nil)
+		manager.SetToken(token)
+		manager.SetAllowRemote(mcpSSEAllowRemote)
+
+		if generated {
+			fmt.Printf("MCP SSE token (generated): %s\n", token)
+		}
 		if err := manager.Start(mcp.TransportSSE, addr); err != nil {
-			return
+			fmt.Fprintf(os.Stderr, "failed to start MCP SSE server: %v\n", err)
+			os.Exit(1)
 		}
 		// Block until stopped
 		select {}
@@ -59,6 +100,9 @@ Example:
 }
 
 func init() {
+	mcpSSECmd.Flags().StringVar(&mcpSSEToken, "token", "", "bearer token required from SSE clients (generated if empty)")
+	mcpSSECmd.Flags().BoolVar(&mcpSSEAllowRemote, "allow-remote", false, "allow binding to a non-loopback address")
+
 	rootCmd.AddCommand(mcpCmd)
 	mcpCmd.AddCommand(mcpStdioCmd)
 	mcpCmd.AddCommand(mcpSSECmd)

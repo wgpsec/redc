@@ -2,9 +2,11 @@ package mcp
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -2169,6 +2171,34 @@ type MCPServerManager struct {
 	running    bool
 	mu         sync.Mutex
 	logWriter  LogCallback
+	// token guards the SSE transport. The MCP tool set includes exec_command and
+	// start_case, so an unauthenticated listener is equivalent to remote RCE plus
+	// cloud spend. Empty means "loopback-only, no auth required".
+	token string
+	// allowRemote permits binding to a non-loopback address. Off by default so a
+	// typo like `redc mcp sse 0.0.0.0:9000` cannot silently expose the tool set.
+	allowRemote bool
+}
+
+// SetToken sets the bearer token required by the SSE transport.
+func (m *MCPServerManager) SetToken(token string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.token = token
+}
+
+// SetAllowRemote permits binding the SSE transport to a non-loopback address.
+func (m *MCPServerManager) SetAllowRemote(allow bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.allowRemote = allow
+}
+
+// Token returns the bearer token required by the SSE transport, if set.
+func (m *MCPServerManager) Token() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.token
 }
 
 // NewMCPServerManager creates a new server manager
@@ -2211,7 +2241,9 @@ func (m *MCPServerManager) Start(mode TransportMode, address string) error {
 	case TransportSTDIO:
 		go m.runStdioServer(ctx)
 	case TransportSSE:
-		if err := m.runSSEServer(ctx, address); err != nil {
+		// m.mu is held here, so read the guard config and pass it down rather
+		// than re-locking inside runSSEServer.
+		if err := m.runSSEServer(ctx, address, m.token, m.allowRemote); err != nil {
 			return err
 		}
 	default:
@@ -2301,8 +2333,35 @@ func (m *MCPServerManager) runStdioServer(ctx context.Context) {
 	}
 }
 
-// SSE transport (with Streamable HTTP support per 2025-11-25 spec)
-func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error {
+// isLoopbackAddr reports whether the bind address is limited to the local host.
+func isLoopbackAddr(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	host = strings.TrimSpace(host)
+	if host == "" || host == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
+
+// tokenFromRequest extracts the caller token from the Authorization header or,
+// failing that, the X-RedC-Token header. Query parameters are deliberately not
+// accepted: they leak into access logs and shell history.
+func tokenFromRequest(r *http.Request) string {
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+		return strings.TrimPrefix(auth, "Bearer ")
+	}
+	return r.Header.Get("X-RedC-Token")
+}
+
+// SSE transport (with Streamable HTTP support per 2025-11-25 spec).
+// token and allowRemote are passed in by Start, which already holds m.mu.
+func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string, requireToken string, allowRemote bool) error {
 	// Normalize address
 	if strings.HasPrefix(addr, ":") || !strings.Contains(addr, ":") {
 		if strings.HasPrefix(addr, ":") {
@@ -2312,13 +2371,35 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 		}
 	}
 
+	if !allowRemote && !isLoopbackAddr(addr) {
+		return fmt.Errorf("refusing to bind MCP server to non-loopback address %q without explicit opt-in: "+
+			"this endpoint exposes exec_command and start_case", addr)
+	}
+	if requireToken == "" && !isLoopbackAddr(addr) {
+		return fmt.Errorf("refusing to expose MCP server on %q without a token: "+
+			"set one via SetToken or bind to localhost", addr)
+	}
+
+	// checkAuth returns false when the request must be rejected.
+	checkAuth := func(w http.ResponseWriter, r *http.Request) bool {
+		if requireToken == "" {
+			return true // loopback-only listener
+		}
+		if subtle.ConstantTimeCompare([]byte(tokenFromRequest(r)), []byte(requireToken)) == 1 {
+			return true
+		}
+		w.Header().Set("WWW-Authenticate", `Bearer realm="redc-mcp"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return false
+	}
+
 	mux := http.NewServeMux()
 
-	// CORS preflight handler
+	// CORS preflight handler. No wildcard origin: browsers should not be able to
+	// reach this endpoint from arbitrary pages, and no cookies are used.
 	setCORSHeaders := func(w http.ResponseWriter) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, MCP-Session-Id")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, MCP-Session-Id, Authorization, X-RedC-Token")
 		w.Header().Set("Access-Control-Expose-Headers", "MCP-Session-Id")
 	}
 
@@ -2327,6 +2408,9 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 		setCORSHeaders(w)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if !checkAuth(w, r) {
 			return
 		}
 
@@ -2389,6 +2473,9 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+		if !checkAuth(w, r) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
@@ -2428,6 +2515,9 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 		setCORSHeaders(w)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if !checkAuth(w, r) {
 			return
 		}
 		if r.Method != "POST" {

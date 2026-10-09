@@ -3,6 +3,7 @@ package mod
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -37,6 +38,18 @@ func NewAuditStore() (*AuditStore, error) {
 		return nil, err
 	}
 	dbPath := filepath.Join(RedcPath, "audit.db")
+	// audit_log.args 会记录调用参数，历史上曾包含云 AKSK 明文，因此该文件
+	// 仅限属主可读。先以 0600 创建文件（sql.Open 是惰性的，不会建文件），
+	// 再对历史遗留的宽权限做一次收紧。
+	f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create audit db: %v", err)
+	}
+	f.Close()
+	if err := os.Chmod(dbPath, 0600); err != nil {
+		return nil, fmt.Errorf("failed to restrict audit db permissions: %v", err)
+	}
+
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open audit db: %v", err)
@@ -71,6 +84,19 @@ func (a *AuditStore) Close() {
 	if a.db != nil {
 		a.db.Close()
 	}
+}
+
+// redactedArgMethods mirrors http_server.secretArgMethods: rows written before
+// argument redaction existed still hold plaintext credentials in args, so mask
+// them on the way out too.
+var redactedArgMethods = map[string]bool{
+	"SaveProvidersConfig":            true,
+	"SaveWebhookConfig":              true,
+	"SavePluginConfig":               true,
+	"UpdateProfileAIConfig":          true,
+	"UpdateProfileFallbackProviders": true,
+	"AddHTTPServerUser":              true,
+	"SetHTTPServerConfig":            true,
 }
 
 // Log records an audit log entry
@@ -137,6 +163,9 @@ func (a *AuditStore) List(limit int, offset int, username string, method string)
 			continue
 		}
 		e.Success = success != 0
+		if redactedArgMethods[e.Method] && e.Args != "" {
+			e.Args = "<redacted>"
+		}
 		entries = append(entries, e)
 	}
 	return entries, total, nil
@@ -161,6 +190,9 @@ func (a *AuditStore) ExportAll() ([]AuditLogEntry, error) {
 			continue
 		}
 		e.Success = success != 0
+		if redactedArgMethods[e.Method] && e.Args != "" {
+			e.Args = "<redacted>"
+		}
 		entries = append(entries, e)
 	}
 	return entries, nil

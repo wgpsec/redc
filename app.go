@@ -596,4 +596,5 @@ type MCPStatus struct {
 	Mode            string `json:"mode"`
 	Address         string `json:"address"`
 	ProtocolVersion string `json:"protocolVersion"`
+	Token           string `json:"token,omitempty"`
 }

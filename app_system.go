@@ -912,12 +912,17 @@ return redc.SaveGUISettings(settings)
 }
 
 // GetAllCaseTags returns the full tag map {id: [tags]}
+// 返回深拷贝：调用方可能长时间遍历，直接暴露内部 map 会与 SetCaseTags 并发冲突。
 func (a *App) GetAllCaseTags() map[string][]string {
-settings, err := redc.LoadGUISettings()
-if err != nil || settings == nil || settings.CaseTags == nil {
-return map[string][]string{}
-}
-return settings.CaseTags
+	settings, err := redc.LoadGUISettings()
+	if err != nil || settings == nil || settings.CaseTags == nil {
+		return map[string][]string{}
+	}
+	result := make(map[string][]string, len(settings.CaseTags))
+	for id, tags := range settings.CaseTags {
+		result[id] = append([]string(nil), tags...)
+	}
+	return result
 }
 
 // GetAllTagNames returns all unique tag names across all cases
@@ -1027,7 +1032,9 @@ func (a *App) StartHTTPServer(port int, host string, token string) error {
 		return err
 	}
 	a.httpSrv = srv
-	a.emitLog(fmt.Sprintf("HTTP Server 已启动: http://%s:%d (token: %s)", host, port, token))
+	// 不要把 token 写进日志：gui.log 会被落盘并长期保留，而这个 token 等于 admin 角色。
+	// 需要 token 的调用方走 GetHTTPServerConfig。
+	a.emitLog(fmt.Sprintf("HTTP Server 已启动: http://%s:%d", host, port))
 	return nil
 }
 

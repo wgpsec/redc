@@ -33,8 +33,14 @@ type ComposeWriter struct {
 
 func (m *LogManager) NewServiceLogger(serviceName string) (*ComposeWriter, error) {
 	path := m.GetLogPath(serviceName)
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// 日志会包含 provider 报错、SSH 命令等敏感内容，仅限属主可读。
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
+		return nil, err
+	}
+	// 历史文件可能由旧版本以 0644 创建，OpenFile 不会改变已有文件的权限。
+	if err := f.Chmod(0600); err != nil {
+		f.Close()
 		return nil, err
 	}
 
@@ -45,6 +51,10 @@ func (m *LogManager) NewServiceLogger(serviceName string) (*ComposeWriter, error
 }
 
 func (w *ComposeWriter) Write(p []byte) (n int, err error) {
+	// The GUI's emitLog writes through this writer directly, bypassing
+	// Logger.Log, so redaction must be applied here too or those lines land in
+	// the log file untouched.
+	p = []byte(Redact(string(p)))
 	if w.File != nil {
 		w.File.Write(p)
 	}

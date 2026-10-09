@@ -1,6 +1,23 @@
 {
   "changelog": [
     {
+      "version": "3.3.9",
+      "date": "2026-10-09",
+      "changes": [
+        "安全：MCP SSE 端点强制 Bearer 鉴权并拒绝绑定非 loopback 地址，去掉跨域通配头，避免未授权调用 exec_command / start_case",
+        "安全：修复主令牌可经 viewer 级 GetMCPStatus 接口回显的问题，并在接口层对非 admin 调用者统一裁剪凭证字段",
+        "安全：MCP 服务不再复用 HTTP 主令牌，改为每次启动独立生成，切断 MCP 令牌提权成 admin 的路径",
+        "安全：云厂商 AccessKey 不再明文写入 audit.db，敏感参数按字段脱敏，数据库文件权限收紧至 0600",
+        "安全：AI APIKey 不再经接口回显，改用仅表示「已配置」的布尔字段",
+        "安全：日志层统一脱敏，HTTP 主令牌不再写入 gui.log，日志文件权限收紧至 0600",
+        "安全：Terraform 变量不再经命令行传递，改为 0600 的 JSON 变量文件，避免实例密码出现在 ps 输出中",
+        "安全：Case 与部署目录权限收紧至 0700，tfstate / tfvars / tfplan 统一 0600，命令失败时同样收紧",
+        "修复：删除自定义部署时误判运行状态导致 destroy 被跳过、云资源变孤儿且持续计费的问题",
+        "修复：Terraform destroy 失败时不再静默返回成功，恢复后续流程的失败感知能力",
+        "修复：GUI 设置与 Case 标签的并发读写加锁保护，消除并发写 map 导致的进程崩溃"
+      ]
+    },
+    {
       "version": "3.3.8",
       "date": "2026-08-10",
       "changes": [

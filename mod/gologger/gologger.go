@@ -46,6 +46,10 @@ func (l *Logger) Log(event *Event) {
 		return
 	}
 	event.message = strings.TrimSuffix(event.message, "\n")
+	// Every log sink (file, GUI event stream, CLI writer) sits behind this
+	// single choke point, so credentials are stripped exactly once here rather
+	// than at each call site.
+	event.message = Redact(event.message)
 	data, err := l.formatter.Format(&formatter.LogEvent{
 		Message:  event.message,
 		Level:    event.level,

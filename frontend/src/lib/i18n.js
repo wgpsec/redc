@@ -209,7 +209,7 @@ export const i18n = {
     batchEstimate: '批量估算',
     // AI Configuration
     aiConfig: 'AI 配置', aiProvider: '服务商', aiModel: '模型', aiApiKey: 'API Key',
-    aiApiKeyPlaceholder: '请输入您的 API Key', aiBaseUrl: 'API 地址', aiBaseUrlHint: '可选：自定义 API 端点地址',
+    aiApiKeyPlaceholder: '请输入您的 API Key', aiApiKeyStored: '已保存，留空则不修改', aiBaseUrl: 'API 地址', aiBaseUrlHint: '可选：自定义 API 端点地址',
     aiModelHint: 'Agent 和编排模式依赖工具调用，建议选择推理能力强的模型（如 Claude Sonnet/Opus、GPT 等）',
     aiMaxToolRounds: 'Agent 最大工具调用轮次', aiMaxToolRoundsHint: 'Agent / 开源部署模式下 AI 可调用工具的最大轮次，0 为使用默认值（50轮），最大 200 轮',
     aiContextWindow: '模型上下文窗口 (tokens)', aiContextWindowHint: '模型支持的最大上下文长度，超出后自动压缩历史对话，0 为默认 120K',
@@ -841,7 +841,7 @@ export const i18n = {
     batchEstimate: 'Batch Estimate',
     // AI Configuration
     aiConfig: 'AI Configuration', aiProvider: 'Provider', aiModel: 'Model', aiApiKey: 'API Key',
-    aiApiKeyPlaceholder: 'Enter your API key', aiBaseUrl: 'Base URL', aiBaseUrlHint: 'Optional: Override the default API endpoint',
+    aiApiKeyPlaceholder: 'Enter your API key', aiApiKeyStored: 'Saved — leave blank to keep it', aiBaseUrl: 'Base URL', aiBaseUrlHint: 'Optional: Override the default API endpoint',
     aiModelHint: 'Agent and orchestrator modes rely on tool calls — use a capable model (e.g., Claude Sonnet/Opus, GPT)',
     aiMaxToolRounds: 'Agent Max Tool Rounds', aiMaxToolRoundsHint: 'Max tool call rounds for Agent / Deploy mode. 0 uses default (50 rounds), max 200.',
     aiContextWindow: 'Model Context Window (tokens)', aiContextWindowHint: 'Max context length supported by the model. History is auto-compacted when exceeded. 0 defaults to 120K.',

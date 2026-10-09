@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	redc "red-cloud/mod"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -199,13 +201,31 @@ func TestLoadManifestEnforcesMinimumRedCVersion(t *testing.T) {
 		}
 	}
 
-	writeManifest("3.3.8")
+	// 基准取自实际的 redc.Version，避免每次升版本号都要改测试。
+	current := strings.TrimPrefix(redc.Version, "v")
+	writeManifest(current)
 	if _, err := loadManifest(pluginDir); err != nil {
 		t.Fatalf("compatible plugin was rejected: %v", err)
 	}
 
-	writeManifest("3.3.9")
-	if _, err := loadManifest(pluginDir); err == nil || !strings.Contains(err.Error(), "requires redc 3.3.9 or newer") {
+	next := nextPatchVersion(t, current)
+	writeManifest(next)
+	if _, err := loadManifest(pluginDir); err == nil || !strings.Contains(err.Error(), "requires redc "+next+" or newer") {
 		t.Fatalf("incompatible plugin error = %v", err)
 	}
+}
+
+// nextPatchVersion returns the version one patch above v, e.g. "3.3.9" -> "3.3.10".
+func nextPatchVersion(t *testing.T, v string) string {
+	t.Helper()
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		t.Fatalf("unexpected version format %q", v)
+	}
+	patch, err := strconv.Atoi(parts[2])
+	if err != nil {
+		t.Fatalf("unexpected patch in %q: %v", v, err)
+	}
+	parts[2] = strconv.Itoa(patch + 1)
+	return strings.Join(parts, ".")
 }

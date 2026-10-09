@@ -22,7 +22,14 @@ func (a *App) GetMCPStatus() MCPStatus {
 		Mode:            status["mode"].(string),
 		Address:         status["address"].(string),
 		ProtocolVersion: status["protocolVersion"].(string),
+		// 客户端必须带这个 token 才能调用 SSE 端点，前端用它拼 claude mcp add 命令。
+		Token: mcpStatusToken(a.mcpManager),
 	}
+}
+
+// mcpStatusToken reports the token guarding the SSE transport, if any.
+func mcpStatusToken(m *mcp.MCPServerManager) string {
+	return m.Token()
 }
 
 func (a *App) StartMCPServer(mode string, address string) error {
@@ -48,6 +55,15 @@ func (a *App) StartMCPServer(mode string, address string) error {
 		transportMode = mcp.TransportSTDIO
 	default:
 		return fmt.Errorf("%s", i18n.Tf("app_mcp_unknown_mode", mode))
+	}
+
+	// The SSE transport exposes exec_command / start_case, so it must always be
+	// authenticated. A dedicated token is minted instead of reusing
+	// settings.HTTPServerToken: the latter is the master credential for the whole
+	// HTTP API, so sharing it would make the MCP token an admin token and turn
+	// any leak of the SSE token into a full compromise.
+	if transportMode == mcp.TransportSSE {
+		a.mcpManager.SetToken(GenerateToken())
 	}
 
 	if err := a.mcpManager.Start(transportMode, address); err != nil {

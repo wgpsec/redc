@@ -41,6 +41,8 @@ let { t } = $props();
   let aiConfigSaving = $state(false);
   let aiConfigSaved = $state(false);
   let showApiKey = $state(false);
+  // Backend never returns the stored key — this flag carries "已配置" instead.
+  let apiKeySet = $state(false);
 
   // Fallback providers state
   let fallbackProviders = $state([]);
@@ -94,9 +96,11 @@ let { t } = $props();
           templateDir: active.templateDir || ''
         };
         if (active.aiConfig) {
+          // The stored key is never returned; apiKeySet只表示"已配置"。留空即保持原值。
+          apiKeySet = !!active.aiConfig.apiKeySet;
           aiConfig = {
             provider: active.aiConfig.provider || 'openai',
-            apiKey: active.aiConfig.apiKey || '',
+            apiKey: '',
             baseUrl: active.aiConfig.baseUrl || aiProviderPresets[active.aiConfig.provider || 'openai'].baseUrl,
             model: active.aiConfig.model || aiProviderPresets[active.aiConfig.provider || 'openai'].defaultModel,
             maxToolRounds: active.aiConfig.maxToolRounds || 0,
@@ -105,6 +109,7 @@ let { t } = $props();
           };
         } else {
           const preset = aiProviderPresets['openai'];
+          apiKeySet = false;
           aiConfig = {
             provider: 'openai',
             apiKey: '',
@@ -236,7 +241,7 @@ let { t } = $props();
   }
 
   function addFallbackProvider() {
-    fallbackProviders = [...fallbackProviders, { name: '', provider: 'openai', apiKey: '', baseUrl: '', model: '' }];
+    fallbackProviders = [...fallbackProviders, { name: '', provider: 'openai', apiKey: '', apiKeySet: false, baseUrl: '', model: '' }];
   }
 
   function removeFallbackProvider(index) {
@@ -248,8 +253,8 @@ let { t } = $props();
     fallbackSaving = true;
     fallbackSaved = false;
     try {
-      // Filter out empty entries
-      const validFallbacks = fallbackProviders.filter(fb => fb.apiKey && fb.baseUrl && fb.model);
+      // 已保存过的条目不会再回传明文 key，只带 apiKeySet，因此两者取其一。
+      const validFallbacks = fallbackProviders.filter(fb => (fb.apiKey || fb.apiKeySet) && fb.baseUrl && fb.model);
       await UpdateProfileFallbackProviders(activeProfileId, validFallbacks);
       fallbackSaved = true;
       setTimeout(() => { fallbackSaved = false; }, 2000);
@@ -634,7 +639,7 @@ let { t } = $props();
             <input 
               id="aiApiKey"
               type={showApiKey ? 'text' : 'password'}
-              placeholder={t.aiApiKeyPlaceholder || 'Enter your API key'}
+              placeholder={apiKeySet ? (t.aiApiKeyStored || '已保存，留空则不修改') : (t.aiApiKeyPlaceholder || 'Enter your API key')}
               class="w-full h-9 px-3 pr-10 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow font-mono"
               bind:value={aiConfig.apiKey}
             />

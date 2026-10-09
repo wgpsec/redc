@@ -11,6 +11,7 @@ import (
 	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"reflect"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -22,6 +23,10 @@ var ProjectPath = "redc-taskresult"
 var ActiveConfigPath = ""
 var LoadedConfig *Config = nil           // 全局配置对象
 var LoadedGUISettings *GUISettings = nil // 全局 GUI 设置
+// LoadedGUISettings 是进程级共享状态，调用方会就地修改 CaseTags 等 map。
+// 所有读写都必须经 LoadGUISettings/SaveGUISettings，由 guiSettingsMu 串行化，
+// 否则并发写 map 会触发 runtime fatal error（recover 无法捕获）。
+var guiSettingsMu sync.Mutex
 
 const ProjectFile = "project.json"
 const RedcPlanPath = "case.tfplan"
@@ -344,6 +349,9 @@ func getGUISettingsPath() string {
 }
 
 func LoadGUISettings() (*GUISettings, error) {
+	guiSettingsMu.Lock()
+	defer guiSettingsMu.Unlock()
+
 	if LoadedGUISettings != nil {
 		return LoadedGUISettings, nil
 	}
@@ -378,6 +386,9 @@ func LoadGUISettings() (*GUISettings, error) {
 }
 
 func SaveGUISettings(settings *GUISettings) error {
+	guiSettingsMu.Lock()
+	defer guiSettingsMu.Unlock()
+
 	path := getGUISettingsPath()
 
 	if RedcPath == "" {

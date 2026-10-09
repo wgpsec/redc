@@ -6,7 +6,7 @@
   import HelpTooltip from '../UI/HelpTooltip.svelte';
 
   let { t, onTabChange = () => {} } = $props();
-  let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '' });
+  let mcpStatus = $state({ running: false, mode: '', address: '', protocolVersion: '', token: '' });
   let mcpForm = $state({ mode: 'sse', address: 'localhost:8089' });
   let mcpLoading = $state(false);
   let error = $state('');
@@ -14,8 +14,11 @@
   let subTab = $state('overview');
   let copiedCmd = $state('');
 
-  function getClaudeAddCmd(address) {
-    return `claude mcp add redc -t http http://${address}/mcp -s user`;
+  // The SSE endpoint requires a Bearer token, so the generated command must
+  // carry it — otherwise the client connects and every request returns 401.
+  function getClaudeAddCmd(address, token) {
+    const header = token ? ` -H "Authorization: Bearer ${token}"` : '';
+    return `claude mcp add redc -t http http://${address}/mcp${header} -s user`;
   }
 
   const claudeRemoveCmd = 'claude mcp remove redc -s user';
@@ -45,6 +48,8 @@
     baseUrl: '',
     model: ''
   });
+  // The backend never returns the stored key; apiKeySet tells us one exists.
+  let apiKeySet = $state(false);
   let aiConfigLoading = $state(false);
   let hasAIConfig = $state(false);
 
@@ -92,15 +97,17 @@
     try {
       const profile = await GetActiveProfile();
       if (profile && profile.aiConfig) {
+        apiKeySet = !!profile.aiConfig.apiKeySet;
         aiConfig = {
           provider: profile.aiConfig.provider || 'openai',
-          apiKey: profile.aiConfig.apiKey || '',
+          apiKey: '',
           baseUrl: profile.aiConfig.baseUrl || providerPresets[profile.aiConfig.provider || 'openai']?.baseUrl || '',
           model: profile.aiConfig.model || providerPresets[profile.aiConfig.provider || 'openai']?.defaultModel || ''
         };
-        hasAIConfig = !!(aiConfig.apiKey && aiConfig.baseUrl && aiConfig.model);
+        hasAIConfig = !!(apiKeySet && aiConfig.baseUrl && aiConfig.model);
       } else {
         const preset = providerPresets['openai'];
+        apiKeySet = false;
         aiConfig = {
           provider: 'openai',
           apiKey: '',
@@ -111,6 +118,7 @@
       }
     } catch (e) {
       console.error('Failed to load AI config:', e);
+      apiKeySet = false;
       hasAIConfig = false;
     } finally {
       aiConfigLoading = false;
@@ -118,7 +126,7 @@
   }
 
   function isAIConfigured() {
-    return hasAIConfig && aiConfig.apiKey && aiConfig.baseUrl && aiConfig.model;
+    return hasAIConfig && (apiKeySet || !!aiConfig.apiKey) && aiConfig.baseUrl && aiConfig.model;
   }
 
   async function handleStartMCP() {
@@ -488,9 +496,9 @@
         <p class="text-[11px] text-gray-500 mb-3">{t.claudeCodeIntegrationDesc}</p>
         <div class="space-y-2">
           <div class="flex items-center gap-2">
-            <code class="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-[11px] font-mono text-gray-800 select-all overflow-x-auto whitespace-nowrap">{getClaudeAddCmd(mcpStatus.address)}</code>
+            <code class="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-[11px] font-mono text-gray-800 select-all overflow-x-auto whitespace-nowrap">{getClaudeAddCmd(mcpStatus.address, mcpStatus.token)}</code>
             <button
-              onclick={() => copyCommand(getClaudeAddCmd(mcpStatus.address), 'add')}
+              onclick={() => copyCommand(getClaudeAddCmd(mcpStatus.address, mcpStatus.token), 'add')}
               class="flex-shrink-0 h-7 px-2.5 bg-gray-900 text-white text-[11px] font-medium rounded-md hover:bg-gray-800 transition-colors cursor-pointer inline-flex items-center gap-1"
             >
               {#if copiedCmd === 'add'}

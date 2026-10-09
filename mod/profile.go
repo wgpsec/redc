@@ -24,8 +24,11 @@ type ProfileInfo struct {
 
 // AIConfig represents AI provider configuration
 type AIConfig struct {
-	Provider      string `json:"provider"`
-	APIKey        string `json:"apiKey,omitempty"`
+	Provider string `json:"provider"`
+	APIKey   string `json:"apiKey,omitempty"`
+	// APIKeySet is an outbound-only hint produced by Sanitized: it tells the UI a
+	// key is stored without disclosing it. Never persisted, never trusted on write.
+	APIKeySet     bool   `json:"apiKeySet,omitempty"`
 	BaseURL       string `json:"baseUrl"`
 	Model         string `json:"model"`
 	MaxToolRounds int    `json:"maxToolRounds,omitempty"`
@@ -39,9 +42,11 @@ type AIConfig struct {
 type FallbackProvider struct {
 	Name     string `json:"name"`
 	Provider string `json:"provider"`
-	APIKey   string `json:"apiKey"`
-	BaseURL  string `json:"baseUrl"`
-	Model    string `json:"model"`
+	APIKey   string `json:"apiKey,omitempty"`
+	// APIKeySet mirrors AIConfig.APIKeySet — outbound-only, never persisted.
+	APIKeySet bool   `json:"apiKeySet,omitempty"`
+	BaseURL   string `json:"baseUrl"`
+	Model     string `json:"model"`
 }
 
 type profilePayload struct {
@@ -221,6 +226,44 @@ func ListProfiles() ([]ProfileInfo, error) {
 		return strings.ToLower(profiles[i].Name) < strings.ToLower(profiles[j].Name)
 	})
 	return profiles, nil
+}
+
+// Sanitized returns an outbound copy of the profile with secret material removed.
+// ProfileInfo carries the plaintext AI API key, and ListProfiles/GetActiveProfile
+// are reachable at "viewer" level, so every path that returns a profile to the
+// frontend or HTTP API must go through this. The inner key value is replaced by
+// APIKeySet so the UI can still show "configured", while writers treat an empty
+// incoming key as "keep the stored one".
+func (p ProfileInfo) Sanitized() ProfileInfo {
+	if p.AIConfig == nil {
+		return p
+	}
+	cfg := *p.AIConfig
+	cfg.APIKeySet = cfg.APIKey != ""
+	cfg.APIKey = ""
+	if len(cfg.FallbackProviders) > 0 {
+		fallbacks := make([]FallbackProvider, len(cfg.FallbackProviders))
+		copy(fallbacks, cfg.FallbackProviders)
+		for i := range fallbacks {
+			fallbacks[i].APIKeySet = fallbacks[i].APIKey != ""
+			fallbacks[i].APIKey = ""
+		}
+		cfg.FallbackProviders = fallbacks
+	}
+	p.AIConfig = &cfg
+	return p
+}
+
+// SanitizeProfiles applies Sanitized to a slice, preserving order.
+func SanitizeProfiles(profiles []ProfileInfo) []ProfileInfo {
+	if profiles == nil {
+		return nil
+	}
+	out := make([]ProfileInfo, len(profiles))
+	for i, p := range profiles {
+		out[i] = p.Sanitized()
+	}
+	return out
 }
 
 func GetActiveProfile() (ProfileInfo, error) {

@@ -316,9 +316,9 @@ func (s *CustomDeploymentService) CreateCustomDeployment(config *DeploymentConfi
 		return nil, fmt.Errorf("获取模板路径失败: %w", err)
 	}
 
-	// 5. 创建部署目录
+	// 5. 创建部署目录（含 tfvars / tfstate，仅属主可进入）
 	deploymentPath := filepath.Join(projectPath, deploymentID)
-	if err := os.MkdirAll(deploymentPath, 0755); err != nil {
+	if err := os.MkdirAll(deploymentPath, 0700); err != nil {
 		return nil, fmt.Errorf("创建部署目录失败: %w", err)
 	}
 
@@ -352,9 +352,9 @@ func (s *CustomDeploymentService) CreateCustomDeployment(config *DeploymentConfi
 		return nil, fmt.Errorf("生成变量文件失败: %w", err)
 	}
 
-	// 9. 写入变量文件
+	// 9. 写入变量文件（可能含 instance_password，仅属主可读）
 	tfvarsPath := filepath.Join(deploymentPath, "terraform.tfvars")
-	if err := os.WriteFile(tfvarsPath, []byte(tfvarsContent), 0644); err != nil {
+	if err := os.WriteFile(tfvarsPath, []byte(tfvarsContent), 0600); err != nil {
 		// 清理失败的部署目录
 		os.RemoveAll(deploymentPath)
 		return nil, fmt.Errorf("写入变量文件失败: %w", err)
@@ -483,7 +483,7 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 			gologger.Warning().Msgf("%s", i18n.Tf("deploy_regen_vars_failed", err))
 		} else {
 			tfvarsPath := filepath.Join(deploymentPath, "terraform.tfvars")
-			if err := os.WriteFile(tfvarsPath, []byte(tfvarsContent), 0644); err != nil {
+			if err := os.WriteFile(tfvarsPath, []byte(tfvarsContent), 0600); err != nil {
 				gologger.Warning().Msgf("%s", i18n.Tf("deploy_write_vars_failed", err))
 			} else {
 				gologger.Info().Msg(i18n.T("deploy_vars_updated"))
@@ -616,6 +616,10 @@ func (s *CustomDeploymentService) DeleteCustomDeployment(projectID, deploymentID
 		return fmt.Errorf("加载部署记录失败: %w", err)
 	}
 
+	// 记录删除前的状态：下面的 destroy 判断必须基于旧状态，
+	// 否则写完 StateRemoving 后条件恒为 false，云资源会被直接遗弃。
+	previousState := deployment.State
+
 	// 更新状态为删除中
 	deployment.State = StateRemoving
 	deployment.UpdatedAt = time.Now()
@@ -627,7 +631,7 @@ func (s *CustomDeploymentService) DeleteCustomDeployment(projectID, deploymentID
 	deploymentPath := filepath.Join(projectPath, deploymentID)
 
 	// 如果部署正在运行，先执行 destroy
-	if deployment.State == StateRunning || deployment.State == StateStarting {
+	if previousState == StateRunning || previousState == StateStarting {
 		if err := TfDestroy(deploymentPath, nil); err != nil {
 			// Destroy 失败，更新状态为错误
 			deployment.State = StateError

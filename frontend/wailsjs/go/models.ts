@@ -317,17 +317,19 @@ export namespace main {
 	    mode: string;
 	    address: string;
 	    protocolVersion: string;
-	
+	    token?: string;
+
 	    static createFrom(source: any = {}) {
 	        return new MCPStatus(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.running = source["running"];
 	        this.mode = source["mode"];
 	        this.address = source["address"];
 	        this.protocolVersion = source["protocolVersion"];
+	        this.token = source["token"];
 	    }
 	}
 	export class ProjectInfo {

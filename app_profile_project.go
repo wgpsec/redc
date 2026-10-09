@@ -313,11 +313,19 @@ func (a *App) SaveProvidersConfig(providerName string, fields map[string]string,
 }
 
 func (a *App) ListProfiles() ([]redc.ProfileInfo, error) {
-	return redc.ListProfiles()
+	profiles, err := redc.ListProfiles()
+	if err != nil {
+		return nil, err
+	}
+	return redc.SanitizeProfiles(profiles), nil
 }
 
 func (a *App) GetActiveProfile() (redc.ProfileInfo, error) {
-	return redc.GetActiveProfile()
+	profile, err := redc.GetActiveProfile()
+	if err != nil {
+		return redc.ProfileInfo{}, err
+	}
+	return profile.Sanitized(), nil
 }
 
 func (a *App) SetActiveProfile(profileID string) (redc.ProfileInfo, error) {
@@ -328,15 +336,23 @@ func (a *App) SetActiveProfile(profileID string) (redc.ProfileInfo, error) {
 	a.mu.Lock()
 	a.templateSources = nil
 	a.mu.Unlock()
-	return profile, nil
+	return profile.Sanitized(), nil
 }
 
 func (a *App) CreateProfile(name string, configPath string, templateDir string) (redc.ProfileInfo, error) {
-	return redc.CreateProfile(name, configPath, templateDir)
+	profile, err := redc.CreateProfile(name, configPath, templateDir)
+	if err != nil {
+		return redc.ProfileInfo{}, err
+	}
+	return profile.Sanitized(), nil
 }
 
 func (a *App) UpdateProfile(profileID string, name string, configPath string, templateDir string) (redc.ProfileInfo, error) {
-	return redc.UpdateProfile(profileID, name, configPath, templateDir)
+	profile, err := redc.UpdateProfile(profileID, name, configPath, templateDir)
+	if err != nil {
+		return redc.ProfileInfo{}, err
+	}
+	return profile.Sanitized(), nil
 }
 
 func (a *App) DeleteProfile(profileID string) error {
@@ -349,6 +365,12 @@ func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey st
 	var existingFallbacks []redc.FallbackProvider
 	if existingProfile.AIConfig != nil {
 		existingFallbacks = existingProfile.AIConfig.FallbackProviders
+	}
+
+	// The API key is never sent back to the UI, so an empty value means
+	// "unchanged" rather than "clear it".
+	if apiKey == "" && existingProfile.AIConfig != nil {
+		apiKey = existingProfile.AIConfig.APIKey
 	}
 
 	aiConfig := &redc.AIConfig{
@@ -378,6 +400,23 @@ func (a *App) UpdateProfileFallbackProviders(profileID string, fallbacks []redc.
 	if profile.AIConfig == nil {
 		profile.AIConfig = &redc.AIConfig{}
 	}
+
+	// Fallback keys are not sent to the UI, so carry the stored key over for
+	// entries the UI left blank (matched by provider+name).
+	stored := map[string]string{}
+	for _, fb := range profile.AIConfig.FallbackProviders {
+		stored[fb.Name+"\x00"+fb.Provider] = fb.APIKey
+		if fb.APIKey != "" {
+			stored[fb.Provider] = fb.APIKey
+		}
+	}
+	for i := range fallbacks {
+		if fallbacks[i].APIKey != "" {
+			continue
+		}
+		fallbacks[i].APIKey = stored[fallbacks[i].Name+"\x00"+fallbacks[i].Provider]
+	}
+
 	profile.AIConfig.FallbackProviders = fallbacks
 	return redc.UpdateProfileAIConfig(profileID, profile.AIConfig)
 }
@@ -391,7 +430,7 @@ func (a *App) GetProfileFallbackProviders(profileID string) ([]redc.FallbackProv
 	if profile.AIConfig == nil || len(profile.AIConfig.FallbackProviders) == 0 {
 		return []redc.FallbackProvider{}, nil
 	}
-	return profile.AIConfig.FallbackProviders, nil
+	return profile.Sanitized().AIConfig.FallbackProviders, nil
 }
 
 func (a *App) ListProjects() ([]ProjectInfo, error) {

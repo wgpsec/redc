@@ -12,6 +12,7 @@ import (
 	"os"
 	redc "red-cloud/mod"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -114,7 +115,7 @@ var methodMinRole = map[string]string{
 	"GetSpotMonitorEnabled": "viewer", "GetSpotAutoRecoverEnabled": "viewer",
 	"GetWebhookConfig": "viewer", "GetAllCaseTags": "viewer", "GetAllTagNames": "viewer",
 	"GetHTTPServerStatus": "viewer",
-	"ListCases": "viewer", "GetCaseOutputs": "viewer", "GetCasePlanPreview": "viewer",
+	"ListCases":           "viewer", "GetCaseOutputs": "viewer", "GetCasePlanPreview": "viewer",
 	"GetResourceSummary": "viewer", "GetBalances": "viewer", "GetBills": "viewer",
 	"GetTotalRuntime": "viewer", "GetPredictedMonthlyCost": "viewer",
 	"ListProfiles": "viewer", "GetActiveProfile": "viewer",
@@ -125,24 +126,24 @@ var methodMinRole = map[string]string{
 	"ListUserdataTemplates": "viewer", "ListComposeTemplates": "viewer",
 	"ListCustomDeployments": "viewer", "GetDeploymentHistory": "viewer",
 	"GetDeploymentPlanPreview": "viewer",
-	"GetCostEstimate": "viewer",
-	"ListPlugins": "viewer", "GetPluginConfig": "viewer", "FetchPluginRegistry": "viewer",
-	"GetMCPStatus": "viewer",
+	"GetCostEstimate":          "viewer",
+	"ListPlugins":              "viewer", "GetPluginConfig": "viewer", "FetchPluginRegistry": "viewer",
+	"GetMCPStatus":       "viewer",
 	"ListScheduledTasks": "viewer", "ListCaseScheduledTasks": "viewer",
 	"ListAllScheduledTasks": "viewer", "GetScheduledTask": "viewer",
 	"GetAgentMemories": "viewer",
-	"GetF8xCatalog": "viewer", "GetF8xCategories": "viewer", "GetF8xPresets": "viewer",
+	"GetF8xCatalog":    "viewer", "GetF8xCategories": "viewer", "GetF8xPresets": "viewer",
 	"GetF8xStatus": "viewer", "GetF8xInstallHistory": "viewer", "GetF8xRunningTasks": "viewer",
 	"RefreshF8xCatalog": "viewer",
 	"GetSSHInfoForCase": "viewer", "GetSSHInfosForCase": "viewer",
 	"ListPortForwards": "viewer", "ListRemoteFiles": "viewer",
 	"GetRemoteFileContent": "viewer",
-	"HasActiveOperations": "viewer",
-	"ValidateTemplate": "viewer", "ValidateDeploymentConfig": "viewer",
+	"HasActiveOperations":  "viewer",
+	"ValidateTemplate":     "viewer", "ValidateDeploymentConfig": "viewer",
 	"EstimateDeploymentCost": "viewer",
-	"GetProviderRegions": "viewer", "GetInstanceTypes": "viewer",
+	"GetProviderRegions":     "viewer", "GetInstanceTypes": "viewer",
 	"GetTerraformMirrorConfig": "viewer",
-	"GetAuditLogs": "viewer", "ExportAuditLogs": "viewer",
+	"GetAuditLogs":             "viewer", "ExportAuditLogs": "viewer",
 	// MCP read
 	"MCPGetCostEstimate": "viewer", "MCPGetBalances": "viewer",
 	"MCPGetResourceSummary": "viewer", "MCPGetPredictedMonthlyCost": "viewer",
@@ -160,18 +161,18 @@ var methodMinRole = map[string]string{
 	"BatchStartCustomDeployments": "operator", "BatchStopCustomDeployments": "operator",
 	"ComposePreview": "operator", "ComposeUp": "operator", "ComposeDown": "operator",
 	"SelectComposeFile": "operator",
-	"ExecCommand": "operator", "ExecUserdata": "operator",
+	"ExecCommand":       "operator", "ExecUserdata": "operator",
 	"UploadUserdataScript": "operator", "UploadFile": "operator", "DownloadFile": "operator",
 	"StartSSHTerminal": "operator", "StartSSHTerminalInstance": "operator",
 	"StartSSHTerminalDirect": "operator",
-	"WriteToTerminal": "operator", "ResizeTerminal": "operator", "CloseTerminal": "operator",
+	"WriteToTerminal":        "operator", "ResizeTerminal": "operator", "CloseTerminal": "operator",
 	"CreateRemoteDirectory": "operator", "WriteRemoteFileContent": "operator",
 	"RenameRemoteFile": "operator",
 	"StartPortForward": "operator", "StopPortForward": "operator",
 	"AIChatStream": "operator", "SmartAgentChatStream": "operator",
 	"AgentChatStream": "operator", "DeployAgentChatStream": "operator",
 	"TroubleshootAgentChatStream": "operator", "OrchestratorStream": "operator",
-	"StopAgentStream": "operator",
+	"StopAgentStream":       "operator",
 	"SubmitAskUserResponse": "operator", "ExportChatLog": "operator",
 	"AIRecommendTemplates": "operator", "AIGenerateTemplate": "operator",
 	"AICostOptimization": "operator", "RecommendTemplates": "operator",
@@ -179,12 +180,12 @@ var methodMinRole = map[string]string{
 	"PullTemplate": "operator", "CreateLocalTemplate": "operator",
 	"SaveTemplateFiles": "operator", "CopyTemplate": "operator",
 	"ExportTemplates": "operator", "ImportTemplates": "operator",
-	"CopyFileTo": "operator",
+	"CopyFileTo":         "operator",
 	"SaveConfigTemplate": "operator", "LoadConfigTemplate": "operator",
 	"ListConfigTemplates": "operator",
-	"ScheduleTask": "operator", "ScheduleTaskWithRepeat": "operator",
+	"ScheduleTask":        "operator", "ScheduleTaskWithRepeat": "operator",
 	"ScheduleTaskFull": "operator", "CancelScheduledTask": "operator",
-	"SetCaseTags": "operator",
+	"SetCaseTags":      "operator",
 	"SetActiveProfile": "operator", "SwitchProject": "operator",
 	"InstallPlugin": "operator", "EnablePlugin": "operator",
 	"DisablePlugin": "operator", "UpdatePlugin": "operator",
@@ -254,6 +255,61 @@ func GenerateToken() string {
 	return hex.EncodeToString(b)
 }
 
+// secretArgMethods are methods whose arguments carry credentials. For these we
+// record only the argument shape (field names / types), never the values, since
+// audit.db is readable by anyone who can reach GetAuditLogs or ExportAuditLogs.
+var secretArgMethods = map[string]bool{
+	"SaveProvidersConfig":            true,
+	"SaveWebhookConfig":              true,
+	"SavePluginConfig":               true,
+	"UpdateProfileAIConfig":          true,
+	"UpdateProfileFallbackProviders": true,
+	"AddHTTPServerUser":              true,
+	"SetHTTPServerConfig":            true,
+}
+
+// redactArgs replaces the values in a captured argument preview with their
+// JSON types, e.g. {"accessKey":"LTAI..."} -> {"accessKey":"<string>"}.
+func redactArgs(raw string) string {
+	var parsed interface{}
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+		return "<redacted>"
+	}
+	return redactValue(parsed)
+}
+
+func redactValue(v interface{}) string {
+	switch t := v.(type) {
+	case map[string]interface{}:
+		keys := make([]string, 0, len(t))
+		for k := range t {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		parts := make([]string, 0, len(keys))
+		for _, k := range keys {
+			parts = append(parts, fmt.Sprintf("%q:%s", k, redactValue(t[k])))
+		}
+		return "{" + strings.Join(parts, ",") + "}"
+	case []interface{}:
+		parts := make([]string, 0, len(t))
+		for _, item := range t {
+			parts = append(parts, redactValue(item))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+	case string:
+		return `"<string>"`
+	case float64:
+		return "<number>"
+	case bool:
+		return "<bool>"
+	case nil:
+		return "null"
+	default:
+		return "<value>"
+	}
+}
+
 // auditLog records an operation to the audit store
 func (s *HTTPServer) auditLog(username, role, method string, args []json.RawMessage, ip string, success bool, errMsg string) {
 	if s.app.auditStore == nil {
@@ -271,6 +327,9 @@ func (s *HTTPServer) auditLog(username, role, method string, args []json.RawMess
 		}
 		if b, err := json.Marshal(preview); err == nil {
 			argsStr = string(b)
+			if secretArgMethods[method] {
+				argsStr = redactArgs(argsStr)
+			}
 		}
 	}
 	// Strip port from RemoteAddr
@@ -299,6 +358,34 @@ func isAuditableMethod(method string) bool {
 
 // Start starts the HTTP server
 func (s *HTTPServer) Start(staticFS fs.FS) error {
+	mux := s.buildAPIMux()
+
+	// Static files (SPA fallback)
+	subFS, err := fs.Sub(staticFS, "frontend/dist")
+	if err != nil {
+		return fmt.Errorf("failed to access static files: %w", err)
+	}
+	mux.Handle("/", spaHandler(subFS))
+
+	addr := fmt.Sprintf("%s:%d", s.host, s.port)
+	s.srv = &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	go func() {
+		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("[HTTP Server] Error: %v\n", err)
+		}
+	}()
+
+	return nil
+}
+
+// buildAPIMux wires up the /api/* routes. It is separate from Start so tests can
+// exercise the real dispatch path — including role-based credential scrubbing —
+// without needing the embedded frontend bundle.
+func (s *HTTPServer) buildAPIMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Auth middleware helper — returns (username, role, ok)
@@ -345,7 +432,7 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 			return
 		}
 
-		result, err := s.dispatch(req.Method, req.Args)
+		result, err := s.dispatch(req.Method, req.Args, role)
 
 		// Audit: log write operations (operator+admin methods)
 		if isAuditableMethod(req.Method) {
@@ -450,12 +537,13 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 		json.NewEncoder(w).Encode(map[string]string{"path": tmpFile.Name()})
 	})
 
-	// Static files (SPA fallback)
-	subFS, err := fs.Sub(staticFS, "frontend/dist")
-	if err != nil {
-		return fmt.Errorf("failed to access static files: %w", err)
-	}
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	return mux
+}
+
+// spaHandler serves the embedded frontend bundle with an index.html fallback
+// for unknown paths.
+func spaHandler(subFS fs.FS) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
 			path = "index.html"
@@ -483,7 +571,6 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 				http.Error(w, "Not found", 404)
 				return
 			}
-			defer func() { /* already deferred above, but overwritten */ }()
 			stat, _ = f.Stat()
 		}
 
@@ -515,20 +602,6 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 			io.Copy(w, f)
 		}
 	})
-
-	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	s.srv = &http.Server{
-		Addr:    addr,
-		Handler: mux,
-	}
-
-	go func() {
-		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("[HTTP Server] Error: %v\n", err)
-		}
-	}()
-
-	return nil
 }
 
 // Stop stops the HTTP server
@@ -556,8 +629,76 @@ var blockedInHTTPMode = map[string]bool{
 	"SelectSaveFile":  true,
 }
 
-// dispatch calls an App method by name using reflection
-func (s *HTTPServer) dispatch(method string, args []json.RawMessage) (interface{}, error) {
+// tokenResponseFields are fields whose value is itself a usable credential for
+// a different trust boundary — GetMCPStatus hands out the SSE bearer token,
+// which authorises exec_command / start_case on the MCP endpoint. These are
+// blanked rather than masked so clients see "no token" and skip sending an
+// Authorization header, instead of building a request around a fake value.
+var tokenResponseFields = map[string]bool{
+	"token":           true,
+	"httpServerToken": true,
+}
+
+// maskedResponseFields are credential fields that some read-only methods return
+// already partially masked (see maskValue). They are replaced with a uniform
+// mask: the UI uses "non-empty" to mean "configured", so blanking them would
+// wrongly report credentials as missing.
+var maskedResponseFields = map[string]bool{
+	"apiKey":     true,
+	"accessKey":  true,
+	"secretKey":  true,
+	"secretId":   true,
+	"password":   true,
+	"privateKey": true,
+}
+
+const maskedResponseValue = "***"
+
+// scrubCredentialsFromHTTP strips credential-bearing fields from a method
+// result before it is serialised to an HTTP client whose role is below admin.
+// The desktop GUI calls the same App methods directly (not through dispatch),
+// so this does not affect it.
+func scrubCredentialsFromHTTP(v interface{}) interface{} {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return v
+	}
+	var parsed interface{}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return v
+	}
+	scrubCredentialsValue(parsed)
+	return parsed
+}
+
+func scrubCredentialsValue(v interface{}) {
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, val := range t {
+			if tokenResponseFields[k] {
+				if s, ok := val.(string); ok && s != "" {
+					t[k] = ""
+				}
+				continue
+			}
+			if maskedResponseFields[k] {
+				if s, ok := val.(string); ok && s != "" {
+					t[k] = maskedResponseValue
+				}
+				continue
+			}
+			scrubCredentialsValue(val)
+		}
+	case []interface{}:
+		for _, item := range t {
+			scrubCredentialsValue(item)
+		}
+	}
+}
+
+// dispatch calls an App method by name using reflection. role is the caller's
+// role, used to trim credential material from results for non-admin callers.
+func (s *HTTPServer) dispatch(method string, args []json.RawMessage, role string) (interface{}, error) {
 	if blockedInHTTPMode[method] {
 		return nil, fmt.Errorf("此功能在浏览器模式下不可用，请使用桌面应用")
 	}
@@ -601,14 +742,22 @@ func (s *HTTPServer) dispatch(method string, args []json.RawMessage) (interface{
 	if len(out) == 0 {
 		return nil, nil
 	}
+
+	scrub := func(v interface{}) interface{} {
+		if RoleLevel(role) >= RoleLevel("admin") {
+			return v
+		}
+		return scrubCredentialsFromHTTP(v)
+	}
+
 	if len(out) == 1 {
-		return out[0].Interface(), nil
+		return scrub(out[0].Interface()), nil
 	}
 
 	// Multiple return values → return as array
 	results := make([]interface{}, len(out))
 	for i, v := range out {
-		results[i] = v.Interface()
+		results[i] = scrub(v.Interface())
 	}
 	return results, nil
 }
